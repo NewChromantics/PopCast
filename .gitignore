@@ -1,0 +1,76 @@
+# Everything in plugins is generated at compile time
+Unity/Assets/Plugins
+Unity/Assets/Plugins.meta
+
+# streaming assets are massive, dont commit them
+Unity/Assets/StreamingAssets
+
+*.apk
+UnityBackup/
+
+# compiled object files
+obj/
+libs/
+
+# android generated
+local.properties
+proguard-project.txt
+
+# xcode user files
+xcuserdata/
+*.xccheckout
+
+# visual studio temp files
+*.visualstudio/[dD]ebug/
+*.visualstudio/[cC]uda/
+bin/
+*.sdf
+*.opensdf
+
+# build in root
+*.app
+*.zip
+Build/
+*.ipa
+*build/
+build*/
+
+# =============== #
+# Audio resources #
+# =============== #
+#gr: un-ignored for final assets
+#Audio/
+
+# =============== #
+# Unity generated #
+# =============== #
+Temp/
+Obj/
+UnityGenerated/
+Library/
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+ExportedObj/
+*.svd
+*.userprefs
+*.csproj
+*.pidb
+*.suo
+Unity/**/*.sln
+*.user
+*.unityproj
+*.booproj
+
+# ============ #
+# OS generated #
+# ============ #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
