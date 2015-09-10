@@ -24,7 +24,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BF41F9731B4BD0700015614A"
-               BuildableName = "PopCastAndroid.bundle"
+               BuildableName = "PopCastOsx.bundle"
                BlueprintName = "PopCastOsx"
                ReferencedContainer = "container:PopCast.xcodeproj">
             </BuildableReference>
@@ -59,7 +59,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BF41F9731B4BD0700015614A"
-            BuildableName = "PopCastAndroid.bundle"
+            BuildableName = "PopCastOsx.bundle"
             BlueprintName = "PopCastOsx"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
@@ -77,7 +77,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BF41F9731B4BD0700015614A"
-            BuildableName = "PopCastAndroid.bundle"
+            BuildableName = "PopCastOsx.bundle"
             BlueprintName = "PopCastOsx"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>

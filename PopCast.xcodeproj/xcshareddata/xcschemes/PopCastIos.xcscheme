@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BFEEDD6C1B46A7E5002F9CFA"
-               BuildableName = "libPopCastAndroid.a"
+               BuildableName = "libPopCastIos.a"
                BlueprintName = "PopCastIos"
                ReferencedContainer = "container:PopCast.xcodeproj">
             </BuildableReference>
@@ -57,7 +57,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BFEEDD6C1B46A7E5002F9CFA"
-            BuildableName = "libPopCastAndroid.a"
+            BuildableName = "libPopCastIos.a"
             BlueprintName = "PopCastIos"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
@@ -79,7 +79,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BFEEDD6C1B46A7E5002F9CFA"
-            BuildableName = "libPopCastAndroid.a"
+            BuildableName = "libPopCastIos.a"
             BlueprintName = "PopCastIos"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
@@ -97,7 +97,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BFEEDD6C1B46A7E5002F9CFA"
-            BuildableName = "libPopCastAndroid.a"
+            BuildableName = "libPopCastIos.a"
             BlueprintName = "PopCastIos"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
