@@ -18,7 +18,7 @@ namespace PopCast
 	class TInstance;
 	typedef Unity::ulong	TInstanceRef;
 
-	std::shared_ptr<TInstance>	Alloc(const TCasterParams& Params);
+	std::shared_ptr<TInstance>	Alloc(TCasterParams Params);
 	std::shared_ptr<TInstance>	GetInstance(TInstanceRef Instance);
 	bool						Free(TInstanceRef Instance);
 };

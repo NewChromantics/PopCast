@@ -14,11 +14,19 @@ public:
 class TCastDeviceMeta
 {
 public:
+	TCastDeviceMeta() :
+		mReference	( nullptr )
+	{
+	}
+	
+	bool			IsValid() const	{	return !mName.empty();	}
+	
 	std::string		mName;
 	std::string		mAddress;
 	std::string		mSerial;
 	std::string		mVendor;
 	std::string		mModel;
+	void*			mReference;	//	get rid of this!
 };
 inline std::ostream& operator<<(std::ostream &out,const TCastDeviceMeta&in)
 {

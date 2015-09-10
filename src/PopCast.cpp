@@ -10,7 +10,9 @@ namespace PopCast
 	std::vector<std::shared_ptr<PopCast::TInstance> >	gInstances;
 	
 	std::shared_ptr<GoogleCast::TContext>	GoogleCastContext;
+	GoogleCast::TContext&					GetGoogleCastContext();
 };
+
 
 
 __export Unity::ulong	PopCast_Alloc(const char* Filename)
@@ -57,21 +59,18 @@ __export bool	PopCast_Free(Unity::ulong Instance)
 
 __export void	PopCast_EnumDevices()
 {
-	if ( !PopCast::GoogleCastContext )
-	{
-		try
-		{
-			PopCast::GoogleCastContext.reset( new GoogleCast::TContext() );
-		}
-		catch(std::exception& e)
-		{
-			std::Debug << "Failed to make google cast context: " << e.what() << std::endl;
-		}
-	}
-	
 	Array<TCastDeviceMeta> Metas;
-	if ( PopCast::GoogleCastContext )
-		PopCast::GoogleCastContext->EnumDevices( GetArrayBridge( Metas ) );
+
+	//	get chromecast devices
+	try
+	{
+		auto& GoogleCastContext = PopCast::GetGoogleCastContext();
+		GoogleCastContext.EnumDevices( GetArrayBridge( Metas ) );
+	}
+	catch (std::exception& e)
+	{
+		std::Debug << e.what() << std::endl;
+	}
 	
 	for ( int i=0;	i<Metas.GetSize();	i++ )
 	{
@@ -79,16 +78,27 @@ __export void	PopCast_EnumDevices()
 	}
 }
 
+GoogleCast::TContext& PopCast::GetGoogleCastContext()
+{
+	if ( !PopCast::GoogleCastContext )
+	{
+		PopCast::GoogleCastContext.reset( new GoogleCast::TContext() );
+	}
 
-std::shared_ptr<PopCast::TInstance> PopCast::Alloc(const TCasterParams& Params)
+	return *PopCast::GoogleCastContext;
+}
+
+
+
+std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params)
 {
 	gInstancesLock.lock();
 	static TInstanceRef gInstanceRefCounter(1000);
 	auto InstanceRef = gInstanceRefCounter++;
 	gInstancesLock.unlock();
 
-	//	try to alloc, if this fails it'll throw
 	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params) );
+	
 	gInstancesLock.lock();
 	gInstances.push_back( pInstance );
 	gInstancesLock.unlock();
@@ -133,6 +143,17 @@ bool PopCast::Free(TInstanceRef Instance)
 PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	mRef		( Ref )
 {
-
+	//	try to alloc, if this fails it'll throw
+	if ( Soy::StringTrimLeft( Params.mName, "chromecast:", false ) )
+	{
+		auto& Context = GetGoogleCastContext();
+		mCaster = Context.AllocDevice( Params );
+	}
+	else
+	{
+		std::stringstream Error;
+		Error << "Don't know what caster to make. Try chromecast:";
+		throw Soy::AssertException( Error.str() );
+	}
 }
 

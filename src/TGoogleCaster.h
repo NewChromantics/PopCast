@@ -12,7 +12,27 @@ namespace GoogleCast
 {
 	class TContext;
 	class TContextInternal;	//	objective-c classes
+	
+	class TDevice;
+	class TDeviceInternal;
 }
+
+
+class TMediaMeta
+{
+public:
+	std::string		mTitle;
+	std::string		mSubtitle;
+	std::string		mImageUrl;
+	size_t			mImageWidth;
+	size_t			mImageHeight;
+	std::string		mMediaUrl;		//	"http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+	size_t			mDuration;
+	std::string		mContentType;	//	"video/mp4"
+	size_t			mStartTime;
+	bool			mAutoPlay;
+};
+
 
 
 class GoogleCast::TContext
@@ -22,7 +42,8 @@ public:
 	TContext(const std::string& AppName="CBFF3EA9");
 	~TContext();
 	
-	virtual void		EnumDevices(ArrayBridge<TCastDeviceMeta>&& Metas);
+	std::shared_ptr<TDevice>	AllocDevice(TCasterParams Params);
+	virtual void				EnumDevices(ArrayBridge<TCastDeviceMeta>&& Metas);
 
 protected:
 	std::string					mAppName;
@@ -32,6 +53,19 @@ protected:
 private:
 	std::shared_ptr<TContextInternal>		mInternal;
 	std::shared_ptr<Soy::TRuntimeLibrary>	mLibrary;
+};
+
+
+class GoogleCast::TDevice : public TCaster
+{
+public:
+	TDevice(void* GCKDevice);
+	
+	void		Connect();
+	void		LoadMedia(const TMediaMeta& Media);
+	
+public:
+	std::shared_ptr<TDeviceInternal>	mInternal;
 };
 
 
