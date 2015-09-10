@@ -61,7 +61,7 @@ public class PopCast
 	}
 	
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ulong		PopCast_Alloc(PopCastParams Params);
+	private static extern ulong		PopCast_Alloc(String Filename);
 	
 	[DllImport (PluginName)]
 	private static extern bool		PopCast_Free(ulong Instance);

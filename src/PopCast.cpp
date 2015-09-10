@@ -8,10 +8,12 @@ namespace PopCast
 {
 	std::mutex gInstancesLock;
 	std::vector<std::shared_ptr<PopCast::TInstance> >	gInstances;
+	
+	std::shared_ptr<GoogleCast::TContext>	GoogleCastContext;
 };
 
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename,TPopCastParams Params)
+__export Unity::ulong	PopCast_Alloc(const char* Filename)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::gParams.mMinTimerMs );
 	if ( Filename == nullptr )
@@ -20,7 +22,8 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename,TPopCastParams Params)
 		return 0;
 	}
 	
-	Unity::gParams.mDebugPluginEvent = bool_cast(Params.mDebugRenderThreadCallback);
+	TCasterParams Params;
+	Params.mName = Filename;
 	
 
 	try
@@ -28,7 +31,7 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename,TPopCastParams Params)
 		auto Instance = PopCast::Alloc( Params );
 		if ( !Instance )
 			return 0;
-		return Instance->GetRef().GetInt64();
+		return Instance->GetRef();
 	}
 	catch ( std::exception& e )
 	{
@@ -49,30 +52,43 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename,TPopCastParams Params)
 __export bool	PopCast_Free(Unity::ulong Instance)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::gParams.mMinTimerMs );
-	return PopCast::Free( PopCast::TInstanceRef( Instance ) );
+	return PopCast::Free( Instance );
 }
 
 __export void	PopCast_EnumDevices()
 {
+	if ( !PopCast::GoogleCastContext )
+	{
+		try
+		{
+			PopCast::GoogleCastContext.reset( new GoogleCast::TContext() );
+		}
+		catch(std::exception& e)
+		{
+			std::Debug << "Failed to make google cast context: " << e.what() << std::endl;
+		}
+	}
+	
 	Array<TCastDeviceMeta> Metas;
-	GoogleCast::EnumDevices( GetArrayBridge( Metas ) );
+	if ( PopCast::GoogleCastContext )
+		PopCast::GoogleCastContext->EnumDevices( GetArrayBridge( Metas ) );
 	
 	for ( int i=0;	i<Metas.GetSize();	i++ )
 	{
-		std::Debug << Metas[i].mName << std::endl;
+		std::Debug << Metas[i] << std::endl;
 	}
 }
 
 
-std::shared_ptr<PopCast::TInstance> PopCast::Alloc(const TPopCastParams& Params)
+std::shared_ptr<PopCast::TInstance> PopCast::Alloc(const TCasterParams& Params)
 {
 	gInstancesLock.lock();
 	static TInstanceRef gInstanceRefCounter(1000);
-	gInstanceRefCounter.mRef++;
+	auto InstanceRef = gInstanceRefCounter++;
 	gInstancesLock.unlock();
 
 	//	try to alloc, if this fails it'll throw
-	std::shared_ptr<TInstance> pInstance( new TInstance(gInstanceRefCounter,Params) );
+	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params) );
 	gInstancesLock.lock();
 	gInstances.push_back( pInstance );
 	gInstancesLock.unlock();
@@ -114,10 +130,9 @@ bool PopCast::Free(TInstanceRef Instance)
 
 
 
-PopCast::TInstance::TInstance(const TInstanceRef& Ref,TPopCastParams Params) :
+PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	mRef		( Ref )
 {
-	mCaster.reset( new TGoogleCaster() );
 
 }
 

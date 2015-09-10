@@ -198,14 +198,14 @@ __export void	QueueTextureBlit(Unity::NativeTexturePtr SourceTexture,Unity::Nati
 //		compiler DOES NOT issue a link error like it should
 //		this would apply to any statically linked lib
 #if defined(TARGET_IOS)
-__export void UnityRenderEvent_Ios_PopMovieTexture(Unity::sint eventID);
+__export void UnityRenderEvent_Ios_PopCastTexture(Unity::sint eventID);
 #else
 __export void UnityRenderEvent(Unity::sint eventID);
 #endif
 __export void UnitySetGraphicsDevice(void* device,Unity::sint deviceType,Unity::sint eventType);
 
 //	unique eventid so that other plugins don't trigger redundant opengl thread calls
-__export Unity::sint PopMovie_GetPluginEventId();
+__export Unity::sint PopCast_GetPluginEventId();
 
 
 
