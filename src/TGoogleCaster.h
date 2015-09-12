@@ -47,8 +47,6 @@ public:
 
 protected:
 	std::string					mAppName;
-	std::mutex					mDevicesLock;
-	Array<TCastDeviceMeta>		mDevices;
 	
 private:
 	std::shared_ptr<TContextInternal>		mInternal;

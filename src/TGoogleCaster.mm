@@ -15,6 +15,7 @@ typedef OCMediaMetadata GCKMediaMetadata;
 typedef OCImage GCKImage;
 typedef OCMediaInformation GCKMediaInformation;
 typedef OCMediaControlChannel GCKMediaControlChannel;
+typedef OCDeviceScannerListener GCKDeviceScannerListener;
 auto kGCKMetadataKeyTitle = kOCMetadataKeyTitle;
 auto kGCKMetadataKeySubtitle = kOCMetadataKeySubtitle;
 auto GCKMediaStreamTypeNone = OCMediaStreamTypeNone;
@@ -30,6 +31,23 @@ NSString* const kOCMetadataKeyTitle = @"Title";
 NSString* const kOCMetadataKeySubtitle = @"SubTitle";
 #endif
 
+
+
+@class TScannerListener;
+
+@interface TScannerListener : NSObject<GCKDeviceScannerListener>
+{
+	GoogleCast::TContextInternal*	mParent;
+}
+
+- (id)initWithContext:(GoogleCast::TContextInternal*)parent;
+- (void)deviceDidComeOnline:(GCKDevice *)device;
+- (void)deviceDidGoOffline:(GCKDevice *)device;
+
+@end
+
+
+
 class GoogleCast::TDeviceInternal
 {
 public:
@@ -38,7 +56,7 @@ public:
 	{
 	}
 	
-	ObjcPtr<OCDeviceManager>	mDeviceManager;
+	ObjcPtr<GCKDeviceManager>	mDeviceManager;
 	ObjcPtr<GCKMediaControlChannel>	mMediaControl;
 	TDevice&					mParent;
 };
@@ -49,11 +67,68 @@ public:
 	TContextInternal(TContext& Parent);
 	~TContextInternal();
 	
+	void						OnDeviceAdded(GCKDevice* Device);
+	void						OnDeviceRemoved(GCKDevice* Device);
+	void						EnumDevices(ArrayBridge<TCastDeviceMeta>& Metas);
+	void						EnumDevices(ArrayBridge<TCastDeviceMeta>&& Metas)	{	EnumDevices( Metas );	}
+	std::shared_ptr<ObjcPtr<GCKDevice>>	GetFirstDevice();
+	std::shared_ptr<ObjcPtr<GCKDevice>>	GetDevice(const std::string& Name);
+	
 public:
+	std::mutex					mDeviceLock;
+	std::map<std::string,std::shared_ptr<ObjcPtr<GCKDevice>>>	mDevices;
+	
 	TContext&					mParent;
-	ObjcPtr<OCDeviceScanner>	mScanner;
+	ObjcPtr<GCKDeviceScanner>	mScanner;
+	ObjcPtr<TScannerListener>	mScannerListener;
 };
 
+
+
+
+
+TCastDeviceMeta GetMeta(GCKDevice* Device)
+{
+	Soy::Assert( Device, "Device expected" );
+	TCastDeviceMeta Meta;
+
+	std::stringstream Address;
+	Address << Soy::NSStringToString( Device.ipAddress ) << ":" << Device.servicePort;
+	Meta.mAddress = Address.str();
+
+	Meta.mSerial = Soy::NSStringToString(Device.deviceID);
+	Meta.mName = Soy::NSStringToString(Device.friendlyName);
+	Meta.mVendor = Soy::NSStringToString(Device.manufacturer);
+	Meta.mModel = Soy::NSStringToString(Device.modelName);
+
+	return Meta;
+}
+
+
+
+@implementation TScannerListener
+
+- (id)initWithContext:(GoogleCast::TContextInternal*)parent
+{
+	self = [super init];
+	if (self)
+	{
+		mParent = parent;
+	}
+	return self;
+}
+
+- (void)deviceDidComeOnline:(GCKDevice *)device
+{
+	mParent->OnDeviceAdded(device);
+}
+
+- (void)deviceDidGoOffline:(GCKDevice *)device
+{
+	mParent->OnDeviceRemoved(device);
+}
+
+@end
 
 
 
@@ -74,7 +149,10 @@ GoogleCast::TContextInternal::TContextInternal(TContext& Parent) :
 	GCKFilterCriteria* Filter = [GCKFilterCriteria criteriaForAvailableApplicationWithID:AppNameNs];
 	mScanner.Retain( [[GCKDeviceScanner alloc] initWithFilterCriteria:Filter] );
 #endif
+	
+	mScannerListener.Retain( [[TScannerListener alloc] initWithContext:this] );
 
+	[mScanner.mObject addListener:mScannerListener.mObject];
 	[mScanner.mObject startScan];
 }
 
@@ -88,6 +166,68 @@ GoogleCast::TContextInternal::~TContextInternal()
 }
 
 
+void GoogleCast::TContextInternal::OnDeviceAdded(GCKDevice* Device)
+{
+	std::lock_guard<std::mutex> Lock( mDeviceLock );
+
+	std::shared_ptr<ObjcPtr<GCKDevice>> pDevice( new ObjcPtr<GCKDevice>() );
+	pDevice->Retain( Device );
+	
+	auto Meta = GetMeta( Device );
+	mDevices[Meta.mName] = pDevice;
+}
+
+void GoogleCast::TContextInternal::OnDeviceRemoved(GCKDevice* Device)
+{
+	std::lock_guard<std::mutex> Lock( mDeviceLock );
+	
+	auto Meta = GetMeta( Device );
+	mDevices[Meta.mName].reset();
+}
+
+void GoogleCast::TContextInternal::EnumDevices(ArrayBridge<TCastDeviceMeta>& Metas)
+{
+	std::lock_guard<std::mutex> Lock( mDeviceLock );
+	
+	for ( auto it=mDevices.begin();	it!=mDevices.end();	it++ )
+	{
+		auto& DeviceName = it->first;
+		auto& Device = it->second;
+		TCastDeviceMeta Meta;
+		
+		if ( !Device )
+		{
+			Meta.mName = DeviceName;
+		}
+		else
+		{
+			Meta = GetMeta( Device->mObject );
+		}
+		Metas.PushBack( Meta );
+	}
+}
+
+std::shared_ptr<ObjcPtr<GCKDevice>> GoogleCast::TContextInternal::GetDevice(const std::string& Name)
+{
+	std::lock_guard<std::mutex> Lock( mDeviceLock );
+	auto Device = mDevices[Name];
+	return Device;
+}
+
+
+std::shared_ptr<ObjcPtr<GCKDevice>> GoogleCast::TContextInternal::GetFirstDevice()
+{
+	std::lock_guard<std::mutex> Lock( mDeviceLock );
+
+	for ( auto it=mDevices.begin();	it!=mDevices.end();	it++ )
+	{
+		auto& Device = it->second;
+		if ( !Device )
+			continue;
+		return Device;
+	}
+	return nullptr;
+}
 
 
 GoogleCast::TContext::TContext(const std::string& AppName) :
@@ -120,66 +260,38 @@ GoogleCast::TContext::~TContext()
 
 void GoogleCast::TContext::EnumDevices(ArrayBridge<TCastDeviceMeta>&& Metas)
 {
-	std::lock_guard<std::mutex> Lock( mDevicesLock );
-
-	mDevices.Clear();
+	if ( !mInternal )
+		return;
 	
-	//	grab list
-	auto Devices = mInternal->mScanner.mObject.devices;
-	
-	for ( GCKDevice* Device in Devices )
-	{
-		ObjcPtr<GCKDevice> _Device( Device );
-		TCastDeviceMeta Meta;
-		std::stringstream Address;
-		//	gr: this has suddenly started crashing?
-		//Address << Soy::NSStringToString( Device.ipAddress ) << ":" << Device.servicePort;
-		Meta.mAddress = Address.str();
-		
-		Meta.mSerial = Soy::NSStringToString(Device.deviceID);
-		Meta.mName = Soy::NSStringToString(Device.friendlyName);
-		Meta.mVendor = Soy::NSStringToString(Device.manufacturer);
-		Meta.mModel = Soy::NSStringToString(Device.modelName);
-		Meta.mReference = Device;
-	
-		mDevices.PushBack( Meta );
-	}
-	
-	
-	Metas.PushBackArray( mDevices );
+	mInternal->EnumDevices( Metas );
 }
 
 
 std::shared_ptr<GoogleCast::TDevice> GoogleCast::TContext::AllocDevice(TCasterParams Params)
 {
-	//	find device
-	Array<TCastDeviceMeta> Metas;
-	EnumDevices( GetArrayBridge(Metas) );
-
-	//	find match
-	GCKDevice* Device = nullptr;
-	for ( int m=0;	m<Metas.GetSize();	m++ )
+	if ( !mInternal )
+		return nullptr;
+	
+	std::shared_ptr<ObjcPtr<GCKDevice>> pDevice;
+	if ( Params.mName == "*" )
 	{
-		auto& Meta = Metas[m];
-		if ( Params.mName == "*" )
-		{
-		}
-		else if ( !Soy::StringBeginsWith( Meta.mName, Params.mName, false ) )
-		{
-			continue;
-		}
-		Device = reinterpret_cast<GCKDevice*>(Meta.mReference);
-		break;
+		pDevice = mInternal->GetFirstDevice();
+	}
+	else
+	{
+		pDevice = mInternal->GetDevice( Params.mName );
 	}
 
-	if ( !Device )
+	if ( !pDevice )
 	{
+		Array<TCastDeviceMeta> Metas;
+		mInternal->EnumDevices( GetArrayBridge(Metas) );
 		std::stringstream Error;
-		Error << "No matching chromecast name " << Params.mName << " out of " << Metas.GetSize() << " devices";
+		Error << "No matching/alive chromecast name " << Params.mName << " out of " << Metas.GetSize() << " devices";
 		throw Soy::AssertException( Error.str() );
 	}
 	
-	std::shared_ptr<GoogleCast::TDevice> NewDevice( new GoogleCast::TDevice(Device) );
+	std::shared_ptr<GoogleCast::TDevice> NewDevice( new GoogleCast::TDevice(pDevice->mObject) );
 	return NewDevice;
 }
 
@@ -192,7 +304,7 @@ GoogleCast::TDevice::TDevice(void* _GCKDevice) :
 	
 	//	create new device interface and connect to it
 	NSString* PackageName = @"CBFF3EA9";
-	mDeviceManager.Retain( [[OCDeviceManager alloc]initWithDevice:Device clientPackageName:PackageName] );
+	mDeviceManager.Retain( [[GCKDeviceManager alloc]initWithDevice:Device clientPackageName:PackageName] );
 	if ( !mDeviceManager )
 		throw Soy::AssertException("Failed to allocate device manager");
 	
@@ -249,7 +361,7 @@ launchedApplication:(BOOL)launchedApplication {
 	[Meta setString:TitleNs forKey:kGCKMetadataKeyTitle];
 	[Meta setString:SubtitleNs forKey:kGCKMetadataKeySubtitle];
 #if !defined(TARGET_OSX)
-	[Meta addImage:[[GCKImage alloc]initWithURL:[[NSURL alloc] initWithString:ImageUrlNs] width:ImageWidth height:ImageHeight]];
+	[Meta addImage:[[GCKImage alloc]initWithURL:[[NSURL alloc] initWithString:ImageUrlNs] width:Media.mImageWidth height:Media.mImageHeight]];
 #endif
 	
 	GCKMediaInformation *mediaInformation =
