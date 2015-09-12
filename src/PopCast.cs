@@ -83,7 +83,7 @@ public class PopCast
 
 	public PopCast(string Filename,PopCastParams Params)
 	{
-		mInstance = PopCast_Alloc ( Params );
+		mInstance = PopCast_Alloc ( Filename );
 
 		//	if this fails, capture the flush and throw an exception
 		if (mInstance == 0) {
