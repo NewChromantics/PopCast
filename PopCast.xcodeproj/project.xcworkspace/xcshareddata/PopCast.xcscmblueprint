@@ -1,0 +1,37 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "3EA6B5380D894491ED38119B2315A466F1D92D0C",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "87907EAD08F9AC05484849759EAC4E8AE0659685" : 0,
+    "3EA6B5380D894491ED38119B2315A466F1D92D0C" : 0,
+    "3C57439D3CFC4E285A6CCFF070435C9C507D0F0A" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "1FF68839-EBD2-49AB-A1F7-FF11EB8620EA",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "87907EAD08F9AC05484849759EAC4E8AE0659685" : "SoyLib\/",
+    "3EA6B5380D894491ED38119B2315A466F1D92D0C" : "PopCast\/",
+    "3C57439D3CFC4E285A6CCFF070435C9C507D0F0A" : "OpenCast\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "PopCast",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "PopCast.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/acj\/OpenCast.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "3C57439D3CFC4E285A6CCFF070435C9C507D0F0A"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/NewChromantics\/PopCast.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "3EA6B5380D894491ED38119B2315A466F1D92D0C"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/SoylentGraham\/SoyLib.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "87907EAD08F9AC05484849759EAC4E8AE0659685"
+    }
+  ]
+}

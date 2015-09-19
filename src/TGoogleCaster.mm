@@ -3,6 +3,7 @@
 #if defined(TARGET_OSX)
 #include <OpenCast.h>
 #include <OCMediaMetaData.h>
+#include <OCDeviceScanner.h>
 #elif defined(TARGET_IOS)
 #include <GoogleCast/GoogleCast.h>
 #endif
@@ -11,11 +12,12 @@ extern NSString *const kOCMetadataKeySubtitle;
 #if defined(TARGET_OSX)
 typedef OCDevice GCKDevice;
 typedef OCDeviceScanner GCKDeviceScanner;
+typedef OCDeviceManager GCKDeviceManager;
 typedef OCMediaMetadata GCKMediaMetadata;
 typedef OCImage GCKImage;
 typedef OCMediaInformation GCKMediaInformation;
 typedef OCMediaControlChannel GCKMediaControlChannel;
-typedef OCDeviceScannerListener GCKDeviceScannerListener;
+#define GCKDeviceScannerListener OCDeviceScannerListener 	//	typedef doesn't work on @protocol?
 auto kGCKMetadataKeyTitle = kOCMetadataKeyTitle;
 auto kGCKMetadataKeySubtitle = kOCMetadataKeySubtitle;
 auto GCKMediaStreamTypeNone = OCMediaStreamTypeNone;
@@ -93,6 +95,10 @@ TCastDeviceMeta GetMeta(GCKDevice* Device)
 	TCastDeviceMeta Meta;
 
 	std::stringstream Address;
+	
+	auto RetainCount = [Device.ipAddress retainCount];
+	std::Debug << "ip address retain count " << RetainCount << std::endl;
+	
 	Address << Soy::NSStringToString( Device.ipAddress ) << ":" << Device.servicePort;
 	Meta.mAddress = Address.str();
 
@@ -373,6 +379,7 @@ launchedApplication:(BOOL)launchedApplication {
 										customData:nil];
 	
 	
-	[mMediaControl loadMedia:mediaInformation autoplay:Media.mAutoPlay?YES:NO playPosition:Media.mStartTime];
+	auto Result = [mMediaControl loadMedia:mediaInformation autoplay:Media.mAutoPlay?YES:NO playPosition:Media.mStartTime];
+	std::Debug << "Load media result: " << Result << std::endl;
 }
 
