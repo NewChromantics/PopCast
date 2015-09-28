@@ -59,6 +59,10 @@ class GoogleCast::TDevice : public TCaster
 public:
 	TDevice(void* GCKDevice);
 	
+	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode) override;
+	virtual void		Write(const SoyPixelsImpl& Image,SoyTime Timecode) override;
+
+protected:
 	void		Connect();
 	void		LoadMedia(const TMediaMeta& Media);
 	
