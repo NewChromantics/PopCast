@@ -383,3 +383,13 @@ launchedApplication:(BOOL)launchedApplication {
 	std::Debug << "Load media result: " << Result << std::endl;
 }
 
+void GoogleCast::TDevice::Write(const Opengl::TTexture& Image,SoyTime Timecode)
+{
+	throw Soy::AssertException("Not supported");
+}
+
+void GoogleCast::TDevice::Write(const SoyPixelsImpl& Image,SoyTime Timecode)
+{
+	throw Soy::AssertException("Not supported");
+}
+

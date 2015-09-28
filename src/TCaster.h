@@ -8,7 +8,8 @@
 class TCasterParams
 {
 public:
-	std::string		mName;
+	std::string		mName;		//	filename, device name etc
+	SoyPixelsMeta	mMeta;		//	if we know ahead of time the format of what we're outputting we can pre-prepare
 };
 
 class TCastDeviceMeta
@@ -32,6 +33,9 @@ inline std::ostream& operator<<(std::ostream &out,const TCastDeviceMeta&in)
 class TCaster
 {
 public:
+	//	throw if your caster can't support these
+	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode)=0;
+	virtual void		Write(const SoyPixelsImpl& Image,SoyTime Timecode)=0;
 };
 
 
