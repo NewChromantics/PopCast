@@ -30,8 +30,9 @@ class TH264Frame
 {
 public:
 	TFrameMeta		mMeta;
-	Array<uint8>	mFrame;
+	Array<uint8>	mFrame;	//	mpeg data, not NAL packet
 };
+
 
 
 //	http://asciiwwdc.com/2014/sessions/513

@@ -12,6 +12,7 @@
 #include <VideoToolbox/VTCompressionSession.h>
 #include <VideoToolbox/VTErrors.h>
 
+#include "AvfPixelBuffer.h"
 
 
 namespace AvfCompressor
@@ -140,9 +141,66 @@ AvfCompressor::TSession::~TSession()
 
 void AvfCompressor::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInfoFlags Flags)
 {
-	//	turn into frame
-	std::shared_ptr<TH264Frame> Frame;
+	/*
+	//	get the image buffer
+	CFPtr<CVImageBufferRef> LockedImageBuffer( CMSampleBufferGetImageBuffer(SampleBuffer) );
+	Soy::Assert( LockedImageBuffer!= nullptr, "Failed to lock image buffer from sample");
+	auto& ImageBuffer = LockedImageBuffer.mObject;
+	ImageBuffer.des
+	 */
+	
+	//	uou want to send SampleBuffer out over the network, which means you may need to switch these over to Elementary Stream packaging.
+	//	he parameters sets will in your MPEG-4 package, H.264 will be in the CMVideoFormatDescription.
+	//	extract those parameter sets and package them as NAL Units to send out over the network.
+	//	CMVideoFormatDescription GetH.264ParameterSetAtIndex.
+	//	All right, and the next thing you need to do is the opposite of what we did with AVSampleBufferDisplayLayer.
+	//	Our NAL Units are all going to have length headers and you're going to need to convert those length headers into start codes.
+	//	So as you extract each NAL Unit from the compressed data inside the CMSampleBuffer, convert those headers on the NAL Units.
+	
+	SoyTime DecodeTime = Soy::Platform::GetTime( CMSampleBufferGetOutputDecodeTimeStamp( SampleBuffer ) );
+	SoyTime PresentationTime = Soy::Platform::GetTime( CMSampleBufferGetOutputPresentationTimeStamp( SampleBuffer ) );
+	
+	
+	auto DataIsReady = CMSampleBufferDataIsReady( SampleBuffer );
+	
+	CMFormatDescriptionRef FormatDescription = CMSampleBufferGetFormatDescription( SampleBuffer );
+	auto Codec = Soy::Platform::GetCodec( FormatDescription );
+	auto Extensions = Soy::Platform::GetExtensions( FormatDescription );
+	
+	std::Debug << "OnCompressedFrame @" << DecodeTime << "/" << PresentationTime << ", ";
+	std::Debug << "Data is ready: " << DataIsReady << ", ";
+	std::Debug << "codec=" << Codec << ", ";
+	std::Debug << "Extensions=" << Codec << ", ";
+	std::Debug << std::endl;
+	
+	
+	
+	CMSampleBufferInvalidate( SampleBuffer );
+/*
+	
+	
+	CreateVideo
+	CMVideoFormatDescription(
+	
+	SampleBuffer->formatDe
+	
+	SampleBuffer
+	CMVideoFormatDescription
+	
+	
+	
+	
+							 //	turn into frame
+							 std::shared_ptr<TH264Frame> Frame;
+							 
+
 	mParent.PushCompressedFrame( Frame );
+	
+
+		CMSampleBufferInvalidate(mSample.mObject);
+*/
+	
+	
 }
 
 void AvfCompressor::TSession::OnError(const std::string& Error)

@@ -264,18 +264,14 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,SoyTime Timestamp,O
 	
 	try
 	{
-		std::shared_ptr<SoyPixels> Pixels;
-		auto ReadPixels = [&Texture,&Pixels]
+		std::shared_ptr<TCaster> Caster = mCaster;
+		auto ReadPixels = [Texture,Caster,Timestamp]
 		{
-			Pixels.reset( new SoyPixels() );
+			std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
 			Texture.Read( *Pixels );
+			Caster->Write( Pixels, Timestamp );
 		};
-		Soy::TSemaphore Semaphore;
-		Context.PushJob( ReadPixels, Semaphore );
-		Semaphore.Wait();
-		Soy::Assert( Pixels!=nullptr, "Pixel buffer failed to allocate");
-		
-		mCaster->Write( Pixels, Timestamp );
+		Context.PushJob( ReadPixels );
 		return;
 	}
 	catch(std::exception& e)
