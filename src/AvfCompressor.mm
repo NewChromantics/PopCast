@@ -39,13 +39,26 @@ public:
 };
 
 
+//	lots of errors in macerrors.h with no string conversion :/
+#define TESTENUMERROR(e,Enum)	if ( (e) == (Enum)	return ##Enum ;
+
 //	http://stackoverflow.com/questions/2196869/how-do-you-convert-an-iphone-osstatus-code-to-something-useful
 std::string GetString(OSStatus Status)
 {
+//	TESTENUMERROR(Status,x);
+	
+	//	could be fourcc?
+	return Soy::FourCCToString( CFSwapInt32HostToBig(Status) );
+	
 	NSBundle *bundle = [NSBundle bundleWithIdentifier:@"com.apple.security"];
 	NSString *key = [NSString stringWithFormat:@"%d", Status];
 	auto* StringNs = [bundle localizedStringForKey:key value:key table:@"SecErrorMessages"];
 	return Soy::NSStringToString( StringNs );
+}
+
+std::shared_ptr<AvfCompressor::TInstance> AvfCompressor::Allocate(const TCasterParams& Params)
+{
+	return std::shared_ptr<AvfCompressor::TInstance>( new AvfCompressor::TInstance(Params) );
 }
 
 
@@ -58,7 +71,8 @@ void AvfCompressor::IsOkay(OSStatus Error,const std::string& Context)
 	ErrorString << "OSStatus error in " << Context << ": " << GetString(Error);
 	throw Soy::AssertException( ErrorString.str() );
 }
-						   
+
+
 
 //	make compressor VTCompressionSession
 void OnCompressionOutput(void *outputCallbackRefCon,
@@ -93,7 +107,7 @@ AvfCompressor::TSession::TSession(TInstance& Parent,SoyPixelsMeta OutputMeta) :
 	NSDictionary *encoderSpec =
 	@{
 	  (id)kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder : @(YES),
-	  (id)kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder : @(YES),
+	  (id)kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder : @(NO),
 	  };
 	
 	auto Codec = kCMVideoCodecType_H264;
@@ -150,7 +164,7 @@ void AvfCompressor::TSession::Finish()
 
 
 
-AvfCompressor::TInstance::TInstance() :
+AvfCompressor::TInstance::TInstance(const TCasterParams& Params) :
 	mOutputMeta	( 256, 256, SoyPixelsFormat::RGBA )	//	gr: change this from RGBA to H264?
 {
 	//	allocate session
@@ -162,6 +176,12 @@ void PixelReleaseCallback(void *releaseRefCon, const void *baseAddress)
 {
 	
 }
+
+void AvfCompressor::TInstance::Write(const Opengl::TTexture& Image,SoyTime Timecode)
+{
+	throw Soy::AssertException("Not supported yet");
+}
+
 
 void AvfCompressor::TInstance::Write(const SoyPixelsImpl& Image,SoyTime Timecode)
 {

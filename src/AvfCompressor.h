@@ -6,6 +6,9 @@ namespace AvfCompressor
 {
 	class TInstance;
 	class TSession;		//	objc interface
+	
+	
+	std::shared_ptr<TInstance>	Allocate(const TCasterParams& Params);
 };
 
 
@@ -35,8 +38,9 @@ public:
 class AvfCompressor::TInstance : public TCaster
 {
 public:
-	TInstance();
+	TInstance(const TCasterParams& Params);
 	
+	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode) override;
 	virtual void		Write(const SoyPixelsImpl& Image,SoyTime Timecode) override;
 
 	void				PushCompressedFrame(std::shared_ptr<TH264Frame> Frame);

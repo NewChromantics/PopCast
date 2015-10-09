@@ -4,6 +4,48 @@ using System.Runtime.InteropServices;		// required for DllImport
 using System;								// requred for IntPtr
 
 
+
+
+public class TTexturePtrCache<TEXTURE> where TEXTURE : Texture
+{
+public TEXTURE			mTexture;
+public System.IntPtr	mPtr;
+};
+
+public class TexturePtrCache
+{
+static public System.IntPtr GetCache<T>(ref TTexturePtrCache<T> Cache,T texture) where T : Texture
+{
+if (Cache==null)
+return texture.GetNativeTexturePtr();
+
+if ( texture.Equals(Cache.mTexture) )
+return Cache.mPtr;
+Cache.mPtr = texture.GetNativeTexturePtr();
+if ( Cache.mPtr != System.IntPtr.Zero )
+Cache.mTexture = texture;
+return Cache.mPtr;
+}
+
+static public System.IntPtr GetCache(ref TTexturePtrCache<RenderTexture> Cache,RenderTexture texture)
+{
+if (Cache==null)
+return texture.GetNativeTexturePtr();
+
+if ( texture.Equals(Cache.mTexture) )
+return Cache.mPtr;
+var Prev = RenderTexture.active;
+RenderTexture.active = texture;
+Cache.mPtr = texture.GetNativeTexturePtr();
+RenderTexture.active = Prev;
+if ( Cache.mPtr != System.IntPtr.Zero )
+Cache.mTexture = texture;
+return Cache.mPtr;
+}
+};
+
+
+
 [StructLayout(LayoutKind.Sequential),Serializable]
 public class  PopCastParams
 {
@@ -25,6 +67,10 @@ public class PopCast
 
 	private ulong	mInstance = 0;
 	private static int	mPluginEventId = PopCast_GetPluginEventId();
+
+	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
+	private TTexturePtrCache<Texture2D>		mTexture2DPtrCache = new TTexturePtrCache<Texture2D>();
+	private TTexturePtrCache<RenderTexture>	mRenderTexturePtrCache = new TTexturePtrCache<RenderTexture>();
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate void DebugLogDelegate(string str);
@@ -74,6 +120,12 @@ public class PopCast
 	
 	[DllImport (PluginName)]
 	private static extern bool		FlushDebug([MarshalAs(UnmanagedType.FunctionPtr)]System.IntPtr FunctionPtr);
+
+	[DllImport (PluginName)]
+	private static extern bool		PopCast_UpdateTexture2D(ulong Instance,System.IntPtr TextureId,int Width,int Height,TextureFormat textureFormat);
+
+	[DllImport (PluginName)]
+	private static extern bool		PopCast_UpdateRenderTexture(ulong Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat);
 
 
 	public static void EnumDevices()
@@ -128,9 +180,22 @@ public class PopCast
 			FlushDebug (System.IntPtr.Zero);
 		}
 	}
-	
-	
-	public void Update()
+
+	public void UpdateTexture(RenderTexture Target)
+	{
+		Update ();
+		PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache( ref mRenderTexturePtrCache, Target ), Target.width, Target.height, Target.format );
+		FlushDebug ();
+	}
+
+	public void UpdateTexture(Texture2D Target)
+	{
+		Update ();
+		PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache( ref mTexture2DPtrCache, Target ), Target.width, Target.height, Target.format );
+		FlushDebug ();
+	}
+
+	private void Update()
 	{
 		GL.IssuePluginEvent (mPluginEventId);
 		FlushDebug();

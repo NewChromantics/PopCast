@@ -3,6 +3,9 @@
 #include "TGoogleCaster.h"
 #include "TAirplayCaster.h"
 
+#if defined(TARGET_OSX)||defined(TARGET_IOS)
+#include "AvfCompressor.h"
+#endif
 
 
 namespace PopCast
@@ -93,6 +96,26 @@ __export void	PopCast_EnumDevices()
 	}
 }
 
+__export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat)
+{
+	auto pInstance = PopCast::GetInstance( Instance );
+	if ( !pInstance )
+		return false;
+
+	//	todo
+	return true;
+}
+__export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat)
+{
+	auto pInstance = PopCast::GetInstance( Instance );
+	if ( !pInstance )
+		return false;
+	
+	//	todo
+	return true;
+}
+
+
 GoogleCast::TContext& PopCast::GetGoogleCastContext()
 {
 	if ( !PopCast::GoogleCastContext )
@@ -181,10 +204,14 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 		auto& Context = GetGoogleCastContext();
 		mCaster = Context.AllocDevice( Params );
 	}
+	else if ( Soy::StringTrimLeft( Params.mName, "h264:", false ) )
+	{
+		mCaster = AvfCompressor::Allocate(Params);
+	}
 	else
 	{
 		std::stringstream Error;
-		Error << "Don't know what caster to make. Try chromecast:";
+		Error << "Don't know what caster to make. Try chromecast: airplay: h264:";
 		throw Soy::AssertException( Error.str() );
 	}
 }

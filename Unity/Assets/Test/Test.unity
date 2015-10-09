@@ -214,7 +214,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d01ae05e90fd44fd7a9ed97c7b6799ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Wait: 10
+  Wait: 1
+  mOutputTarget: h264:hello
+  mOutputTexture: {fileID: 2800000, guid: 682cea168666a4ea3b084d7865818eb1, type: 3}
 --- !u!4 &843894333
 Transform:
   m_ObjectHideFlags: 0
