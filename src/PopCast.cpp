@@ -1,6 +1,7 @@
 #include "PopCast.h"
 #include "TCaster.h"
 #include "TGoogleCaster.h"
+#include "TAirplayCaster.h"
 
 
 
@@ -11,7 +12,11 @@ namespace PopCast
 	
 	std::shared_ptr<GoogleCast::TContext>	GoogleCastContext;
 	GoogleCast::TContext&					GetGoogleCastContext();
+	std::shared_ptr<Airplay::TContext>		AirplayContext;
+	Airplay::TContext&						GetAirplayContext();
 };
+
+
 
 
 
@@ -72,6 +77,16 @@ __export void	PopCast_EnumDevices()
 		std::Debug << e.what() << std::endl;
 	}
 	
+	try
+	{
+		auto& AirplayContext = PopCast::GetAirplayContext();
+		AirplayContext.EnumDevices( GetArrayBridge( Metas ) );
+	}
+	catch (std::exception& e)
+	{
+		std::Debug << e.what() << std::endl;
+	}
+	
 	for ( int i=0;	i<Metas.GetSize();	i++ )
 	{
 		std::Debug << Metas[i] << std::endl;
@@ -84,8 +99,20 @@ GoogleCast::TContext& PopCast::GetGoogleCastContext()
 	{
 		PopCast::GoogleCastContext.reset( new GoogleCast::TContext() );
 	}
-
+	
 	return *PopCast::GoogleCastContext;
+}
+
+
+
+Airplay::TContext& PopCast::GetAirplayContext()
+{
+	if ( !PopCast::AirplayContext )
+	{
+		PopCast::AirplayContext.reset( new Airplay::TContext() );
+	}
+	
+	return *PopCast::AirplayContext;
 }
 
 
@@ -144,7 +171,12 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	mRef		( Ref )
 {
 	//	try to alloc, if this fails it'll throw
-	if ( Soy::StringTrimLeft( Params.mName, "chromecast:", false ) )
+	if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
+	{
+		auto& Context = GetAirplayContext();
+		mCaster = Context.AllocDevice( Params );
+	}
+	else if ( Soy::StringTrimLeft( Params.mName, "chromecast:", false ) )
 	{
 		auto& Context = GetGoogleCastContext();
 		mCaster = Context.AllocDevice( Params );
