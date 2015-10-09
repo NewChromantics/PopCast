@@ -40,8 +40,8 @@ class AvfCompressor::TInstance : public TCaster
 public:
 	TInstance(const TCasterParams& Params);
 	
-	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode) override;
-	virtual void		Write(const SoyPixelsImpl& Image,SoyTime Timecode) override;
+	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
+	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
 
 	void				PushCompressedFrame(std::shared_ptr<TH264Frame> Frame);
 	void				OnError(const std::string& Error);

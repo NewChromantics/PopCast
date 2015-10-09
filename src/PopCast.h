@@ -37,6 +37,8 @@ public:
 	
 	TInstanceRef	GetRef() const		{	return mRef;	}
 	
+	void			WriteFrame(Opengl::TTexture Texture,SoyTime Timestamp,Opengl::TContext& Context);
+	
 public:
 	std::shared_ptr<TCaster>	mCaster;
 	

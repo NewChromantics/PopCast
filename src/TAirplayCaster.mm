@@ -127,12 +127,12 @@ Airplay::TDevice::TDevice(const TCasterParams& Params) :
 }
 
 
-void Airplay::TDevice::Write(const Opengl::TTexture& Image,SoyTime Timecode)
+void Airplay::TDevice::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported");
 }
 
-void Airplay::TDevice::Write(const SoyPixelsImpl& Image,SoyTime Timecode)
+void Airplay::TDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
 {
 	throw Soy::AssertException("Not supported");
 }

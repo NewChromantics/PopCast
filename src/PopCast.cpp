@@ -2,6 +2,7 @@
 #include "TCaster.h"
 #include "TGoogleCaster.h"
 #include "TAirplayCaster.h"
+#include "PopUnity.h"
 
 #if defined(TARGET_OSX)||defined(TARGET_IOS)
 #include "AvfCompressor.h"
@@ -102,8 +103,23 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 	if ( !pInstance )
 		return false;
 
-	//	todo
-	return true;
+	try
+	{
+		auto& Context = Unity::GetOpenglContext();
+		
+		//	assuming type atm... maybe we can extract it via opengl?
+		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
+		GLenum Type = GL_TEXTURE_2D;
+		Opengl::TTexture Texture( TextureId, Meta, Type );
+		SoyTime Now(true);
+		pInstance->WriteFrame( Texture, Now, Context );
+		return true;
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << __func__ << " failed: " << e.what() << std::endl;
+		return false;
+	}
 }
 __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat)
 {
@@ -111,8 +127,23 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	if ( !pInstance )
 		return false;
 	
-	//	todo
-	return true;
+	try
+	{
+		auto& Context = Unity::GetOpenglContext();
+
+		//	assuming type atm... maybe we can extract it via opengl?
+		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
+		GLenum Type = GL_TEXTURE_2D;
+		Opengl::TTexture Texture( TextureId, Meta, Type );
+		SoyTime Now(true);
+		pInstance->WriteFrame( Texture, Now, Context );
+		return true;
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << __func__ << " failed: " << e.what() << std::endl;
+		return false;
+	}
 }
 
 
@@ -216,3 +247,41 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	}
 }
 
+void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,SoyTime Timestamp,Opengl::TContext& Context)
+{
+	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	
+	try
+	{
+		mCaster->Write( Texture, Timestamp, Context );
+		return;
+	}
+	catch(std::exception& e)
+	{
+		//	failed, maybe pixels will be okay
+		std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+	}
+	
+	try
+	{
+		std::shared_ptr<SoyPixels> Pixels;
+		auto ReadPixels = [&Texture,&Pixels]
+		{
+			Pixels.reset( new SoyPixels() );
+			Texture.Read( *Pixels );
+		};
+		Soy::TSemaphore Semaphore;
+		Context.PushJob( ReadPixels, Semaphore );
+		Semaphore.Wait();
+		Soy::Assert( Pixels!=nullptr, "Pixel buffer failed to allocate");
+		
+		mCaster->Write( Pixels, Timestamp );
+		return;
+	}
+	catch(std::exception& e)
+	{
+		//	failed, maybe pixels will be okay
+		std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+	}
+	
+}

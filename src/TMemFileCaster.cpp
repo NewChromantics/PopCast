@@ -42,13 +42,15 @@ TMemFileCaster::TMemFileCaster(const TCasterParams& Params) :
 {
 }
 
-void TMemFileCaster::Write(const Opengl::TTexture& Image,SoyTime Timecode)
+void TMemFileCaster::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("todo");
 }
 
-void TMemFileCaster::Write(const SoyPixelsImpl& Image,SoyTime Timecode)
+void TMemFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
 {
+	auto& Image = *pImage;
+	
 	//	make sure file is allocated
 	AllocateFile( mFilename, Image.GetMeta() );
 	

@@ -34,8 +34,8 @@ class TMemFileCaster : public TCaster
 public:
 	TMemFileCaster(const TCasterParams& Params);
 	
-	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode) override;
-	virtual void		Write(const SoyPixelsImpl& Image,SoyTime Timecode) override;
+	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
+	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
 	
 protected:
 	void				AllocateFile(const std::string& Filename,const SoyPixelsMeta& Meta);

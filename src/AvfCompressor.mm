@@ -177,14 +177,15 @@ void PixelReleaseCallback(void *releaseRefCon, const void *baseAddress)
 	
 }
 
-void AvfCompressor::TInstance::Write(const Opengl::TTexture& Image,SoyTime Timecode)
+void AvfCompressor::TInstance::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported yet");
 }
 
 
-void AvfCompressor::TInstance::Write(const SoyPixelsImpl& Image,SoyTime Timecode)
+void AvfCompressor::TInstance::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
 {
+	auto& Image = *pImage;
 	Soy::Assert( mSession != nullptr, "Session expected" );
 
 	//	make CVPixelBuffer

@@ -34,8 +34,8 @@ class TCaster
 {
 public:
 	//	throw if your caster can't support these
-	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode)=0;
-	virtual void		Write(const SoyPixelsImpl& Image,SoyTime Timecode)=0;
+	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)=0;
+	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)=0;
 };
 
 
