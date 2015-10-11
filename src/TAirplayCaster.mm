@@ -74,8 +74,10 @@ Airplay::TContextInternal::~TContextInternal()
 
 
 Airplay::TContext::TContext() :
-	mInternal	( new TContextInternal(*this) )
+	mInternal		( new TContextInternal(*this) ),
+	mMulticaster	( new SoyMulticaster("_airplay._tcp") )
 {
+	
 }
 
 Airplay::TContext::~TContext()
@@ -88,7 +90,25 @@ void Airplay::TContext::EnumDevices(ArrayBridge<TCastDeviceMeta>&& Metas)
 	if ( !mInternal )
 		return;
 	
-	//mInternal->EnumDevices( Metas );
+	Array<TServiceMeta> ServiceMetas;
+	mMulticaster->EnumServices( GetArrayBridge(ServiceMetas) );
+	
+	//	convert
+	for ( int m=0;	m<ServiceMetas.GetSize();	m++ )
+	{
+		auto& ServiceMeta = ServiceMetas[m];
+		TCastDeviceMeta Meta;
+		
+		Meta.mVendor = ServiceMeta.mType;
+		Meta.mName = ServiceMeta.mName;
+		Meta.mSerial = ServiceMeta.mHostName;
+		
+		std::stringstream Address;
+		Address << ServiceMeta.mHostName << ":" << ServiceMeta.mPort;
+		Meta.mAddress = Address.str();
+		
+		Metas.PushBack( Meta );
+	}
 }
 
 

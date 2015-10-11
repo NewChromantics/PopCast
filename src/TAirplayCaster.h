@@ -2,6 +2,7 @@
 
 #include "TCaster.h"
 #include "SoyHttpConnection.h"
+#include "SoyMulticast.h"
 
 
 namespace Airplay
@@ -28,6 +29,7 @@ public:
 
 	
 private:
+	std::shared_ptr<SoyMulticaster>			mMulticaster;
 	std::shared_ptr<TContextInternal>		mInternal;
 };
 
