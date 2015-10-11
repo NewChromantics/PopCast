@@ -139,15 +139,23 @@ AvfCompressor::TSession::~TSession()
 	}
 }
 
+
+void IsOkay(CVReturn Error,const std::string& Context)
+{
+	if ( Error == kCVReturnSuccess )
+		return;
+	
+	throw Soy::AssertException( Context );
+}
+
 void AvfCompressor::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInfoFlags Flags)
 {
-	/*
 	//	get the image buffer
-	CFPtr<CVImageBufferRef> LockedImageBuffer( CMSampleBufferGetImageBuffer(SampleBuffer) );
-	Soy::Assert( LockedImageBuffer!= nullptr, "Failed to lock image buffer from sample");
+	CFPtr<CVImageBufferRef> LockedImageBuffer( CMSampleBufferGetImageBuffer(SampleBuffer), false );
+	Soy::Assert( LockedImageBuffer, "Failed to lock image buffer from sample");
 	auto& ImageBuffer = LockedImageBuffer.mObject;
-	ImageBuffer.des
-	 */
+	//ImageBuffer.des
+	
 	
 	//	uou want to send SampleBuffer out over the network, which means you may need to switch these over to Elementary Stream packaging.
 	//	he parameters sets will in your MPEG-4 package, H.264 will be in the CMVideoFormatDescription.
@@ -166,6 +174,31 @@ void AvfCompressor::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,V
 	CMFormatDescriptionRef FormatDescription = CMSampleBufferGetFormatDescription( SampleBuffer );
 	auto Codec = Soy::Platform::GetCodec( FormatDescription );
 	auto Extensions = Soy::Platform::GetExtensions( FormatDescription );
+	
+	
+	//	grab pixels
+	bool ReadOnlyLock = true;
+	auto Error = CVPixelBufferLockBaseAddress( ImageBuffer, ReadOnlyLock ? kCVPixelBufferLock_ReadOnly : 0 );
+	AvfCompressor::IsOkay( Error, "CVPixelBufferLockBaseAddress" );
+
+	try
+	{
+		auto Height = CVPixelBufferGetHeight( ImageBuffer );
+		auto Width = CVPixelBufferGetWidth( ImageBuffer );
+		auto* Pixels = CVPixelBufferGetBaseAddress(ImageBuffer);
+		auto DataSize = CVPixelBufferGetDataSize(ImageBuffer);
+		Soy::Assert( Pixels, "Failed to get base address of pixels" );
+		/*
+		SoyPixelsRemote Temp( reinterpret_cast<uint8*>(Pixels), Width, Height, DataSize, mFormat );
+		mLockedPixels[0] = Temp;
+		Planes.PushBack( &mLockedPixels[0] );
+		 */
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << "Pixel buffer error: " << e.what() << std::endl;
+	}
+	
 	
 	std::Debug << "OnCompressedFrame @" << DecodeTime << "/" << PresentationTime << ", ";
 	std::Debug << "Data is ready: " << DataIsReady << ", ";
