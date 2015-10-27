@@ -4,89 +4,6 @@
 
 
 
-TSocketReadThread::TSocketReadThread(std::shared_ptr<SoySocket>& Socket,SoyRef ConnectionRef) :
-TStreamReader	( "TSocketReadThread" ),
-mSocket			( Socket ),
-mConnectionRef	( ConnectionRef )
-{
-	
-}
-
-
-
-void TSocketReadThread::Read()
-{
-	SoySocketConnection	ClientSocket = mSocket->GetConnection( mConnectionRef );
-	if ( !ClientSocket.IsValid() )
-	{
-		//	lost connection
-		throw Soy::AssertException("Connection lost");
-	}
-	
-	//	gr use a larger static buffer so we can stream locally much faster than in 1024 chunks
-	//static int BufferSize = 1024*1024*20;	//	Xmb a time should be plenty... maybe query for the actual socket limit jsut so we don't go silly with memory
-	static int BufferSize = 100;	//	Xmb a time should be plenty... maybe query for the actual socket limit jsut so we don't go silly with memory
-	auto& Buffer = mRecvBuffer;
-	Buffer.SetSize( BufferSize );
-	
-	
-	//	throws on error
-	if ( !ClientSocket.Recieve( GetArrayBridge(Buffer) ) )
-	{
-		//	graceful close
-		throw Soy::AssertException("Gracefull close");
-	}
-	
-	mReadBuffer.Push( GetArrayBridge( Buffer ) );
-}
-
-
-
-TSocketWriteThread::TSocketWriteThread(std::shared_ptr<SoySocket>& Socket,SoyRef ConnectionRef) :
-TStreamWriter	( "TSocketWriteThread" ),
-mSocket			( Socket ),
-mConnectionRef	( ConnectionRef )
-{
-}
-
-void TSocketWriteThread::Write(TStreamBuffer& Buffer)
-{
-	//	keep writing until buffer is empty
-	while ( !Buffer.IsEmpty() )
-	{
-		SoySocketConnection	ClientSocket = mSocket->GetConnection( mConnectionRef );
-		if ( !ClientSocket.IsValid() )
-		{
-			//	lost connection
-			throw Soy::AssertException("Connection lost");
-		}
-		
-		static size_t PopMaxSize = 1024 * 1024 * 1;
-		size_t PopSize = std::min( PopMaxSize, Buffer.GetBufferedSize() );
-		if ( !Buffer.Pop( PopSize, GetArrayBridge(mSendBuffer) ) )
-		{
-			std::Debug << "Buffer data has gone missing. Trying again" << std::endl;
-			continue;
-		}
-		
-		//	write to socket
-		try
-		{
-			ClientSocket.Send( GetArrayBridge(mSendBuffer), mSocket->IsUdp() );
-		}
-		catch (std::exception& e)
-		{
-			mSocket->OnError( mConnectionRef, e.what() );
-			throw;
-		}
-	}
-}
-
-
-
-
-
-
 THttpConnection::THttpConnection(const std::string& Url) :
 	SoyWorkerThread	( "THttpConnection", SoyWorkerWaitMode::Sleep ),
 	mSocket			( new SoySocket )
@@ -114,38 +31,35 @@ THttpConnection::THttpConnection(const std::string& Url) :
 	{
 		std::string Hostname;
 		uint16 Port;
-		if ( !SoySocket::GetHostnameAndPortFromAddress( Hostname, Port, mServerAddress ) )
+		try
+		{
+			Soy::SplitHostnameAndPort( Hostname, Port, mServerAddress );
+		}
+		catch (...)
 		{
 			mServerAddress += ":80";
 		}
 		
 		//	fail if it doesn't succeed again
-		if ( !SoySocket::GetHostnameAndPortFromAddress( Hostname, Port, mServerAddress ) )
-		{
-			std::stringstream Error;
-			Error << "Failed to split hostname & port from " << ServerAndUrl[0];
-			throw Soy::AssertException( Error.str() );
-		}
+		Soy::SplitHostnameAndPort( Hostname, Port, mServerAddress );
 	}
 	
-	
-	mUrl = ServerAndUrl[1];
-	
-	std::Debug << "Split Http fetch to server=" << mServerAddress << " and url=" << mUrl << std::endl;
+	std::Debug << "Split Http fetch to server=" << mServerAddress << std::endl;
 }
 
 void THttpConnection::Shutdown()
 {
+	if ( mSocket )
+	{
+		mSocket->Close();
+	}
+	
 	if ( mReadThread )
 	{
 		mReadThread->WaitToFinish();
 		mReadThread.reset();
 	}
-	
-	if ( mSocket )
-	{
-		mSocket->Close();
-	}
+
 }
 
 
@@ -165,6 +79,8 @@ bool THttpConnection::Iteration()
 			{
 				throw Soy::AssertException("Connecton failed");
 			}
+			
+			FlushRequestQueue();
 			
 			if ( !mReadThread )
 			{
@@ -205,15 +121,40 @@ void THttpConnection::SendRequest(std::shared_ptr<Http::TRequestProtocol> Reques
 	Soy::Assert( Request != nullptr, "Request expected" );
 	auto pRequest = std::dynamic_pointer_cast<Soy::TWriteProtocol>( Request );
 	
+	//	set host automatically
+	if ( Request->mHost.empty() )
+	{
+		Request->mHost = mServerAddress;
+	}
+	
+	mRequestQueue.PushBack( Request );
+	FlushRequestQueue();
+	
+}
+
+void THttpConnection::FlushRequestQueue()
+{
+	//	gotta wait for a connection!
+	if ( !mSocket || !mConnectionRef.IsValid() )
+		return;
+	
 	//	make thread if we don't have one
 	if ( !mWriteThread )
 	{
 		mWriteThread.reset( new THttpWriteThread(mSocket,mConnectionRef) );
+		mWriteThread->mOnStreamError.AddListener( mOnError );
 		mWriteThread->Start();
+		
 	}
 	
-	mWriteThread->Push( pRequest );
+	while ( !mRequestQueue.IsEmpty() )
+	{
+		auto QueueRequest = mRequestQueue.PopAt(0);
+		std::shared_ptr<Soy::TWriteProtocol> Request = QueueRequest;
+		mWriteThread->Push( Request );
+	}
 }
+
 
 void THttpConnection::SendRequest(const Http::TRequestProtocol& Request)
 {

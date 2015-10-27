@@ -3,6 +3,7 @@
 #include "TCaster.h"
 #include "SoyHttpConnection.h"
 #include "SoyMulticast.h"
+#include <SoySocketStream.h>
 
 
 namespace Airplay
@@ -10,7 +11,8 @@ namespace Airplay
 	class TContext;
 	class TContextInternal;	//	objective-c classes
 	
-	class TDevice;
+	class TMirrorDevice;
+	typedef TMirrorDevice TDevice;
 	class TDeviceInternal;
 }
 
@@ -34,19 +36,20 @@ private:
 };
 
 
-class Airplay::TDevice : public TCaster
+class Airplay::TMirrorDevice : public TCaster
 {
 public:
-	TDevice(const TCasterParams& Params);
+	TMirrorDevice(const std::string& Name,const std::string& Address,const TCasterParams& Params);
 	
 	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
 	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
 
 protected:
+	bool				mSentHeader;	//	when sent, we're just sending video stream
+	std::string			mServerXml;
 	
 public:
 	std::shared_ptr<THttpConnection>	mConnection;
-	std::shared_ptr<THttpConnection>	mReverseConnection;
 	std::shared_ptr<TDeviceInternal>	mInternal;
 };
 

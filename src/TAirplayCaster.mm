@@ -103,8 +103,12 @@ void Airplay::TContext::EnumDevices(ArrayBridge<TCastDeviceMeta>&& Metas)
 		Meta.mName = ServiceMeta.mName;
 		Meta.mSerial = ServiceMeta.mHostName;
 		
+		//	hostnames in multicast end in a . remove it
+		std::string Hostname = ServiceMeta.mHostName;
+		Soy::StringTrimRight( Hostname, ".", true );
+		
 		std::stringstream Address;
-		Address << ServiceMeta.mHostName << ":" << ServiceMeta.mPort;
+		Address << Hostname << ":" << ServiceMeta.mPort;
 		Meta.mAddress = Address.str();
 		
 		Metas.PushBack( Meta );
@@ -117,12 +121,26 @@ std::shared_ptr<Airplay::TDevice> Airplay::TContext::AllocDevice(TCasterParams P
 	if ( !mInternal )
 		return nullptr;
 	
+	Array<TCastDeviceMeta> Metas;
+	EnumDevices( GetArrayBridge(Metas) );
+	
+	//	look for magic params
+	if ( Params.mName == "*" )
+	{
+		if ( !Metas.IsEmpty() )
+		{
+			auto& Meta = Metas[0];
+			return std::shared_ptr<Airplay::TDevice>( new Airplay::TMirrorDevice( Meta.mName, Meta.mAddress, Params ) );
+		}
+	}
+	
 	return nullptr;
 }
 
 
-Airplay::TDevice::TDevice(const TCasterParams& Params) :
-	mInternal	( new TDeviceInternal(*this) )
+Airplay::TMirrorDevice::TMirrorDevice(const std::string& Name,const std::string& Address,const TCasterParams& Params) :
+	mInternal	( new TDeviceInternal(*this) ),
+	mSentHeader	( false )
 {
 	//	http://nto.github.io/AirPlay.html#introduction
 	auto OnConnected = [](bool&)
@@ -137,22 +155,43 @@ Airplay::TDevice::TDevice(const TCasterParams& Params) :
 	{
 		std::Debug << "AppleTv connection error: " << Error << std::endl;
 	};
+
+	//	mirroring has a specific port
+	std::string Hostname;
+	try
+	{
+		uint16 Port;
+		Soy::SplitHostnameAndPort( Hostname, Port, Address );
+	}
+	catch(...)
+	{
+		Hostname = Address;
+	}
+	std::stringstream MirrorAddress;
+	MirrorAddress << "http://" << Hostname << ":7100";
 	
 	//	create http connections to device
-	mConnection.reset( new THttpConnection( Params.mName ) );
+	mConnection.reset( new THttpConnection( MirrorAddress.str() ) );
 	mConnection->mOnConnected.AddListener( OnConnected );
 	mConnection->mOnResponse.AddListener( OnHttpResponse );
 	mConnection->mOnError.AddListener( OnError );
 	mConnection->Start();
+	
+	
+	Http::TRequestProtocol ServerXmlRequest;
+	ServerXmlRequest.mUrl = "stream.xml";
+	ServerXmlRequest.mHeaders["Accept"] = "*/*";
+	ServerXmlRequest.mHeaders["User-Agent"] = "curl/7.43.0";
+	mConnection->SendRequest( ServerXmlRequest );
 }
 
 
-void Airplay::TDevice::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+void Airplay::TMirrorDevice::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported");
 }
 
-void Airplay::TDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
+void Airplay::TMirrorDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
 {
 	throw Soy::AssertException("Not supported");
 }

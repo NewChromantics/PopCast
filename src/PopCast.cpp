@@ -263,7 +263,7 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,Opengl::TContext& C
 	catch(std::exception& e)
 	{
 		//	failed, maybe pixels will be okay
-		std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+		//std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
 	}
 	
 	try
@@ -281,7 +281,7 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,Opengl::TContext& C
 	catch(std::exception& e)
 	{
 		//	failed, maybe pixels will be okay
-		std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+		//std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
 	}
 	
 }
