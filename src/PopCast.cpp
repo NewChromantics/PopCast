@@ -3,6 +3,7 @@
 #include "TGoogleCaster.h"
 #include "TAirplayCaster.h"
 #include "PopUnity.h"
+#include "TFileCaster.h"
 
 #if defined(TARGET_OSX)||defined(TARGET_IOS)
 #include "AvfCompressor.h"
@@ -111,8 +112,7 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		GLenum Type = GL_TEXTURE_2D;
 		Opengl::TTexture Texture( TextureId, Meta, Type );
-		SoyTime Now(true);
-		pInstance->WriteFrame( Texture, Now, Context );
+		pInstance->WriteFrame( Texture, Context );
 		return true;
 	}
 	catch(std::exception& e)
@@ -135,8 +135,7 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		GLenum Type = GL_TEXTURE_2D;
 		Opengl::TTexture Texture( TextureId, Meta, Type );
-		SoyTime Now(true);
-		pInstance->WriteFrame( Texture, Now, Context );
+		pInstance->WriteFrame( Texture, Context );
 		return true;
 	}
 	catch(std::exception& e)
@@ -222,9 +221,10 @@ bool PopCast::Free(TInstanceRef Instance)
 
 
 PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
-	mRef		( Ref )
+	mRef			( Ref ),
+	mBaseTimestamp	( true )	//	timestamps based on now
 {
-	//	try to alloc, if this fails it'll throw
+	
 	if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
 	{
 		auto& Context = GetAirplayContext();
@@ -235,9 +235,9 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 		auto& Context = GetGoogleCastContext();
 		mCaster = Context.AllocDevice( Params );
 	}
-	else if ( Soy::StringTrimLeft( Params.mName, "h264:", false ) )
+	else if ( Soy::StringTrimLeft( Params.mName, "file:", false ) )
 	{
-		mCaster = AvfCompressor::Allocate(Params);
+		mCaster.reset( new TFileCaster(Params) );
 	}
 	else
 	{
@@ -247,9 +247,13 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	}
 }
 
-void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,SoyTime Timestamp,Opengl::TContext& Context)
+void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,Opengl::TContext& Context)
 {
 	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	
+	//	make relative timestamp
+	SoyTime Timestamp(true);
+	Timestamp -= mBaseTimestamp;
 	
 	try
 	{

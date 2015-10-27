@@ -1,56 +1,66 @@
 #pragma once
 
 #include "TCaster.h"
+#include <SoyMedia.h>
 
-namespace AvfCompressor
+
+namespace Avf
 {
-	class TInstance;
+	class TEncoder;		//	SoyMediaEncoder
 	class TSession;		//	objc interface
-	
-	
-	std::shared_ptr<TInstance>	Allocate(const TCasterParams& Params);
+	class TParams;
 };
 
 
+namespace H264ProfileLevel
+{
+	enum Type
+	{
+		Invalid,
+		Baseline,
+	};
+	
+	DECLARE_SOYENUM(H264ProfileLevel);
+}
 
-class TFrameMeta
+
+
+class Avf::TParams
 {
 public:
-	TFrameMeta() :
-		mKeyframe	( false )
+	TParams() :
+		mAverageBitrate		( 1000 ),
+		mProfile			( H264ProfileLevel::Baseline ),
+		mRealtimeEncoding	( true ),
+		mRequireHardwareAcceleration	( false ),
+		mMaxKeyframeInterval	( 2000ull )
 	{
 	}
-	
-public:
-	SoyTime		mTime;
-	bool		mKeyframe;
-};
 
-class TH264Frame
-{
 public:
-	TFrameMeta		mMeta;
-	Array<uint8>	mFrame;	//	mpeg data, not NAL packet
+	bool					mRequireHardwareAcceleration;
+	size_t					mAverageBitrate;
+	H264ProfileLevel::Type	mProfile;
+	bool					mRealtimeEncoding;
+	SoyTime					mMaxKeyframeInterval;	//	Videotoolbox actually restricts this per-second. 0 is no-limit
 };
 
 
 
-//	http://asciiwwdc.com/2014/sessions/513
-class AvfCompressor::TInstance : public TCaster
+class Avf::TEncoder : public TMediaEncoder
 {
 public:
-	TInstance(const TCasterParams& Params);
+	TEncoder(const TCasterParams& Params,std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex);
 	
 	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
 	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
 
-	void				PushCompressedFrame(std::shared_ptr<TH264Frame> Frame);
 	void				OnError(const std::string& Error);
-
+	
 public:
 	std::shared_ptr<TSession>	mSession;
 	SoyPixelsMeta				mOutputMeta;
-	Array<std::shared_ptr<TH264Frame>>	mFrames;
+	TMediaPacketBuffer			mFrames;
 };
 
 

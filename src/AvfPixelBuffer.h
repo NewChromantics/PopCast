@@ -9,6 +9,7 @@
 #include "PopUnity.h"
 #include <SoyEvent.h>
 #include <SoyThread.h>
+#include <SoyMedia.h>
 
 #if defined(__OBJC__)
 #import <Foundation/Foundation.h>
@@ -34,26 +35,6 @@ namespace Soy
 		std::string		GetExtensions(CMFormatDescriptionRef FormatDescription);
 	}
 }
-
-
-
-class TPixelBuffer
-{
-public:
-	//	different paths return arrays now - shader/fbo blit is pretty generic now so move it out of pixel buffer
-	//	generic array, handle that internally (each implementation tends to have it's own lock info anyway)
-	//	for future devices (metal, dx), expand these
-	//	if 1 texture assume RGB/BGR greyscale etc
-	//	if multiple, assuming YUV
-	//virtual void		Lock(ArrayBridge<Metal::TTexture>&& Textures)=0;
-	//virtual void		Lock(ArrayBridge<Cuda::TTexture>&& Textures)=0;
-	//virtual void		Lock(ArrayBridge<Opencl::TTexture>&& Textures)=0;
-	virtual void		Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context)=0;
-	virtual void		Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context)=0;
-	virtual void		Lock(ArrayBridge<SoyPixelsImpl*>&& Textures)=0;
-	virtual void		Unlock()=0;
-};
-
 
 
 
