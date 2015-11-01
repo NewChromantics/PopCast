@@ -8,10 +8,6 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 {
 	auto& Filename = Params.mName;
 	
-	//	open file
-	mFileStream = std::ofstream( Filename, std::ios::out );
-	Soy::Assert( mFileStream.is_open(), std::string("Failed to open ")+Filename );
-	
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 	this->WakeOnEvent( mFrameBuffer->mOnNewPacket );
@@ -21,9 +17,10 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	mEncoder.reset( new Avf::TEncoder( Params, mFrameBuffer, StreamIndex ) );
 	
 	//	alloc muxer
-	mMulitplexer.reset( new TMultiplexerMp4( mFileData ) );
-	this->WakeOnEvent( mFileData.mOnDataPushed );
-	
+	mFileStream.reset( new TFileStreamWriter( Filename ) );
+	mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
+
+	mFileStream->Start();
 	Start();
 }
 
@@ -31,15 +28,17 @@ TFileCaster::~TFileCaster()
 {
 	//	wait for encoder
 	mEncoder.reset();
-
+	mMuxer.reset();
+	mFileStream.reset();
+	
 	WaitToFinish();
-	mFileStream.close();
 	
 	mFrameBuffer.reset();
 }
 
 bool TFileCaster::Iteration()
 {
+	/*
 	//	push frames to muxer
 	while ( true )
 	{
@@ -51,7 +50,7 @@ bool TFileCaster::Iteration()
 				break;
 
 			auto& Packet = *pPacket;
-			mMulitplexer->Push( Packet );
+			mMuxer->Push( Packet );
 		
 		}
 		catch (std::exception& e)
@@ -60,32 +59,7 @@ bool TFileCaster::Iteration()
 			break;
 		}
 	}
-	
-	//	write to file
-	while ( mFileData.GetBufferedSize() > 0 )
-	{
-		try
-		{
-			Array<char> Buffer;
-			if ( !mFileData.Pop( mFileData.GetBufferedSize(), GetArrayBridge(Buffer) ) )
-				break;
-			
-			if ( Buffer.IsEmpty() )
-				break;
-			
-			//	write frame
-			mFileStream.write( Buffer.GetArray(), Buffer.GetDataSize() );
-			
-			//Soy::Assert( File.fail(), "Error writing to file" );
-			Soy::Assert( !mFileStream.bad(), "Error writing to file" );
-		}
-		catch (std::exception& e)
-		{
-			std::Debug << "TFileCaster write-file error: " << e.what() << std::endl;
-			break;
-		}
-	}
-
+*/
 	return true;
 }
 

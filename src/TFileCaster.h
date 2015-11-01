@@ -3,6 +3,8 @@
 #include "TCaster.h"
 #include <fstream>
 #include <SoyStream.h>
+#include "SoyMpeg2Ts.h"
+
 
 class TMediaPacket;
 class TMediaEncoder;
@@ -105,11 +107,9 @@ protected:
 
 protected:
 	std::shared_ptr<TMediaEncoder>		mEncoder;
-	std::shared_ptr<TMultiplexerMp4>	mMulitplexer;
 	std::shared_ptr<TMediaPacketBuffer>	mFrameBuffer;
-
-	std::ofstream		mFileStream;
-	TStreamBuffer		mFileData;
+	std::shared_ptr<TMpeg2TsMuxer>		mMuxer;
+	std::shared_ptr<TStreamWriter>		mFileStream;
 };
 
 
