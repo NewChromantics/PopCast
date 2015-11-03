@@ -18,7 +18,15 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	
 	//	alloc muxer
 	mFileStream.reset( new TFileStreamWriter( Filename ) );
-	mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
+	
+	if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
+	{
+		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
+	}
+	else
+	{
+		mMuxer.reset( new TRawMuxer( mFileStream, mFrameBuffer ) );
+	}
 
 	mFileStream->Start();
 	Start();
@@ -268,3 +276,49 @@ void SoyMediaAtom::Write(TStreamBuffer& Data)
 	
 }
 */
+
+class TRawWriteProtocol : public Soy::TWriteProtocol
+{
+public:
+	TRawWriteProtocol(std::shared_ptr<TMediaPacket> Packet) :
+		mPacket	( Packet )
+	{
+	}
+
+	virtual void					Encode(TStreamBuffer& Buffer) override
+	{
+		Buffer.Push( GetArrayBridge( mPacket->mData ) );
+	}
+	
+	std::shared_ptr<TMediaPacket>	mPacket;
+};
+
+TRawMuxer::TRawMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
+	TMediaMuxer		( Output, Input, "TRawMuxer" ),
+	mStreamIndex	( -1 )
+{
+	
+}
+
+void TRawMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
+{
+	//	first packet!
+	if ( mStreamIndex == -1 )
+		mStreamIndex = size_cast<int>(Packet->mMeta.mStreamIndex);
+	
+	//	ignore packets from different streams
+	if ( mStreamIndex != Packet->mMeta.mStreamIndex )
+	{
+		std::stringstream Error;
+		Error << __func__ << " ignoring packet from stream " << Packet->mMeta.mStreamIndex << ", filtering only " << mStreamIndex;
+		std::Debug << Error.str() << std::endl;
+		return;
+	}
+	
+	//	write out
+	std::shared_ptr<Soy::TWriteProtocol> Protocol( new TRawWriteProtocol( Packet ) );
+	Output.Push( Protocol );
+}
+	
+
+
