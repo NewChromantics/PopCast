@@ -116,24 +116,17 @@ public:
 };
 
 
-//	rename this and TMediaExtractor to match (muxer and demuxer?)
-class TMpeg2TsMuxer : public SoyWorkerThread
+class TMpeg2TsMuxer : public TMediaMuxer
 {
 public:
 	TMpeg2TsMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input);
 	
-	virtual bool			Iteration() override;	//	pop next packet and push a Mpeg2Ts protocol
-	virtual bool			CanSleep() override;
-	
 protected:
+	virtual void			ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
 	Mpeg2Ts::TStreamMeta&	GetStreamMeta(const ::TStreamMeta& Stream);
 	void					UpdatePatPmt(const TMediaPacket& Packet);
 	
 public:
-	SoyListenerId							mOnPacketListener;
-	std::shared_ptr<TStreamWriter>			mOutput;
-	std::shared_ptr<TMediaPacketBuffer>		mInput;
-	
 	Array<Mpeg2Ts::TProgramMeta>			mPrograms;
 	std::map<size_t,Mpeg2Ts::TStreamMeta>	mStreamMetas;
 	size_t									mPacketCounter;

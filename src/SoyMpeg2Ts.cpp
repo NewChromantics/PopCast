@@ -817,92 +817,62 @@ void Mpeg2Ts::TPmtPacket::Encode(TStreamBuffer& Buffer)
 	Buffer.Push( GetArrayBridge( mPayload ) );
 }
 
+
+
+
 TMpeg2TsMuxer::TMpeg2TsMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
-	SoyWorkerThread	( "TMpeg2TsMuxer", SoyWorkerWaitMode::Wake ),
-	mPacketCounter	( 0 ),
-	mOutput			( Output ),
-	mInput			( Input )
+	TMediaMuxer		( Output, Input, "TMpeg2TsMuxer" ),
+	mPacketCounter	( 0 )
 {
-	Soy::Assert( mOutput!=nullptr, "TMpeg2TsMuxer output missing");
-	Soy::Assert( mInput!=nullptr, "TMpeg2TsMuxer input missing");
-	mOnPacketListener = WakeOnEvent( mInput->mOnNewPacket );
-	
 	mPrograms.PushBack( Mpeg2Ts::TProgramMeta( AP4_MPEG2_TS_DEFAULT_PID_VIDEO, AP4_MPEG2_TS_DEFAULT_PID_PMT ) );
-	
-	Start();
 }
 
 
-bool TMpeg2TsMuxer::CanSleep()
+void TMpeg2TsMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStreamWriter& Output)
 {
-	if ( !mInput )
-		return true;
-	if ( !mInput->HasPackets() )
-		return true;
-	
-	return false;
-}
-
-bool TMpeg2TsMuxer::Iteration()
-{
-	//	pop next packet
-	if ( !mInput )
-		return true;
-	
-	auto Packet = mInput->PopPacket();
-	if ( !Packet )
-		return true;
-
+	auto& Packet = *pPacket;
 	static bool HoldSps = true;
 	if ( HoldSps )
 	{
-		if ( Packet->mMeta.mCodec == SoyMediaFormat::H264_SPS_ES )
+		if ( Packet.mMeta.mCodec == SoyMediaFormat::H264_SPS_ES )
 		{
-			mSpsPacket = Packet;
-			return true;
+			mSpsPacket = pPacket;
+			return;
 		}
 		
-		if ( Packet->mMeta.mCodec == SoyMediaFormat::H264_PPS_ES )
+		if ( Packet.mMeta.mCodec == SoyMediaFormat::H264_PPS_ES )
 		{
-			mPpsPacket = Packet;
-			return true;
+			mPpsPacket = pPacket;
+			return;
 		}
 	}
 	
-	try
+	auto StreamMeta = GetStreamMeta( Packet.mMeta );
+
+	UpdatePatPmt( Packet );
+
+	static bool WriteSps = true;
+
+	if ( Packet.mMeta.mCodec == SoyMediaFormat::H264_SPS_ES || Packet.mMeta.mCodec == SoyMediaFormat::H264_PPS_ES )
 	{
-		auto StreamMeta = GetStreamMeta( Packet->mMeta );
-
-		UpdatePatPmt( *Packet );
-
-		static bool WriteSps = true;
-
-		if ( Packet->mMeta.mCodec == SoyMediaFormat::H264_SPS_ES || Packet->mMeta.mCodec == SoyMediaFormat::H264_PPS_ES )
+		if ( WriteSps )
 		{
-			if ( WriteSps )
-			{
-				std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( Packet, StreamMeta, mPacketCounter++, mSpsPacket, mPpsPacket ) );
-				mOutput->Push( Mpeg2TsPacket );
-			}
-		}
-		else
-			{
-			
-			static bool WriteFrames = false;
-			if ( WriteFrames )
-			{
-				std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( Packet, StreamMeta, mPacketCounter++, mSpsPacket, mPpsPacket ) );
-				mOutput->Push( Mpeg2TsPacket );
-			}
+			std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( pPacket, StreamMeta, mPacketCounter++, mSpsPacket, mPpsPacket ) );
+			mOutput->Push( Mpeg2TsPacket );
 		}
 	}
-	catch (std::exception& e)
+	else
 	{
-		std::Debug << __func__ << " error; " << e.what() << std::endl;
+		
+		static bool WriteFrames = true;
+		if ( WriteFrames )
+		{
+			std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( pPacket, StreamMeta, mPacketCounter++, mSpsPacket, mPpsPacket ) );
+			mOutput->Push( Mpeg2TsPacket );
+		}
 	}
-	
-	return true;
 }
+
 
 void TMpeg2TsMuxer::UpdatePatPmt(const TMediaPacket& Packet)
 {
