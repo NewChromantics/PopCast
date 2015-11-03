@@ -111,7 +111,8 @@ void H264::ConvertToEs(SoyMediaFormat::Type& Format,ArrayBridge<uint8>&& Data)
 	
 	ReformatDeliminator( Data, ExtractChunkDelin, InsertChunkDelin );
 
-	
+	//	finally update the format
+	Format = SoyMediaFormat::H264_ES;
 }
 
 
