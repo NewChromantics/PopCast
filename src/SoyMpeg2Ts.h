@@ -12,8 +12,27 @@ namespace Mpeg2Ts
 	class TPatPacket;
 	class TPmtPacket;
 	class TStreamMeta;
+	class TProgramMeta;
 }
 
+
+class Mpeg2Ts::TProgramMeta
+{
+public:
+	TProgramMeta(uint16 ProgramId,uint16 PmtPid) :
+		mProgramId	( ProgramId ),
+		mPmtPid		( PmtPid )
+	{
+	}
+	TProgramMeta() :
+		mProgramId	( 0 ),
+		mPmtPid		( 0 )
+	{
+	}
+public:
+	uint16		mProgramId;
+	uint16		mPmtPid;
+};
 
 
 class Mpeg2Ts::TStreamMeta
@@ -30,6 +49,8 @@ public:
 		mProgramId	( ProgramId ),
 		mStreamType	( StreamType )
 	{
+		//	https://en.wikipedia.org/wiki/MPEG_transport_stream#PCR
+		Soy::Assert( ProgramId != 0x1FFF, "Pid 0x1FFF is reserved as a null program id");
 	}
 	
 public:
@@ -51,7 +72,7 @@ public:
 //	virtual void			Encode(TStreamBuffer& Buffer) override;
 	
 protected:
-	void					WriteHeader(bool PayloadStart,size_t PayloadSize,bool WithPcr,TStreamBuffer& Buffer);
+	void					WriteHeader(bool PayloadStart,size_t PayloadSize,bool WithPcr,uint64 PcrSize,TStreamBuffer& Buffer);
 
 public:
 	TStreamMeta				mStreamMeta;
@@ -62,11 +83,13 @@ public:
 class Mpeg2Ts::TPesPacket : public Mpeg2Ts::TPacket
 {
 public:
-	TPesPacket(std::shared_ptr<TMediaPacket> Packet,const TStreamMeta& Stream,size_t PacketCounter);
+	TPesPacket(std::shared_ptr<TMediaPacket> Packet,const TStreamMeta& Stream,size_t PacketCounter,std::shared_ptr<TMediaPacket>& SpsPacket,std::shared_ptr<TMediaPacket>& PpsPacket);
 	
 	virtual void			Encode(TStreamBuffer& Buffer) override;
 	
 public:
+	std::shared_ptr<TMediaPacket>&	mSpsPacket;
+	std::shared_ptr<TMediaPacket>&	mPpsPacket;
 	std::shared_ptr<TMediaPacket>	mPacket;
 };
 
@@ -75,15 +98,17 @@ public:
 class Mpeg2Ts::TPatPacket : public Mpeg2Ts::TPacket
 {
 public:
-	TPatPacket(uint16 ProgramId);
+	TPatPacket(ArrayBridge<TProgramMeta>&& Programs);
 
 	virtual void			Encode(TStreamBuffer& Buffer) override;
+	
+	Array<TProgramMeta>		mPrograms;
 };
 
 class Mpeg2Ts::TPmtPacket : public Mpeg2Ts::TPacket
 {
 public:
-	TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Streams,uint16 ProgramId);
+	TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Streams,TProgramMeta ProgramMeta);
 	
 	virtual void	Encode(TStreamBuffer& Buffer) override;
 	
@@ -109,13 +134,16 @@ public:
 	std::shared_ptr<TStreamWriter>			mOutput;
 	std::shared_ptr<TMediaPacketBuffer>		mInput;
 	
-	uint16									mProgramId;
+	Array<Mpeg2Ts::TProgramMeta>			mPrograms;
 	std::map<size_t,Mpeg2Ts::TStreamMeta>	mStreamMetas;
 	size_t									mPacketCounter;
 
 	//	copies of the PAT/PMT if they've been written
 	std::shared_ptr<Mpeg2Ts::TPatPacket>	mPatPacket;
 	std::shared_ptr<Mpeg2Ts::TPmtPacket>	mPmtPacket;
+	std::shared_ptr<TMediaPacket>			mSpsPacket;
+	std::shared_ptr<TMediaPacket>			mPpsPacket;
+	
 };
 
 

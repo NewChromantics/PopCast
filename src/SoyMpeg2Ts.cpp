@@ -4,7 +4,9 @@
 namespace Mpeg2Ts
 {
 	uint32	ComputeCRC(const unsigned char* data, unsigned int data_size);
+	uint64	GetTimecode90hz(SoyTime Time);
 }
+
 
 //	gr: can;t find official documentation on whether this is enforced...
 //	https://en.wikipedia.org/wiki/Packetized_elementary_stream#cite_note-7
@@ -84,6 +86,18 @@ uint32 Mpeg2Ts::ComputeCRC(const unsigned char* data, unsigned int data_size)
 	return crc;
 }
 
+uint64 Mpeg2Ts::GetTimecode90hz(SoyTime TimeMs)
+{
+	double Time = TimeMs.GetTime();
+	Time /= 1000.0;
+	Time *= 90.0;
+	return Time;
+}
+
+
+
+
+
 class TArrayBitWriter	//	AP4_BitWriter
 {
 public:
@@ -104,28 +118,26 @@ private:
 
 void TArrayBitWriter::Write(uint32 bits,size_t bit_count)
 {
-	//	onto next byte
-	if ( mBitCount+bit_count > mData.GetDataSize()* 8 )
-	{
-		mData.PushBack(0);
-	}
-
-	auto* data = mData.GetArray();
-	data += mBitCount/8;
 	unsigned int space = 8-(mBitCount%8);
 	while (bit_count)
 	{
+		auto Byte = mBitCount/8;
+		while ( Byte >= mData.GetDataSize() )
+		{
+			mData.PushBack(0);
+		}
+		Soy::Assert( mBitCount/8 < mData.GetDataSize(), "bit out of bounds");
+		auto& data = mData[mBitCount/8];
 		unsigned int mask = bit_count==32 ? 0xFFFFFFFF : ((1<<bit_count)-1);
 		if (bit_count <= space)
 		{
-			*data |= ((bits&mask) << (space-bit_count));
+			data |= ((bits&mask) << (space-bit_count));
 			mBitCount += bit_count;
 			return;
 		}
 		else
 		{
-			*data |= ((bits&mask) >> (bit_count-space));
-			++data;
+			data |= ((bits&mask) >> (bit_count-space));
 			mBitCount += space;
 			bit_count  -= space;
 			space       = 8;
@@ -140,7 +152,7 @@ Mpeg2Ts::TPacket::TPacket(const TStreamMeta& Stream,size_t PacketCounter) :
 {
 }
 
-void Mpeg2Ts::TPacket::WriteHeader(bool PayloadStart,size_t PayloadSize,bool WithPcr,TStreamBuffer& Buffer)
+void Mpeg2Ts::TPacket::WriteHeader(bool PayloadStart,size_t PayloadSize,bool WithPcr,uint64 PcrSize,TStreamBuffer& Buffer)
 {
 	uint16 Pid = mStreamMeta.mProgramId;
 	BufferArray<uint8,4> header(4);
@@ -211,58 +223,450 @@ void Mpeg2Ts::TPacket::WriteHeader(bool PayloadStart,size_t PayloadSize,bool Wit
 }
 
 
-Mpeg2Ts::TPesPacket::TPesPacket(std::shared_ptr<TMediaPacket> Packet,const TStreamMeta& Stream,size_t PacketCounter) :
+Mpeg2Ts::TPesPacket::TPesPacket(std::shared_ptr<TMediaPacket> Packet,const TStreamMeta& Stream,size_t PacketCounter,std::shared_ptr<TMediaPacket>& SpsPacket,std::shared_ptr<TMediaPacket>& PpsPacket) :
 	mPacket						( Packet ),
-	TPacket						( Stream, PacketCounter )
+	TPacket						( Stream, PacketCounter ),
+	mSpsPacket					( SpsPacket ),
+	mPpsPacket					( PpsPacket )
 {
+	Soy::Assert( mPacket !=nullptr, "Packet missing");
 }
 
 
 void Mpeg2Ts::TPesPacket::Encode(TStreamBuffer& Buffer)
 {
-	//	write sample
+	std::Debug << "Encoding PES packet" << std::endl;
+	//	ALLL the code below seems to be for converting to H264_ts, so assume it's already been done
+	/*
+	if (sample_description->GetType() == AP4_SampleDescription::TYPE_AVC) {
+		// check the sample description
+		AP4_AvcSampleDescription* avc_desc = AP4_DYNAMIC_CAST(AP4_AvcSampleDescription, sample_description);
+		if (avc_desc == NULL) return AP4_ERROR_NOT_SUPPORTED;
+		
+		if ((int)sample.GetDescriptionIndex() != m_SampleDescriptionIndex) {
+			m_SampleDescriptionIndex = (int)sample.GetDescriptionIndex();
+			m_NaluLengthSize = avc_desc->GetNaluLengthSize();
+			
+			// make the SPS/PPS prefix
+			m_Prefix.SetDataSize(0);
+			for (unsigned int i=0; i<avc_desc->GetSequenceParameters().ItemCount(); i++) {
+				AP4_DataBuffer& buffer = avc_desc->GetSequenceParameters()[i];
+				unsigned int prefix_size = m_Prefix.GetDataSize();
+				m_Prefix.SetDataSize(prefix_size+4+buffer.GetDataSize());
+				unsigned char* p = m_Prefix.UseData()+prefix_size;
+				*p++ = 0;
+				*p++ = 0;
+				*p++ = 0;
+				*p++ = 1;
+				AP4_CopyMemory(p, buffer.GetData(), buffer.GetDataSize());
+			}
+			for (unsigned int i=0; i<avc_desc->GetPictureParameters().ItemCount(); i++) {
+				AP4_DataBuffer& buffer = avc_desc->GetPictureParameters()[i];
+				unsigned int prefix_size = m_Prefix.GetDataSize();
+				m_Prefix.SetDataSize(prefix_size+4+buffer.GetDataSize());
+				unsigned char* p = m_Prefix.UseData()+prefix_size;
+				*p++ = 0;
+				*p++ = 0;
+				*p++ = 0;
+				*p++ = 1;
+				AP4_CopyMemory(p, buffer.GetData(), buffer.GetDataSize());
+			}
+		}
+	} else if (sample_description->GetType() == AP4_SampleDescription::TYPE_HEVC) {
+		// check the sample description
+		AP4_HevcSampleDescription* hevc_desc = AP4_DYNAMIC_CAST(AP4_HevcSampleDescription, sample_description);
+		if (hevc_desc == NULL) return AP4_ERROR_NOT_SUPPORTED;
+		
+		if ((int)sample.GetDescriptionIndex() != m_SampleDescriptionIndex) {
+			m_SampleDescriptionIndex = (int)sample.GetDescriptionIndex();
+			m_NaluLengthSize = hevc_desc->GetNaluLengthSize();
+			
+			// make the VPS/SPS/PPS prefix
+			m_Prefix.SetDataSize(0);
+			for (unsigned int i=0; i<hevc_desc->GetSequences().ItemCount(); i++) {
+				const AP4_HvccAtom::Sequence& seq = hevc_desc->GetSequences()[i];
+				if (seq.m_NaluType == AP4_HEVC_NALU_TYPE_VPS_NUT) {
+					for (unsigned int j=0; j<seq.m_Nalus.ItemCount(); j++) {
+						const AP4_DataBuffer& buffer = seq.m_Nalus[j];
+						unsigned int prefix_size = m_Prefix.GetDataSize();
+						m_Prefix.SetDataSize(prefix_size+4+buffer.GetDataSize());
+						unsigned char* p = m_Prefix.UseData()+prefix_size;
+						*p++ = 0;
+						*p++ = 0;
+						*p++ = 0;
+						*p++ = 1;
+						AP4_CopyMemory(p, buffer.GetData(), buffer.GetDataSize());
+					}
+				}
+			}
+			
+			for (unsigned int i=0; i<hevc_desc->GetSequences().ItemCount(); i++) {
+				const AP4_HvccAtom::Sequence& seq = hevc_desc->GetSequences()[i];
+				if (seq.m_NaluType == AP4_HEVC_NALU_TYPE_SPS_NUT) {
+					for (unsigned int j=0; j<seq.m_Nalus.ItemCount(); j++) {
+						const AP4_DataBuffer& buffer = seq.m_Nalus[j];
+						unsigned int prefix_size = m_Prefix.GetDataSize();
+						m_Prefix.SetDataSize(prefix_size+4+buffer.GetDataSize());
+						unsigned char* p = m_Prefix.UseData()+prefix_size;
+						*p++ = 0;
+						*p++ = 0;
+						*p++ = 0;
+						*p++ = 1;
+						AP4_CopyMemory(p, buffer.GetData(), buffer.GetDataSize());
+					}
+				}
+			}
+			
+			for (unsigned int i=0; i<hevc_desc->GetSequences().ItemCount(); i++) {
+				const AP4_HvccAtom::Sequence& seq = hevc_desc->GetSequences()[i];
+				if (seq.m_NaluType == AP4_HEVC_NALU_TYPE_PPS_NUT) {
+					for (unsigned int j=0; j<seq.m_Nalus.ItemCount(); j++) {
+						const AP4_DataBuffer& buffer = seq.m_Nalus[j];
+						unsigned int prefix_size = m_Prefix.GetDataSize();
+						m_Prefix.SetDataSize(prefix_size+4+buffer.GetDataSize());
+						unsigned char* p = m_Prefix.UseData()+prefix_size;
+						*p++ = 0;
+						*p++ = 0;
+						*p++ = 0;
+						*p++ = 1;
+						AP4_CopyMemory(p, buffer.GetData(), buffer.GetDataSize());
+					}
+				}
+			}
+			
+		}
+	} else {
+		return AP4_ERROR_NOT_SUPPORTED;
+	}
+	
+	// decide if we need to emit the prefix
+	bool emit_prefix = false;
+	if (sample.IsSync() || m_SamplesWritten == 0) {
+		emit_prefix = true;
+	}
+	
+	// write the NAL units
+	const unsigned char* data      = sample_data.GetData();
+	unsigned int         data_size = sample_data.GetDataSize();
+	
+	// allocate a buffer for the PES packet
+	AP4_DataBuffer pes_data;
+	
+	// output all NALUs
+	for (unsigned int nalu_count = 0; data_size; nalu_count++) {
+		// sanity check
+		if (data_size < m_NaluLengthSize) break;
+		
+		// get the next NAL unit
+		AP4_UI32 nalu_size;
+		if (m_NaluLengthSize == 1) {
+			nalu_size = *data++;
+			data_size--;
+		} else if (m_NaluLengthSize == 2) {
+			nalu_size = AP4_BytesToInt16BE(data);
+			data      += 2;
+			data_size -= 2;
+		} else if (m_NaluLengthSize == 4) {
+			nalu_size = AP4_BytesToInt32BE(data);
+			data      += 4;
+			data_size -= 4;
+		} else {
+			break;
+		}
+		if (nalu_size > data_size) break;
+		
+		// check if we need to add a delimiter before the NALU
+		if (nalu_count == 0 && sample_description->GetType() == AP4_SampleDescription::TYPE_AVC) {
+			if (nalu_size != 2 || (data[0] & 0x1F) != AP4_AVC_NAL_UNIT_TYPE_ACCESS_UNIT_DELIMITER) {
+				// the first NAL unit is not an Access Unit Delimiter, we need to add one
+				unsigned char delimiter[6];
+				delimiter[0] = 0;
+				delimiter[1] = 0;
+				delimiter[2] = 0;
+				delimiter[3] = 1;
+				delimiter[4] = 9;    // NAL type = Access Unit Delimiter;
+				delimiter[5] = 0xF0; // Slice types = ANY
+				pes_data.AppendData(delimiter, 6);
+				
+				if (emit_prefix) {
+					pes_data.AppendData(m_Prefix.GetData(), m_Prefix.GetDataSize());
+					emit_prefix = false;
+				}
+			}
+		} else {
+			if (emit_prefix) {
+				pes_data.AppendData(m_Prefix.GetData(), m_Prefix.GetDataSize());
+				emit_prefix = false;
+			}
+		}
+		
+		// add a start code before the NAL unit
+		unsigned char start_code[3];
+		start_code[0] = 0;
+		start_code[1] = 0;
+		start_code[2] = 1;
+		pes_data.AppendData(start_code, 3);
+		
+		// add the NALU
+		pes_data.AppendData(data, nalu_size);
+		
+		// for AVC streams that do start with a NAL unit delimiter, we need to add the prefix now
+		if (emit_prefix) {
+			pes_data.AppendData(m_Prefix.GetData(), m_Prefix.GetDataSize());
+			emit_prefix = false;
+		}
+		
+		// move to the next NAL unit
+		data      += nalu_size;
+		data_size -= nalu_size;
+	}
+	
+	// compute the timestamp
+	AP4_UI64 dts = AP4_ConvertTime(sample.GetDts(), m_TimeScale, 90000);
+	AP4_UI64 pts = AP4_ConvertTime(sample.GetCts(), m_TimeScale, 90000);
+	
+	// update counters
+	++m_SamplesWritten;
+	
+	// write the packet
+	return WritePES(pes_data.GetData(), pes_data.GetDataSize(), dts, true, pts, with_pcr, output);
+}
+	 */
+	/*
+	uint64
+	AP4_ConvertTime(uint64 time_value,
+					uint32 from_time_scale,
+					uint32 to_time_scale)
+	{
+		if (from_time_scale == 0) return 0;
+		double ratio = (double)to_time_scale/(double)from_time_scale;
+		return ((AP4_UI64)(0.5+(double)time_value*ratio));
+	}
+	
+	uint64 PresentationTime = Packet.mTimecode;
+	uint64 DisplayTimestamp =
+	AP4_UI64 dts = AP4_ConvertTime(sample.GetDts(), m_TimeScale, 90000);
+	AP4_UI64 pts = AP4_ConvertTime(sample.GetCts(), m_TimeScale, 90000);
+	
+	*/
+	
+	auto& Packet = *mPacket;
+	Array<uint8> PacketData;
+	if ( mSpsPacket )
+	{
+		PacketData.PushBackArray( mSpsPacket->mData );
+		mSpsPacket.reset();
+	}
+	if ( mPpsPacket )
+	{
+		PacketData.PushBackArray( mPpsPacket->mData );
+		mPpsPacket.reset();
+	}
+	PacketData.PushBackArray( Packet.mData );
+
+	
+	uint64 pts = GetTimecode90hz( Packet.mTimecode );
+	if ( pts == 0 )
+		pts = mPacketContinuityCounter * 90;
+	uint64 dts = GetTimecode90hz( Packet.mDecodeTimecode );
+	// adjust the base timestamp so we don't start at 0
+	// dts += 10000;
+	// pts += 10000;
+
+	
+	Array<uint8> AdditionalHeader;
+	{
+		bool with_dts = (dts != 0);
+		TArrayBitWriter AdditionalHeaderWriter( GetArrayBridge(AdditionalHeader) );
+		if ( pts != 0 )
+		{
+			//AdditionalHeaderWriter.Write(PtsDtsFlag, 2); // PTS_DTS_flags
+			AdditionalHeaderWriter.Write(with_dts?3:2, 4);         // '0010' or '0011'
+			AdditionalHeaderWriter.Write((uint32)(pts>>30), 3);  // PTS[32..30]
+			AdditionalHeaderWriter.Write(1, 1);                    // marker_bit
+			AdditionalHeaderWriter.Write((uint32)(pts>>15), 15); // PTS[29..15]
+			AdditionalHeaderWriter.Write(1, 1);                    // marker_bit
+			AdditionalHeaderWriter.Write((uint32)pts, 15);       // PTS[14..0]
+			AdditionalHeaderWriter.Write(1, 1);                    // market_bit
+		}
+		
+		if ( dts != 0 )
+		{
+			AdditionalHeaderWriter.Write(1, 4);                    // '0001'
+			AdditionalHeaderWriter.Write((uint32)(dts>>30), 3);  // DTS[32..30]
+			AdditionalHeaderWriter.Write(1, 1);                    // marker_bit
+			AdditionalHeaderWriter.Write((uint32)(dts>>15), 15); // DTS[29..15]
+			AdditionalHeaderWriter.Write(1, 1);                    // marker_bit
+			AdditionalHeaderWriter.Write((uint32)dts, 15);       // DTS[14..0]
+			AdditionalHeaderWriter.Write(1, 1);                    // market_bit
+		}
+	}
+	
+	//unsigned int pes_header_size = 14+(with_dts?5:0);
+	unsigned int pes_header_size = 9;
+	
+	Array<uint8> Header;
+	TArrayBitWriter pes_header( GetArrayBridge(Header) );
+	
+	
+	pes_header.Write(0x000001, 24);    // packet_start_code_prefix
+	pes_header.Write( mStreamMeta.mStreamId, 8);   // stream_id
+
+	//	https://en.wikipedia.org/wiki/Packetized_elementary_stream#cite_note-7
+	//	Specifies the number of bytes remaining in the packet after this field.
+	//	Can be zero. If the PES packet length is set to zero, the PES packet can be of any length.
+	//	A value of zero for the PES packet length can be used only when the PES packet payload is a
+	//	video elementary stream
+	//uint16 PacketLength = (mStreamMeta.mStreamId == AP4_MPEG2_TS_DEFAULT_STREAM_ID_VIDEO) ? 0 : (data_size+pes_header_size-6);
+	//	video can be 0 because the length can be > 16bit
+	//	gr: -6 for everything before length...
+	size_t PacketLength_t = ( PacketData.GetDataSize() + pes_header_size + AdditionalHeader.GetDataSize() - 6 );
+	uint16 PacketLength = PacketLength_t > 65536 ? 0 : PacketLength_t;
+	pes_header.Write(PacketLength, 16); // PES_packet_length
+	
+	pes_header.Write(2, 2);            // '01'
+	pes_header.Write(0, 2);            // PES_scrambling_control
+	pes_header.Write(0, 1);            // PES_priority
+	pes_header.Write(1, 1);            // data_alignment_indicator
+	pes_header.Write(0, 1);            // copyright
+	pes_header.Write(0, 1);            // original_or_copy
+	
+	uint32 PtsDtsFlag = 0;
+	if ( pts != 0 )	PtsDtsFlag |= 0x2;
+	if ( dts != 0 )	PtsDtsFlag |= 0x1;
+	//	pes_header.Write(with_dts?3:2, 2); // PTS_DTS_flags
+	pes_header.Write(PtsDtsFlag, 2); // PTS_DTS_flags
+	pes_header.Write(0, 1);            // ESCR_flag
+	pes_header.Write(0, 1);            // ES_rate_flag
+	pes_header.Write(0, 1);            // DSM_trick_mode_flag
+	pes_header.Write(0, 1);            // additional_copy_info_flag
+	pes_header.Write(0, 1);            // PES_CRC_flag
+	pes_header.Write(0, 1);            // PES_extension_flag
+	pes_header.Write( size_cast<uint32>(AdditionalHeader.GetDataSize()), 8);// PES_header_data_length
+	
+	//	write data, splitting as we go
+	size_t DataWritten = 0;
+	Array<uint8> Data;
+	Data.PushBackArray( Header );
+	Data.PushBackArray( AdditionalHeader );
+	Data.PushBackArray( PacketData );
+	
+	while ( DataWritten < Data.GetDataSize() )
+	{
+		//	chunk
+		size_t PayloadSize = Data.GetDataSize() - DataWritten;
+		if ( PayloadSize > AP4_MPEG2TS_PACKET_PAYLOAD_SIZE )
+		{
+			PayloadSize = AP4_MPEG2TS_PACKET_PAYLOAD_SIZE;
+		}
+		auto PayloadData = GetArrayBridge(Data).GetSubArray<uint8>( DataWritten, PayloadSize );
+		
+		//	first packet
+		if ( DataWritten == 0 )
+		{
+			//	wtf is this number
+			bool WithPcr = false;
+			auto PcrSize = ( dts!=0 ? dts : pts ) * 300;
+			WriteHeader( true, PayloadData.GetDataSize(), WithPcr, PcrSize, Buffer );
+		}
+		else
+		{
+			auto PcrSize = 0;
+			WriteHeader( false, PayloadData.GetDataSize(), false, PcrSize, Buffer );
+		}
+		Buffer.Push( GetArrayBridge(PayloadData) );
+		DataWritten += PayloadData.GetDataSize();
+	}
+
 }
 
 
-Mpeg2Ts::TPatPacket::TPatPacket(uint16 ProgramId) :
-	TPacket		( TStreamMeta(0,0,ProgramId), 0 )
+Mpeg2Ts::TPatPacket::TPatPacket(ArrayBridge<TProgramMeta>&& Programs) :
+	TPacket			( TStreamMeta(0,0,0), 0 ),
+	mPrograms		( Programs )
 {
-	
 }
 
 void Mpeg2Ts::TPatPacket::Encode(TStreamBuffer& Buffer)
 {
+	std::Debug << "Encoding PAT packet" << std::endl;
+
 	bool PayloadStart = true;
 	size_t PayloadSize = AP4_MPEG2TS_PACKET_PAYLOAD_SIZE;
 	bool WithPcr = false;
-	WriteHeader( PayloadStart, PayloadSize, WithPcr, Buffer );
+	WriteHeader( PayloadStart, PayloadSize, WithPcr, 0, Buffer );
 	
-	//	was 1024... but only end up writing 17...
-	BufferArray<uint8,17> Payload(17);
+	Array<uint8> Payload;
+	
 	TArrayBitWriter writer( GetArrayBridge(Payload) );
+	uint16 SectionLength = 9 + (4*mPrograms.GetSize());	//	header + section data
+	uint16 TransportStreamId = 1;
 	
 	writer.Write(0, 8);  // pointer
 	writer.Write(0, 8);  // table_id
 	writer.Write(1, 1);  // section_syntax_indicator
 	writer.Write(0, 1);  // '0'
 	writer.Write(3, 2);  // reserved
-	writer.Write(13, 12);// section_length
-	writer.Write(1, 16); // transport_stream_id
+	writer.Write(SectionLength, 12);// section_length
+	writer.Write(TransportStreamId, 16); // transport_stream_id
 	writer.Write(3, 2);  // reserved
 	writer.Write(0, 5);  // version_number
 	writer.Write(1, 1);  // current_next_indicator
-	writer.Write(0, 8);  // section_number
-	writer.Write(0, 8);  // last_section_number
-	writer.Write(1, 16); // program number
-	writer.Write(7, 3);  // reserved
-	writer.Write( mStreamMeta.mProgramId, 13); // program_map_PID
 	
-	auto Crc = ComputeCRC( &Payload[1], 17-1-4 );
-	writer.Write( Crc, 32 );
-	//writer.Write(ComputeCRC(writer.GetData()+1, 17-1-4), 32);
-	
-	Buffer.Push( GetArrayBridge(Payload) );
 
+	writer.Write( 0, 8);  // section_number
+	writer.Write( size_cast<uint32>(mPrograms.GetSize()-1), 8);  // last_section_number
+	
+	//	section data
+	for ( int i=0;	i<mPrograms.GetSize();	i++ )
+	{
+		uint16 Pid = mPrograms[i].mProgramId;
+		uint16 PmtPid = mPrograms[i].mPmtPid;
+		writer.Write( Pid, 16); // program number
+		writer.Write(7, 3);  // reserved
+		writer.Write( PmtPid, 13); // program_map_PID
+	}
+	
+	
+	uint8 SectionLengthHi = static_cast<uint8>(SectionLength>>8);
+	uint8 SectionLengthLo = static_cast<uint8>(SectionLength&0xff);
+	uint16 Pid = mPrograms[0].mProgramId;
+	uint16 PmtPid = mPrograms[0].mPmtPid;
+	uint8 HardCodedPayload[] =
+	{
+		0x00,	//	pointer
+		0x00,	//	table id
+		static_cast<uint8>(0x10|0x00|0x30|SectionLengthHi), SectionLengthLo,	//	section, 0, reserved, section length
+		static_cast<uint8>(TransportStreamId>>8),	static_cast<uint8>(TransportStreamId&0xff),	//	transport stream id
+		0xC1,	//	reserved, version, current next indicator
+		
+		0x00,	//	section number
+		0x00,	//	last section number
+		static_cast<uint8>(Pid>>8),	static_cast<uint8>(Pid&0xFF),	//	program number
+
+		static_cast<uint8>(0xE0|(PmtPid>>8)), static_cast<uint8>(PmtPid&0xFF),		//	0x7reserved, program map pid
+//		0x36, 0x90, 0xE2, 0x3D	//	checksum
+	};
+
+	static bool UseHardcoded = false;
+	if ( UseHardcoded )
+	{
+		Payload.Clear();
+		Payload.PushBackArray( HardCodedPayload );
+	}
+	Buffer.Push( GetArrayBridge(Payload) );
+	
+	{
+		//auto CrcLength = 17-1-4;
+		auto CrcLength = Payload.GetSize() - 1;
+		Array<uint8> CrcArray;
+		TArrayBitWriter CrcWriter( GetArrayBridge(CrcArray) );
+		auto Crc = ComputeCRC( &Payload[1], CrcLength );
+		CrcWriter.Write( Crc, 32 );
+		Buffer.Push( GetArrayBridge(CrcArray) );
+	}
+
+	
 	Array<uint8> Padding;
 	Padding.SetSize( AP4_MPEG2TS_PACKET_PAYLOAD_SIZE-Payload.GetDataSize() );
 	Padding.SetAll( 0xff );
@@ -270,30 +674,46 @@ void Mpeg2Ts::TPatPacket::Encode(TStreamBuffer& Buffer)
 
 }
 
-Mpeg2Ts::TPmtPacket::TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Streams,uint16 ProgramId) :
-	TPacket	( TStreamMeta(0,0,ProgramId), 0 )
+Mpeg2Ts::TPmtPacket::TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Streams,TProgramMeta ProgramMeta) :
+	TPacket	( TStreamMeta(0,0,ProgramMeta.mPmtPid), 0 )
 {
 	Array<uint8> Payload;
 	TArrayBitWriter writer( GetArrayBridge(Payload) );
 	
-	unsigned int section_length = 13;
-	unsigned int pcr_pid = mStreamMeta.mProgramId;
+	//	http://www.etherguidesystems.com/help/sdos/mpeg/semantics/mpeg-2/section_length.aspx
+	//	The section_length field is a 12-bit field that gives the length of the table section beyond this
+	//	field. Since it is carried starting at bit index 12 in the section (the second and third bytes),
+	//	the actual size of the table section is section_length + 3.
+	unsigned int section_length = 13;	//	gr: seems 1 too many...
+	uint16 pcr_pid = 0;
+	//	http://www.etherguidesystems.com/Help/SDOs/MPEG/semantics/mpeg-2/PCR_PID.aspx
+	//	The PCR_PID is the packet id where the program clock reference for
 
 	for ( auto it=Streams.begin();	it!=Streams.end();	it++ )
 	{
 		auto& Stream = it->second;
-		Soy::Assert( Stream.mProgramId == pcr_pid, "Stream has mis-matched program id... skip, or error?" );
+		if ( Stream.mProgramId != ProgramMeta.mProgramId )
+			continue;
+		//Soy::Assert( Stream.mProgramId == pcr_pid, "Stream has mis-matched program id... skip, or error?" );
 		
 		section_length += 5+Stream.mDescriptor.GetDataSize();
+		
+		//	assign a PCR
+		if ( pcr_pid == 0 )
+			pcr_pid = Stream.mProgramId;
 	}
 
+	Array<uint8> ProgramData;
+	section_length += ProgramData.GetSize();
+	
+	//	http://www.etherguidesystems.com/Help/SDOs/MPEG/Syntax/TableSections/Pmts.aspx
 	writer.Write(0, 8);        // pointer
 	writer.Write(2, 8);        // table_id
 	writer.Write(1, 1);        // section_syntax_indicator
 	writer.Write(0, 1);        // '0'
 	writer.Write(3, 2);        // reserved
 	writer.Write(section_length, 12); // section_length
-	writer.Write(1, 16);       // program_number
+	writer.Write(ProgramMeta.mProgramId, 16);       // program_number
 	writer.Write(3, 2);        // reserved
 	writer.Write(0, 5);        // version_number
 	writer.Write(1, 1);        // current_next_indicator
@@ -302,17 +722,23 @@ Mpeg2Ts::TPmtPacket::TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Str
 	writer.Write(7, 3);        // reserved
 	writer.Write(pcr_pid, 13); // PCD_PID
 	writer.Write(0xF, 4);      // reserved
-	writer.Write(0, 12);       // program_info_length
-
+	writer.Write( size_cast<uint32>(ProgramData.GetSize()), 12);       // program_info_length
+	for ( int i=0;	i<ProgramData.GetDataSize(); i++ )
+	{
+		writer.Write( ProgramData[i], 8 );
+	}
+	
 	for ( auto it=Streams.begin();	it!=Streams.end();	it++ )
 	{
 		auto& Stream = it->second;
+		if ( Stream.mProgramId != ProgramMeta.mProgramId )
+			continue;
 
 		writer.Write( Stream.mStreamType, 8);                // stream_type
 		writer.Write(0x7, 3);                                  // reserved
 		writer.Write( Stream.mProgramId, 13);                   // elementary_PID
 		writer.Write(0xF, 4);                                  // reserved
-		writer.Write( Stream.mDescriptor.GetDataSize(), 12); // ES_info_length
+		writer.Write( size_cast<uint32>(Stream.mDescriptor.GetDataSize()), 12); // ES_info_length
 
 		for ( int i=0;	i<Stream.mDescriptor.GetDataSize(); i++ )
 		{
@@ -320,28 +746,80 @@ Mpeg2Ts::TPmtPacket::TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Str
 		}
 	}
 
+	/*
 	auto Crc = ComputeCRC( &Payload[1], section_length-1);
 	writer.Write(Crc, 32); // CRC
 
 	Payload.SetSize( section_length+4 );
-	mPayload.PushBackArray( Payload );
-	
-	for ( int i=0;	i<AP4_MPEG2TS_PACKET_PAYLOAD_SIZE-(section_length+4);	i++ )
+*/
+
+	//uint8 HardCodedPayload[] = { 0x00, 0x00, 0xB0, 0x0D, 0x00, 0x01, 0xC1, 0x00, 0x00, 0x00, 0x01, 0xEF, 0xFF, 0x36, 0x90, 0xE2, 0x3D	};
+	uint8 HardCodedPayload[] =
 	{
-		mPayload.PushBack(0xff);
+		0x00,	//	pointer
+		0x02,	//	table id
+		0xB0,	0x3C,	//	section_syntax_indicator 0 reserved section_length
+		0x00,	0x01,	//	program_number
+		0xC1,	//	reserved version_number current_next_indicator
+		0x00,	//	section number
+		0x00,	//	last_section_number
+		static_cast<uint8>(0xE0|static_cast<uint8>(pcr_pid>>8)), static_cast<uint8>(pcr_pid&0xff),	//	reserved PCD_PID
+		0xF|0, 0x11,	//	reserved program_info_length
+		//	program info (0x11=17)
+		0x25, 0x0F, 0xFF, 0xFF, 0x49, 0x44, 0x33, 0x20, 0xFF, 0x49, 0x44, 0x33, 0x20, 0x00, 0x1F, 0x00, 0x01,
+		
+		0x15,	//	stream type	ffprobe: Data: timed_id3 (ID3  / 0x20334449)
+		0xE0|0x01, 0x02,	//	reserved | programid
+		0xF0|0x00, 0x0F,	//	reserved | ES_info_length
+		0x26, 0x0D, 0xFF, 0xFF, 0x49, 0x44, 0x33, 0x20, 0xFF, 0x49, 0x44, 0x33, 0x20, 0x00, 0x0F,
+		
+		AP4_MPEG2_STREAM_TYPE_AVC,	//	stream type
+		0xE0|0x01, 0x00,	//	reserved | programid
+		0xF0|0x00, 0x00,	//	reserved | ES_info_length
+		
+		AP4_MPEG2_STREAM_TYPE_ISO_IEC_13818_7,	//	stream type
+		0xE0|0x01, 0x01,	//	reserved | programid
+		0xF0|0x00, 0x00,	//	reserved | ES_info_length
+		
+		//	checksum
+	//	0xD2, 0x7F, 0x16, 0x89
+	};
+	static bool UseHardcoded = false;
+	if ( UseHardcoded )
+	{
+		Payload.Clear();
+		Payload.PushBackArray( HardCodedPayload );
 	}
+
+	mPayload.PushBackArray( Payload );
+	{
+		//auto CrcLength = section_length-1;
+		auto CrcLength = mPayload.GetSize() - 1;
+		Array<uint8> CrcArray;
+		TArrayBitWriter CrcWriter( GetArrayBridge(CrcArray) );
+		auto Crc = ComputeCRC( &Payload[1], CrcLength );
+		CrcWriter.Write( Crc, 32 );
+		mPayload.PushBackArray( GetArrayBridge(CrcArray) );
+	}
+	
+	Array<uint8> Padding;
+	Padding.SetSize( AP4_MPEG2TS_PACKET_PAYLOAD_SIZE-mPayload.GetDataSize() );
+	Padding.SetAll( 0xff );
+	mPayload.PushBackArray( GetArrayBridge(Padding) );
+
 }
 
 void Mpeg2Ts::TPmtPacket::Encode(TStreamBuffer& Buffer)
 {
-	WriteHeader( true, AP4_MPEG2TS_PACKET_PAYLOAD_SIZE, false, Buffer );
+	std::Debug << "Encoding PMT packet" << std::endl;
+
+	WriteHeader( true, AP4_MPEG2TS_PACKET_PAYLOAD_SIZE, false, 0, Buffer );
 	Buffer.Push( GetArrayBridge( mPayload ) );
 }
 
 TMpeg2TsMuxer::TMpeg2TsMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
 	SoyWorkerThread	( "TMpeg2TsMuxer", SoyWorkerWaitMode::Wake ),
 	mPacketCounter	( 0 ),
-	mProgramId		( AP4_MPEG2_TS_DEFAULT_PID_PMT ),
 	mOutput			( Output ),
 	mInput			( Input )
 {
@@ -349,7 +827,7 @@ TMpeg2TsMuxer::TMpeg2TsMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_
 	Soy::Assert( mInput!=nullptr, "TMpeg2TsMuxer input missing");
 	mOnPacketListener = WakeOnEvent( mInput->mOnNewPacket );
 	
-	//	http://wiki.multimedia.cx/index.php?title=MPEG-2_Transport_Stream#PAT
+	mPrograms.PushBack( Mpeg2Ts::TProgramMeta( AP4_MPEG2_TS_DEFAULT_PID_VIDEO, AP4_MPEG2_TS_DEFAULT_PID_PMT ) );
 	
 	Start();
 }
@@ -374,15 +852,49 @@ bool TMpeg2TsMuxer::Iteration()
 	auto Packet = mInput->PopPacket();
 	if ( !Packet )
 		return true;
+
+	static bool HoldSps = true;
+	if ( HoldSps )
+	{
+		if ( Packet->mMeta.mCodec == SoyMediaFormat::H264_SPS_ES )
+		{
+			mSpsPacket = Packet;
+			return true;
+		}
+		
+		if ( Packet->mMeta.mCodec == SoyMediaFormat::H264_PPS_ES )
+		{
+			mPpsPacket = Packet;
+			return true;
+		}
+	}
 	
 	try
 	{
 		auto StreamMeta = GetStreamMeta( Packet->mMeta );
-		std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( Packet, StreamMeta, mPacketCounter++ ) );
 
 		UpdatePatPmt( *Packet );
-		
-		mOutput->Push( Mpeg2TsPacket );
+
+		static bool WriteSps = true;
+
+		if ( Packet->mMeta.mCodec == SoyMediaFormat::H264_SPS_ES || Packet->mMeta.mCodec == SoyMediaFormat::H264_PPS_ES )
+		{
+			if ( WriteSps )
+			{
+				std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( Packet, StreamMeta, mPacketCounter++, mSpsPacket, mPpsPacket ) );
+				mOutput->Push( Mpeg2TsPacket );
+			}
+		}
+		else
+			{
+			
+			static bool WriteFrames = false;
+			if ( WriteFrames )
+			{
+				std::shared_ptr<Soy::TWriteProtocol> Mpeg2TsPacket( new Mpeg2Ts::TPesPacket( Packet, StreamMeta, mPacketCounter++, mSpsPacket, mPpsPacket ) );
+				mOutput->Push( Mpeg2TsPacket );
+			}
+		}
 	}
 	catch (std::exception& e)
 	{
@@ -397,15 +909,18 @@ void TMpeg2TsMuxer::UpdatePatPmt(const TMediaPacket& Packet)
 	//	not written yet
 	if ( !mPatPacket )
 	{
-		mPatPacket.reset( new Mpeg2Ts::TPatPacket( mProgramId ) );
+		mPatPacket.reset( new Mpeg2Ts::TPatPacket( GetArrayBridge(mPrograms) ) );
 		mOutput->Push( std::dynamic_pointer_cast<Soy::TWriteProtocol>( mPatPacket ) );
 	}
 	
 	//	not written yet
 	if ( !mPmtPacket )
 	{
-		mPmtPacket.reset( new Mpeg2Ts::TPmtPacket( mStreamMetas, mProgramId ) );
-		mOutput->Push( std::dynamic_pointer_cast<Soy::TWriteProtocol>( mPmtPacket ) );
+		for ( int i=0;	i<mPrograms.GetSize();	i++ )
+		{
+			mPmtPacket.reset( new Mpeg2Ts::TPmtPacket( mStreamMetas, mPrograms[i] ) );
+			mOutput->Push( std::dynamic_pointer_cast<Soy::TWriteProtocol>( mPmtPacket ) );
+		}
 	}
 }
 
@@ -420,12 +935,14 @@ Mpeg2Ts::TStreamMeta& TMpeg2TsMuxer::GetStreamMeta(const ::TStreamMeta& Stream)
 	
 	//	create new
 	auto& StreamMeta = mStreamMetas[Stream.mStreamIndex];
-	StreamMeta.mProgramId = mProgramId;
+	StreamMeta.mProgramId = mPrograms[0].mProgramId;
 	
 	switch ( Stream.mCodec )
 	{
-		case SoyMediaFormat::H264:
-		case SoyMediaFormat::H264Ts:
+		//case SoyMediaFormat::H264:	//	expecting data as NALU
+		case SoyMediaFormat::H264_ES:
+		case SoyMediaFormat::H264_SPS_ES:
+		case SoyMediaFormat::H264_PPS_ES:
 			StreamMeta.mStreamId = AP4_MPEG2_TS_DEFAULT_STREAM_ID_VIDEO;	//	+index
 			StreamMeta.mStreamType = AP4_MPEG2_STREAM_TYPE_AVC;
 			break;

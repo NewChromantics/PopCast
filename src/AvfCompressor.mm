@@ -15,6 +15,7 @@
 #include "AvfPixelBuffer.h"
 #include <SoyStream.h>
 #include <SoyMedia.h>
+#include "SoyH264.h"
 
 
 
@@ -332,19 +333,75 @@ void GetNalPackets(const ArrayBridge<uint8>&& H264Data,ArrayBridge<TNalPacket>&&
 }
 
 
-void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInfoFlags Flags)
+std::shared_ptr<TMediaPacket> GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format)
 {
-	//	create output packet
+	auto Desc = CMSampleBufferGetFormatDescription( SampleBuffer );
+	size_t ParamCount = 0;
+	auto Result = CMVideoFormatDescriptionGetH264ParameterSetAtIndex( Desc, 0, nullptr, nullptr, &ParamCount, nullptr );
+	Avf::IsOkay( Result, "Get H264 param 0");
+	
+	/*
+	 //	known bug on ios?
+	 if (status ==
+		CoreMediaGlue::kCMFormatDescriptionBridgeError_InvalidParameter) {
+		DLOG(WARNING) << " assuming 2 parameter sets and 4 bytes NAL length header";
+		pset_count = 2;
+		nal_size_field_bytes = 4;
+	 */
+
+	Soy::Assert( ParamIndex < ParamCount, "SPS missing");
+
+	const uint8_t* ParamsData = nullptr;;
+	size_t ParamsSize = 0;
+	Result = CMVideoFormatDescriptionGetH264ParameterSetAtIndex( Desc, ParamIndex, &ParamsData, &ParamsSize, nullptr, nullptr);
+		
+	Avf::IsOkay( Result, "Failed to get H264 param X" );
+
 	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
 	auto& Packet = *pPacket;
-	
+	Packet.mMeta.mCodec = Format;
+	Packet.mData.PushBack(0);
+	Packet.mData.PushBack(0);
+	Packet.mData.PushBack(0);
+	Packet.mData.PushBack(1);
+	Packet.mData.PushBackArray( GetRemoteArray( ParamsData, ParamsSize ) );
+	return pPacket;
+}
 
+
+std::shared_ptr<TMediaPacket> GetH264Packet(CMSampleBufferRef SampleBuffer,size_t StreamIndex)
+{
+	auto Desc = CMSampleBufferGetFormatDescription( SampleBuffer );
+
+	//	need length-byte-size to get proper h264 format
+	int nal_size_field_bytes = 0;
+	auto Result = CMVideoFormatDescriptionGetH264ParameterSetAtIndex( Desc, 0, nullptr, nullptr, nullptr, &nal_size_field_bytes );
+	Avf::IsOkay( Result, "Get H264 param NAL size");
+
+	//	extract SPS/PPS packet
+	auto Fourcc = CFSwapInt32HostToBig( CMFormatDescriptionGetMediaSubType(Desc) );
+	auto Codec = SoyMediaFormat::FromFourcc( Fourcc, nal_size_field_bytes );
+	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
+	auto& Packet = *pPacket;
+	//	Packet.mMeta = GetStreamMeta( CMSampleBufferGetFormatDescription(SampleBuffer) );
+	Packet.mMeta.mCodec = Codec;
+	Packet.mMeta.mStreamIndex = StreamIndex;
+	Packet.mFormat.reset( new Platform::TMediaFormat( Desc ) );
+	
+	CMTime PresentationTimestamp = CMSampleBufferGetPresentationTimeStamp(SampleBuffer);
+	CMTime DecodeTimestamp = CMSampleBufferGetDecodeTimeStamp(SampleBuffer);
+	CMTime SampleDuration = CMSampleBufferGetDuration(SampleBuffer);
+	Packet.mTimecode = Soy::Platform::GetTime(PresentationTimestamp);
+	Packet.mDecodeTimecode = Soy::Platform::GetTime(DecodeTimestamp);
+	Packet.mDuration = Soy::Platform::GetTime(SampleDuration);
+	//GetPixelBufferManager().mOnFrameFound.OnTriggered( Timestamp );
+	
 	
 	//	get bytes, either blocks of data or a CVImageBuffer
 	{
 		CMBlockBufferRef BlockBuffer = CMSampleBufferGetDataBuffer( SampleBuffer );
 		CVImageBufferRef ImageBuffer = CMSampleBufferGetImageBuffer( SampleBuffer );
-		
+			
 		if ( BlockBuffer )
 		{
 			//	read bytes from block
@@ -365,6 +422,40 @@ void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInf
 		//	CFRelease( ImageBuffer );
 	}
 	
+	//	verify/convert h264 AVCC to ES/annexb
+	H264::ConvertToEs( Packet.mMeta.mCodec, GetArrayBridge(Packet.mData) );
+	
+	return pPacket;
+}
+
+
+void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInfoFlags Flags)
+{
+	bool IsKeyframe = false;
+	{
+		//	code based on chromium
+		//	https://chromium.googlesource.com/chromium/src/media/+/cea1808de66191f7f1eb48b5579e602c0c781146/cast/sender/h264_vt_encoder.cc
+		auto sample_attachments = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(SampleBuffer, true), 0));
+		// If the NotSync key is not present, it implies Sync, which indicates a
+		// keyframe (at least I think, VT documentation is, erm, sparse). Could
+		// alternatively use kCMSampleAttachmentKey_DependsOnOthers == false.
+		bool NotSync = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_NotSync);
+		IsKeyframe = !NotSync;
+	}
+	
+	if ( IsKeyframe )
+	{
+		auto SpsPacket = GetFormatDescriptionPacket( SampleBuffer, 0, SoyMediaFormat::H264_SPS_ES );
+		auto PpsPacket = GetFormatDescriptionPacket( SampleBuffer, 1, SoyMediaFormat::H264_PPS_ES );
+		mPushFrameFunc( SpsPacket );
+		mPushFrameFunc( PpsPacket );
+	}
+
+	auto H264Packet = GetH264Packet( SampleBuffer, mStreamIndex );
+	mPushFrameFunc( H264Packet );
+}
+	/*
+	
 	
 	
 	//	grab all the h264 params for this buffer (though we may only use them for keyframes, I'm curious
@@ -378,7 +469,7 @@ void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInf
 	//	Packet.mMeta = GetStreamMeta( CMSampleBufferGetFormatDescription(SampleBuffer) );
 	Packet.mMeta.mStreamIndex = mStreamIndex;
 	
-	Packet.mFormat.reset( new Platform::TMediaFormat( CMSampleBufferGetFormatDescription(SampleBuffer) ) );
+	Packet.mFormat.reset( new Platform::TMediaFormat( Desc ) );
 	
 	CMTime PresentationTimestamp = CMSampleBufferGetPresentationTimeStamp(SampleBuffer);
 	CMTime DecodeTimestamp = CMSampleBufferGetDecodeTimeStamp(SampleBuffer);
@@ -581,8 +672,7 @@ void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInf
 		CMSampleBufferInvalidate(mSample.mObject);
 */
 	
-	
-}
+
 
 void Avf::TSession::OnError(const std::string& Error)
 {
