@@ -364,6 +364,25 @@ std::shared_ptr<TMediaPacket> GetFormatDescriptionPacket(CMSampleBufferRef Sampl
 	Packet.mData.PushBack(0);
 	Packet.mData.PushBack(0);
 	Packet.mData.PushBack(1);
+	//	http://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream
+	if ( Format == SoyMediaFormat::H264_SPS_ES )
+	{
+		//	https://cardinalpeak.com/blog/the-h-264-sequence-parameter-set/
+		//	https://tools.ietf.org/html/rfc6184#section-7.4.1
+		uint8 Idc_Important = 0x3 << 5;	//	0x60
+		uint8 Idc = Idc_Important;	//	011 XXXXX
+		uint8 NalUnitTypeSps = 0x07;
+		Packet.mData.PushBack( Idc|NalUnitTypeSps );
+	}
+	
+	if ( Format == SoyMediaFormat::H264_PPS_ES )
+	{
+		uint8 Idc_Important = 0x3 << 5;	//	0x60
+		uint8 Idc = Idc_Important;	//	011 XXXXX
+		uint8 NalUnitTypePps = 0x08;
+		Packet.mData.PushBack( Idc|NalUnitTypePps );
+	}
+	
 	Packet.mData.PushBackArray( GetRemoteArray( ParamsData, ParamsSize ) );
 	return pPacket;
 }
