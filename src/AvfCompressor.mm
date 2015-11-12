@@ -369,18 +369,14 @@ std::shared_ptr<TMediaPacket> GetFormatDescriptionPacket(CMSampleBufferRef Sampl
 	{
 		//	https://cardinalpeak.com/blog/the-h-264-sequence-parameter-set/
 		//	https://tools.ietf.org/html/rfc6184#section-7.4.1
-		uint8 Idc_Important = 0x3 << 5;	//	0x60
-		uint8 Idc = Idc_Important;	//	011 XXXXX
-		uint8 NalUnitTypeSps = 0x07;
-		Packet.mData.PushBack( Idc|NalUnitTypeSps );
+		auto Byte = H264::EncodeNaluByte( H264NaluContent::SequenceParameterSet,H264NaluPriority::Important );
+		Packet.mData.PushBack( Byte );
 	}
 	
 	if ( Format == SoyMediaFormat::H264_PPS_ES )
 	{
-		uint8 Idc_Important = 0x3 << 5;	//	0x60
-		uint8 Idc = Idc_Important;	//	011 XXXXX
-		uint8 NalUnitTypePps = 0x08;
-		Packet.mData.PushBack( Idc|NalUnitTypePps );
+		auto Byte = H264::EncodeNaluByte(H264NaluContent::PictureParameterSet, H264NaluPriority::Important );
+		Packet.mData.PushBack( Byte );
 	}
 	
 	Packet.mData.PushBackArray( GetRemoteArray( ParamsData, ParamsSize ) );
@@ -442,7 +438,7 @@ std::shared_ptr<TMediaPacket> GetH264Packet(CMSampleBufferRef SampleBuffer,size_
 	}
 	
 	//	verify/convert h264 AVCC to ES/annexb
-	H264::ConvertToEs( Packet.mMeta.mCodec, GetArrayBridge(Packet.mData) );
+	H264::ConvertToFormat( Packet.mMeta.mCodec, SoyMediaFormat::H264_ES, GetArrayBridge(Packet.mData) );
 	
 	return pPacket;
 }
