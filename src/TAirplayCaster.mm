@@ -177,12 +177,43 @@ Airplay::TMirrorDevice::TMirrorDevice(const std::string& Name,const std::string&
 	mConnection->mOnError.AddListener( OnError );
 	mConnection->Start();
 	
+	//	send get-xml info request
+	{
+		Http::TRequestProtocol Request;
+		Request.mUrl = "stream.xml";
+		//Request.mHeaders["Accept"] = "*/*";
+		//Request.mHeaders["User-Agent"] = "curl/7.43.0";
+		mConnection->SendRequest( Request );
+	}
 	
-	Http::TRequestProtocol ServerXmlRequest;
-	ServerXmlRequest.mUrl = "stream.xml";
-	ServerXmlRequest.mHeaders["Accept"] = "*/*";
-	ServerXmlRequest.mHeaders["User-Agent"] = "curl/7.43.0";
-	mConnection->SendRequest( ServerXmlRequest );
+	//	send start of stream
+	{
+		Array<char> PListData;
+		
+		//	gr: this is a special case, we send data, with a length, but then we send data, so need to use a callback
+		auto StreamDataContent = [&PListData](TStreamBuffer& Content)
+		{
+			Content.Push( GetArrayBridge( PListData ) );
+			
+			//	now send stream data
+		};
+		
+		Http::TRequestProtocol Request( StreamDataContent, PListData.GetSize() );
+		Request.mUrl = "stream";
+		Request.mMethod = "POST";
+		Request.mHeaders["Accept"] = "*/*";
+		Request.mHeaders["User-Agent"] = "curl/7.43.0";
+		Request.mHeaders["X-Apple-Device-ID"] = "0xa4d1d2800b68";
+		
+		mConnection->SendRequest( Request );
+	}
+	
+	//	As soon as the server receives a /stream request,
+	//	it will send NTP requests to the client on port 7010,
+	//	which seems hard-coded as well. The client needs to export
+	//	its master clock there, which will be used for audio/video
+	//	synchronization and clock recovery.
+	
 }
 
 
