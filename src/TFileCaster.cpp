@@ -300,6 +300,13 @@ TRawMuxer::TRawMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMed
 	
 }
 
+
+void TRawMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
+{
+	
+}
+
+
 void TRawMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
 {
 	//	first packet!

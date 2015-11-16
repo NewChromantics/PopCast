@@ -122,6 +122,7 @@ public:
 	TMpeg2TsMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input);
 	
 protected:
+	virtual void			SetupStreams(const ArrayBridge<TStreamMeta>&& Streams) override;
 	virtual void			ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
 	Mpeg2Ts::TStreamMeta&	GetStreamMeta(const ::TStreamMeta& Stream);
 	void					UpdatePatPmt(const TMediaPacket& Packet);
