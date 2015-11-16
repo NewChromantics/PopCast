@@ -93,7 +93,7 @@ namespace Unity
 #endif
 	typedef uint32			uint;
 	typedef uint32			boolean;
-	typedef int32			sint;
+	typedef sint32			sint;
 	typedef void*			NativeTexturePtr;
 	
 	class TGlobalParams;
