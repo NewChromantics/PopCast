@@ -1,33 +1,27 @@
 #pragma once
 
 #include <SoyMedia.h>
-
+#include "libavwrapper/LibavWrapper.h"
 
 
 namespace Libav
 {
-	class TExtractor;	//	demuxer
-	
-	//	AVERROR_xxx
-	bool	IsOkay(int Error,const std::string& Context,bool Throw=true);
+	class TMuxer;
 };
 
 
 
-class Libav::TExtractor : public TMediaExtractor
+//	raw muxer writes packets straight out, but means we cannot have multiple streams!
+class Libav::TMuxer : public TMediaMuxer
 {
 public:
-	TExtractor(std::shared_ptr<TStreamBuffer> InputStream,SoyEvent<const SoyTime>& OnFrameExtractedEvent);
+	TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input);
 	
-	virtual void									GetStreams(ArrayBridge<TStreamMeta>&& Streams) override;
-	virtual std::shared_ptr<Platform::TMediaFormat>	GetStreamFormat(size_t StreamIndex) override;
-
 protected:
-	virtual std::shared_ptr<TMediaPacket>	ReadNextPacket() override;
+	virtual void	SetupStreams(const ArrayBridge<TStreamMeta>&& Streams) override;
+	virtual void	ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
 	
-
-protected:
-	std::shared_ptr<TStreamBuffer>	mInputStream;
+private:
+	std::shared_ptr<TStreamBuffer>		mLibavOutput;
+	std::shared_ptr<Libav::TContext>	mContext;
 };
-
-

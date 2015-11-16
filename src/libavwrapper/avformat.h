@@ -600,7 +600,7 @@ typedef struct AVFormatContext {
 } AVFormatContext;
 
 
-struct AVOutputFormat* av_guess_format(const char* Name,void*,void*);
+struct AVOutputFormat* av_guess_format(const char* FormatName,const char* Filename,const char* Extension);
 int av_match_ext(const char* Filename,const char* Ext);
 struct AVDictionaryEntry* av_dict_get(struct AVDictionary*,const char* Key,void*,int);
 

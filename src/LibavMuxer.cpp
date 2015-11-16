@@ -1,30 +1,27 @@
 #include "LibavMuxer.h"
+#include <SoyStream.h>
 
 
-
-
-Libav::TExtractor::TExtractor(std::shared_ptr<TStreamBuffer> InputStream,SoyEvent<const SoyTime>& OnFrameExtractedEvent) :
-	TMediaExtractor		( std::string("Libav::TExtractor/"), OnFrameExtractedEvent ),
-	mInputStream		( InputStream )
+Libav::TMuxer::TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
+	TMediaMuxer	( Output, Input, "Libav::TMuxer" ),
+	mLibavOutput	( new TStreamBuffer )
 {
+	mContext.reset( new Libav::TContext("ts",mLibavOutput) );
 	
+	//	capture mLibavOutput and turn into a raw packet to send to the stream writer...
+	//	gr: see if the base class might want to re-use this buffer rather than deal as packets just because all muxers will otuput raw data?
 }
 
 
-std::shared_ptr<TMediaPacket> Libav::TExtractor::ReadNextPacket()
+void Libav::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 {
-	// av_read_frame(ctx, &pkt);
-	return nullptr;
+	mContext->WriteHeader( Streams );
 }
 
-void Libav::TExtractor::GetStreams(ArrayBridge<TStreamMeta>&& Streams)
+void Libav::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
 {
-	
+	//	make an av packet
+	Libav::TPacket PacketLibav( Packet );
+	mContext->WritePacket( PacketLibav );
 }
-
-std::shared_ptr<Platform::TMediaFormat> Libav::TExtractor::GetStreamFormat(size_t StreamIndex)
-{
-	return nullptr;
-}
-
 

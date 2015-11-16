@@ -1,26 +1,117 @@
 extern "C"
 {
-	#include "avformat.h"
+#include "avformat.h"
+	extern AVOutputFormat ff_mpegts_muxer;
+	void assert()
+	{
+		
+	}
 };
+#include "LibavWrapper.h"
 
 
-void assert()
+namespace Libav
 {
+	template<typename TYPE>
+	std::shared_ptr<TYPE>	GetPoolPointer(TYPE* Object,bool Alloc);	//	alloc/find this object's smart pointer
+
+	AVCodecID				GetCodecId(SoyMediaFormat::Type Format);
+	AVMediaType				GetCodecType(SoyMediaFormat::Type Format);
+}
+
+std::ostream& operator<<(std::ostream& out,const AVError& in)
+{
+	out << (int)(in);
+	return out;
+}
+
+void Libav::IsOkay(int LibavError,const std::string& Context,bool Throw)
+{
+	AVError Error = static_cast<AVError>(LibavError);
+	
+	if ( Error == AVERROR_SUCESS )
+		return;
+	
+	std::stringstream ErrorStr;
+	ErrorStr << "Lib av error in " << Context << "; " << Error << std::endl;
 	
 }
 
-void av_compare_ts()
+AVCodecID Libav::GetCodecId(SoyMediaFormat::Type Format)
 {
+	switch ( Format )
+	{
+		case SoyMediaFormat::H264_16:
+		case SoyMediaFormat::H264_8:
+		case SoyMediaFormat::H264_32:
+		case SoyMediaFormat::H264_ES:
+		case SoyMediaFormat::H264_PPS_ES:
+		case SoyMediaFormat::H264_SPS_ES:
+			return AV_CODEC_ID_H264;
+			
+		case SoyMediaFormat::Aac:
+			return AV_CODEC_ID_AAC;
+			/*
+			AV_CODEC_ID_MPEG1VIDEO,
+			AV_CODEC_ID_MPEG2VIDEO,
+			AV_CODEC_ID_MPEG4,
+			AV_CODEC_ID_H264,
+			AV_CODEC_ID_HEVC,
+			AV_CODEC_ID_CAVS,
+			AV_CODEC_ID_DIRAC,
+			AV_CODEC_ID_MP2,
+			AV_CODEC_ID_MP3,
+			AV_CODEC_ID_AAC,
+			AV_CODEC_ID_AAC_LATM,
+			AV_CODEC_ID_AC3,
+			 */
+	};
+	
+	std::stringstream Error;
+	Error << __func__ << " unhandled " << Format;
+	throw Soy::AssertException( Error.str() );
 }
 
-void av_crc()
+AVMediaType Libav::GetCodecType(SoyMediaFormat::Type Format)
 {
+	if ( SoyMediaFormat::IsAudio(Format) )
+		return AVMEDIA_TYPE_AUDIO;
+
+	if ( SoyMediaFormat::IsVideo(Format) )
+		return AVMEDIA_TYPE_VIDEO;
 	
+	if ( Format == SoyMediaFormat::Subtitle )
+		return AVMEDIA_TYPE_SUBTITLE;
+	
+	std::stringstream Error;
+	Error << __func__ << " unhandled " << Format;
+	throw Soy::AssertException( Error.str() );
 }
 
-void av_crc_get_table()
+
+template<typename TYPE>
+std::shared_ptr<TYPE> Libav::GetPoolPointer(TYPE* Object,bool Alloc)
 {
+	//	may want a lock here sometime
+	static Array<std::shared_ptr<TYPE>> Pool;
+	for ( int i=0;	i<Pool.GetSize();	i++ )
+	{
+		auto& Element = Pool[i];
+		if ( Element.get() == Object )
+			return Element;
+	}
 	
+	//	doesnt exist, alloc
+	if ( !Alloc )
+		throw Soy::AssertException("Object missing from pool");
+
+	std::shared_ptr<TYPE> NewObject( new TYPE );
+	//	clear C object...
+	memset( NewObject.get(), 0, sizeof(TYPE) );
+	
+	//	save and double check alloc
+	Pool.PushBack( NewObject );
+	return GetPoolPointer( NewObject.get(), false );
 }
 
 void av_dict_get()
@@ -38,8 +129,12 @@ void av_freep(void* Object)
 	
 }
 
-struct AVOutputFormat* av_guess_format(const char* Name,void*,void*)
+struct AVOutputFormat* av_guess_format(const char* FormatName,const char* Filename,const char* Extension)
 {
+	if ( std::string(FormatName) == "ts" )
+	{
+		return &ff_mpegts_muxer;
+	}
 	return nullptr;
 }
 
@@ -100,15 +195,22 @@ void avformat_free_context()
 
 struct AVStream* avformat_new_stream(struct AVFormatContext* Context,void*)
 {
-	return nullptr;
+	auto pStream = Libav::GetPoolPointer<struct AVStream>( nullptr, true );
+	
+	pStream->priv_data = nullptr;	//	alloc how much is needed by format
+
+	//	gr: re-alloc
+	Context->streams[Context->nb_streams] = pStream.get();
+	Context->nb_streams++;
+	
+	return pStream.get();
 }
 
 
 int avformat_write_header(struct AVFormatContext* Context,void*)
 {
 	//	call the write header func
-	//return Context->
-	return AVERROR_SUCESS;
+	return Context->oformat->write_header(Context);
 }
 
 
@@ -166,11 +268,6 @@ void ffio_free_dyn_buf()
 
 
 
-struct AVOutputFormat* av_guess_format(int Flags,void*,void*)
-{
-	return nullptr;
-}
-
 struct AVDictionaryEntry* av_dict_get(struct AVDictionary*,const char* Key,void*,int)
 {
 	return nullptr;
@@ -213,7 +310,8 @@ int av_compare_ts(int64_t Timestamp,struct AVRational Base,int64_t Delay,int Fla
 
 struct AVFormatContext* avformat_alloc_context()
 {
-	return nullptr;
+	auto Context = Libav::GetPoolPointer<struct AVFormatContext>( nullptr, true );
+	return Context.get();
 }
 
 void avformat_free_context(struct AVFormatContext* Context)
@@ -266,3 +364,52 @@ const uint8_t* avpriv_find_start_code(const uint8_t* Start,const uint8_t* End,ui
 }
 
 
+
+Libav::TContext::TContext(const std::string& FormatName,std::shared_ptr<TStreamBuffer> Output) :
+	mOutput	( Output )
+{
+	Soy::Assert( mOutput!=nullptr, "Output stream expected");
+	
+	//	find a format
+	auto* Format = av_guess_format( FormatName.c_str(),nullptr,nullptr );
+	
+	//	alloc context
+	mFormat = Libav::GetPoolPointer( avformat_alloc_context(), false );
+	mFormat->oformat = Format;
+}
+
+void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
+{
+	//	setup streams in context
+	for ( int s=0;	s<Streams.GetSize();	s++ )
+	{
+		auto& StreamSoy = Streams[s];
+		auto* StreamAv = avformat_new_stream( mFormat.get(), nullptr );
+		
+		//	setup stream
+		StreamAv->id = StreamSoy.mStreamIndex;
+		StreamAv->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true ).get();
+		StreamAv->codec->codec_id = GetCodecId( StreamSoy.mCodec );
+		StreamAv->codec->codec_type = GetCodecType( StreamSoy.mCodec );
+		
+	}
+	
+	//	write
+	auto& Format = *mFormat->oformat;
+	auto Result = Format.write_header( mFormat.get() );
+	IsOkay( Result, "Write muxing header" );
+}
+
+void Libav::TContext::WritePacket(const Libav::TPacket& Packet)
+{
+	auto& Format = *mFormat->oformat;
+	auto Result = Format.write_packet( mFormat.get(), Packet.mAvPacket.get() );
+	IsOkay( Result, "Write packet" );
+}
+
+
+Libav::TPacket::TPacket(std::shared_ptr<TMediaPacket> Packet) :
+	mSoyPacket	( Packet )
+{
+	//	alloc an avpacket
+}
