@@ -34,16 +34,16 @@
 		BF0F684D1B76285100BF6BFE /* PopCastOsx.bundle in CopyFiles */ = {isa = PBXBuildFile; fileRef = BF41F9741B4BD0700015614A /* PopCastOsx.bundle */; };
 		BF0F684F1B76285100BF6BFE /* PopCast.cs in CopyFiles */ = {isa = PBXBuildFile; fileRef = BFAD33D51B624D4300D3E7A6 /* PopCast.cs */; };
 		BF0F68541B76289B00BF6BFE /* SoyCuda.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC0CAFE1B76222E00D1FAA1 /* SoyCuda.cpp */; };
-		BF1191191BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF11911A1BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF11911B1BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF11911C1BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF11911D1BDAF98000DD627C /* SoyMedia.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1191181BDAF98000DD627C /* SoyMedia.h */; settings = {ASSET_TAGS = (); }; };
-		BF1191241BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF1191251BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF1191261BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF1191271BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF1191281BDF9FD400DD627C /* TFileCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1191231BDF9FD400DD627C /* TFileCaster.h */; settings = {ASSET_TAGS = (); }; };
+		BF1191191BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; };
+		BF11911A1BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; };
+		BF11911B1BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; };
+		BF11911C1BDAF98000DD627C /* SoyMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191171BDAF98000DD627C /* SoyMedia.cpp */; };
+		BF11911D1BDAF98000DD627C /* SoyMedia.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1191181BDAF98000DD627C /* SoyMedia.h */; };
+		BF1191241BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; };
+		BF1191251BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; };
+		BF1191261BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; };
+		BF1191271BDF9FD400DD627C /* TFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1191221BDF9FD400DD627C /* TFileCaster.cpp */; };
+		BF1191281BDF9FD400DD627C /* TFileCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1191231BDF9FD400DD627C /* TFileCaster.h */; };
 		BF1499BE1B4D640D00DA2575 /* TCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1499AB1B4D640D00DA2575 /* TCaster.cpp */; };
 		BF1499BF1B4D640D00DA2575 /* TCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1499AB1B4D640D00DA2575 /* TCaster.cpp */; };
 		BF1499C01B4D640D00DA2575 /* PopCast.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1499AD1B4D640D00DA2575 /* PopCast.cpp */; };
@@ -61,16 +61,16 @@
 		BF1499DE1B4D67CB00DA2575 /* SoyPng.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1499DC1B4D67CB00DA2575 /* SoyPng.cpp */; };
 		BF1499DF1B4D67CB00DA2575 /* SoyPng.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF1499DC1B4D67CB00DA2575 /* SoyPng.cpp */; };
 		BF1499E11B4D67E800DA2575 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF1499E01B4D67E800DA2575 /* OpenGL.framework */; };
-		BF192B001BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B011BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B021BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B031BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B041BF10A9400324911 /* SoyH264.h in Headers */ = {isa = PBXBuildFile; fileRef = BF192AFF1BF10A9400324911 /* SoyH264.h */; settings = {ASSET_TAGS = (); }; };
-		BF192B071BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B081BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B091BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B0A1BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF192B0B1BF10A9D00324911 /* SoyHttpConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = BF192B061BF10A9D00324911 /* SoyHttpConnection.h */; settings = {ASSET_TAGS = (); }; };
+		BF192B001BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; };
+		BF192B011BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; };
+		BF192B021BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; };
+		BF192B031BF10A9400324911 /* SoyH264.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192AFE1BF10A9400324911 /* SoyH264.cpp */; };
+		BF192B041BF10A9400324911 /* SoyH264.h in Headers */ = {isa = PBXBuildFile; fileRef = BF192AFF1BF10A9400324911 /* SoyH264.h */; };
+		BF192B071BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; };
+		BF192B081BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; };
+		BF192B091BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; };
+		BF192B0A1BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; };
+		BF192B0B1BF10A9D00324911 /* SoyHttpConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = BF192B061BF10A9D00324911 /* SoyHttpConnection.h */; };
 		BF2E8B121B55270D00CBD1AC /* SoyString.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF2E8B111B55270D00CBD1AC /* SoyString.mm */; };
 		BF2E8B131B55270D00CBD1AC /* SoyString.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF2E8B111B55270D00CBD1AC /* SoyString.mm */; };
 		BF406D131BB9A1C600CECF4E /* TAirplayCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF406D111BB9A1C600CECF4E /* TAirplayCaster.h */; };
@@ -143,6 +143,10 @@
 		BF48FF971B8E59B5004BCF63 /* GoogleCast.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF48FF961B8E59B5004BCF63 /* GoogleCast.framework */; };
 		BF48FF9C1B8E5D15004BCF63 /* TGoogleCaster.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF48FF9A1B8E5D15004BCF63 /* TGoogleCaster.mm */; };
 		BF48FF9D1B8E5D15004BCF63 /* TGoogleCaster.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF48FF9A1B8E5D15004BCF63 /* TGoogleCaster.mm */; };
+		BF50C37A1BFA09D600A11609 /* LibavMuxer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF50C3781BFA09D600A11609 /* LibavMuxer.cpp */; };
+		BF50C3821BFA0D7700A11609 /* mpegtsenc.c in Sources */ = {isa = PBXBuildFile; fileRef = BF50C3811BFA0D7700A11609 /* mpegtsenc.c */; };
+		BF50C3851BFA228800A11609 /* LibavWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF50C3841BFA228800A11609 /* LibavWrapper.cpp */; };
+		BF50C3871BFA2A1F00A11609 /* crc.c in Sources */ = {isa = PBXBuildFile; fileRef = BF50C3861BFA2A1F00A11609 /* crc.c */; };
 		BF5B07191B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF5B071A1B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF61FBE81B4EC46C00CCF9C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF61FBE71B4EC46C00CCF9C7 /* OpenGLES.framework */; };
@@ -162,17 +166,17 @@
 		BF7A8DF31B652DF400A6C403 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7A8DF21B652DF400A6C403 /* CoreMedia.framework */; };
 		BF7A8DF51B652DFB00A6C403 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7A8DF41B652DFB00A6C403 /* CoreVideo.framework */; };
 		BF7A8DF71B652E0100A6C403 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7A8DF61B652E0100A6C403 /* OpenGL.framework */; };
-		BF89908F1BDFE07900FF81FB /* Core in Resources */ = {isa = PBXBuildFile; fileRef = BF89908E1BDFE07900FF81FB /* Core */; settings = {ASSET_TAGS = (); }; };
-		BF8990AD1BE019FC00FF81FB /* SoySocketStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990AC1BE019FC00FF81FB /* SoySocketStream.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990AE1BE019FC00FF81FB /* SoySocketStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990AC1BE019FC00FF81FB /* SoySocketStream.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990B01BE01A5E00FF81FB /* SoySocketStream.h in Headers */ = {isa = PBXBuildFile; fileRef = BF8990AF1BE01A5E00FF81FB /* SoySocketStream.h */; settings = {ASSET_TAGS = (); }; };
-		BF8990B81BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990B91BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990BA1BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990BB1BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990BC1BE654CB00FF81FB /* SoyMpeg2Ts.h in Headers */ = {isa = PBXBuildFile; fileRef = BF8990B71BE654CB00FF81FB /* SoyMpeg2Ts.h */; settings = {ASSET_TAGS = (); }; };
-		BF8990C51BE7F2E700FF81FB /* array.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C41BE7F2E700FF81FB /* array.hpp */; settings = {ASSET_TAGS = (); }; };
-		BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C61BE7F31400FF81FB /* heaparray.hpp */; settings = {ASSET_TAGS = (); }; };
+		BF89908F1BDFE07900FF81FB /* Core in Resources */ = {isa = PBXBuildFile; fileRef = BF89908E1BDFE07900FF81FB /* Core */; };
+		BF8990AD1BE019FC00FF81FB /* SoySocketStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990AC1BE019FC00FF81FB /* SoySocketStream.cpp */; };
+		BF8990AE1BE019FC00FF81FB /* SoySocketStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990AC1BE019FC00FF81FB /* SoySocketStream.cpp */; };
+		BF8990B01BE01A5E00FF81FB /* SoySocketStream.h in Headers */ = {isa = PBXBuildFile; fileRef = BF8990AF1BE01A5E00FF81FB /* SoySocketStream.h */; };
+		BF8990B81BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; };
+		BF8990B91BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; };
+		BF8990BA1BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; };
+		BF8990BB1BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; };
+		BF8990BC1BE654CB00FF81FB /* SoyMpeg2Ts.h in Headers */ = {isa = PBXBuildFile; fileRef = BF8990B71BE654CB00FF81FB /* SoyMpeg2Ts.h */; };
+		BF8990C51BE7F2E700FF81FB /* array.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C41BE7F2E700FF81FB /* array.hpp */; };
+		BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C61BE7F31400FF81FB /* heaparray.hpp */; };
 		BF9CCA991B6B83F4000B19EA /* PopCast.cs in CopyFiles */ = {isa = PBXBuildFile; fileRef = BFAD33D51B624D4300D3E7A6 /* PopCast.cs */; };
 		BF9CCA9B1B6B840F000B19EA /* PopCast.cs in CopyFiles */ = {isa = PBXBuildFile; fileRef = BFAD33D51B624D4300D3E7A6 /* PopCast.cs */; };
 		BFAD33C41B61720400D3E7A6 /* PopMovieTextureOsxFramework.h in Headers */ = {isa = PBXBuildFile; fileRef = BFAD33C31B61720400D3E7A6 /* PopMovieTextureOsxFramework.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -343,6 +347,14 @@
 		BF48FF9A1B8E5D15004BCF63 /* TGoogleCaster.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGoogleCaster.mm; sourceTree = "<group>"; };
 		BF48FF9B1B8E5D15004BCF63 /* TGoogleCaster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGoogleCaster.h; sourceTree = "<group>"; };
 		BF48FFA01B8E77D1004BCF63 /* OpenCast.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenCast.framework; path = ../PopCast/src/OpenCast.framework; sourceTree = OPENCAST_PATH; };
+		BF50C3781BFA09D600A11609 /* LibavMuxer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LibavMuxer.cpp; sourceTree = "<group>"; };
+		BF50C3791BFA09D600A11609 /* LibavMuxer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LibavMuxer.h; sourceTree = "<group>"; };
+		BF50C37E1BFA0B2100A11609 /* avformat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = avformat.h; sourceTree = "<group>"; };
+		BF50C3801BFA0D5200A11609 /* libavwrapper */ = {isa = PBXFileReference; lastKnownFileType = folder; path = libavwrapper; sourceTree = "<group>"; };
+		BF50C3811BFA0D7700A11609 /* mpegtsenc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mpegtsenc.c; sourceTree = "<group>"; };
+		BF50C3831BFA0FA700A11609 /* libav */ = {isa = PBXFileReference; lastKnownFileType = folder; name = libav; path = ../../libav; sourceTree = "<group>"; };
+		BF50C3841BFA228800A11609 /* LibavWrapper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LibavWrapper.cpp; sourceTree = "<group>"; };
+		BF50C3861BFA2A1F00A11609 /* crc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = crc.c; path = libavwrapper/libavutil/crc.c; sourceTree = "<group>"; };
 		BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyShader.cpp; path = src/SoyShader.cpp; sourceTree = "<group>"; };
 		BF5B07181B5D06AF00C489C6 /* SoyShader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyShader.h; path = src/SoyShader.h; sourceTree = "<group>"; };
 		BF61FBE71B4EC46C00CCF9C7 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.4.sdk/System/Library/Frameworks/OpenGLES.framework; sourceTree = DEVELOPER_DIR; };
@@ -461,6 +473,16 @@
 			);
 			sourceTree = "<group>";
 		};
+		BF50C37D1BFA0B0100A11609 /* libavwrapper */ = {
+			isa = PBXGroup;
+			children = (
+				BF50C3811BFA0D7700A11609 /* mpegtsenc.c */,
+				BF50C3841BFA228800A11609 /* LibavWrapper.cpp */,
+				BF50C37E1BFA0B2100A11609 /* avformat.h */,
+			);
+			path = libavwrapper;
+			sourceTree = "<group>";
+		};
 		BF8F3EA21B4BCC9B00D35543 /* Android */ = {
 			isa = PBXGroup;
 			children = (
@@ -561,7 +583,11 @@
 		BFEEDD6F1B46A7E5002F9CFA /* src */ = {
 			isa = PBXGroup;
 			children = (
+				BF50C3831BFA0FA700A11609 /* libav */,
+				BF50C3801BFA0D5200A11609 /* libavwrapper */,
+				BF50C37D1BFA0B0100A11609 /* libavwrapper */,
 				BFBC3D931BC7EBDF00CEE3D5 /* AvfCompressor.h */,
+				BF50C3861BFA2A1F00A11609 /* crc.c */,
 				BFBC3D941BC7EBDF00CEE3D5 /* AvfCompressor.mm */,
 				BFBC3DBB1BC823F300CEE3D5 /* AvfPixelBuffer.h */,
 				BFBC3DBC1BC823F300CEE3D5 /* AvfPixelBuffer.mm */,
@@ -578,6 +604,8 @@
 				BF1499B01B4D640D00DA2575 /* PopUnity.h */,
 				BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */,
 				BF8990B71BE654CB00FF81FB /* SoyMpeg2Ts.h */,
+				BF50C3781BFA09D600A11609 /* LibavMuxer.cpp */,
+				BF50C3791BFA09D600A11609 /* LibavMuxer.h */,
 				BF406D111BB9A1C600CECF4E /* TAirplayCaster.h */,
 				BF406D121BB9A1C600CECF4E /* TAirplayCaster.mm */,
 				BF1499AB1B4D640D00DA2575 /* TCaster.cpp */,
@@ -902,8 +930,10 @@
 				BF406D151BB9A1C600CECF4E /* TAirplayCaster.mm in Sources */,
 				BF7225B71BAF38D300550AD8 /* SoyRef.cpp in Sources */,
 				BF41F9C81B4BDB270015614A /* SoyAssert.cpp in Sources */,
+				BF50C37A1BFA09D600A11609 /* LibavMuxer.cpp in Sources */,
 				BF406D221BB9B1A900CECF4E /* SoySocket.cpp in Sources */,
 				BF5B071A1B5D06AF00C489C6 /* SoyShader.cpp in Sources */,
+				BF50C3821BFA0D7700A11609 /* mpegtsenc.c in Sources */,
 				BF406D3F1BB9C8B200CECF4E /* SoyMulticast.mm in Sources */,
 				BF41F9CA1B4BDB270015614A /* SoyTime.cpp in Sources */,
 				BF406D321BB9B1C500CECF4E /* SoyProtocol.cpp in Sources */,
@@ -925,12 +955,14 @@
 				BFBC3D961BC7EBDF00CEE3D5 /* AvfCompressor.mm in Sources */,
 				BF1499DB1B4D67AF00DA2575 /* SoyPixels.cpp in Sources */,
 				BF1499C11B4D640D00DA2575 /* PopCast.cpp in Sources */,
+				BF50C3851BFA228800A11609 /* LibavWrapper.cpp in Sources */,
 				BF192B081BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */,
 				BF41F9D91B4BDBC60015614A /* SoyDebug.mm in Sources */,
 				BF406D261BB9B1A900CECF4E /* SoyStream.cpp in Sources */,
 				BF41F9DD1B4BDBD80015614A /* SoyEvent.cpp in Sources */,
 				BF1499CF1B4D646B00DA2575 /* SoyVector.cpp in Sources */,
 				BF406D2E1BB9B1C500CECF4E /* SoyHttp.cpp in Sources */,
+				BF50C3871BFA2A1F00A11609 /* crc.c in Sources */,
 				BF192B011BF10A9400324911 /* SoyH264.cpp in Sources */,
 				BF1499D71B4D663800DA2575 /* SoyOpenglContext.cpp in Sources */,
 				BF41F9D21B4BDBA80015614A /* SoyArray.cpp in Sources */,
@@ -1020,6 +1052,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/src/libavwrapper/**";
 				MTL_ENABLE_DEBUG_INFO = YES;
 			};
 			name = Debug;
