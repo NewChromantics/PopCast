@@ -128,7 +128,7 @@ typedef struct AVCodec {
 typedef struct AVStream {
 	void*					priv_data;
 	struct AVDictionary*	metadata;
-	struct AVCodec*			codec;
+	struct AVCodec*			codec;		//	actually avcodeccontext
 	int						disposition;// AV_DISPOSITION_
 	AVRational				time_base;
 	int						id;			//	pid
@@ -628,7 +628,7 @@ void avio_write(AVIOContext* Context,const uint8_t* Data,size_t Size);
 void avio_flush(AVIOContext* Context);
 int av_write_frame(struct AVFormatContext* Context,struct AVPacket* Packet);
 int avformat_write_header(struct AVFormatContext* Context,void*);
-struct AVStream* avformat_new_stream(struct AVFormatContext* Context,void*);
+struct AVStream* avformat_new_stream(struct AVFormatContext* Context,const struct AVCodec* Codec);
 int avcodec_copy_context(const AVFormatContext* Source,struct AVFormatContext* Dest);
 
 const uint8_t* avpriv_find_start_code(const uint8_t* Start,const uint8_t* End,uint32_t* State);

@@ -1,6 +1,7 @@
 #include "TFileCaster.h"
 #include <SoyMedia.h>
 #include "AvfCompressor.h"
+#include "LibavMuxer.h"
 
 
 TFileCaster::TFileCaster(const TCasterParams& Params) :
@@ -19,6 +20,8 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	//	alloc muxer
 	mFileStream.reset( new TFileStreamWriter( Filename ) );
 	
+	mMuxer.reset( new Libav::TMuxer( mFileStream, mFrameBuffer ) );
+	/*
 	if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
 	{
 		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
@@ -27,7 +30,7 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	{
 		mMuxer.reset( new TRawMuxer( mFileStream, mFrameBuffer ) );
 	}
-
+*/
 	mFileStream->Start();
 	Start();
 }
