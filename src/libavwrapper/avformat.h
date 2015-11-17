@@ -598,16 +598,39 @@ typedef struct AVFormatContext {
 } AVFormatContext;
 
 
+
+
+void ff_dynarray_add(intptr_t **tab_ptr, int *nb_ptr, intptr_t elem);
+
+#ifdef __GNUC__
+#define dynarray_add(tab, nb_ptr, elem)\
+do {\
+__typeof__(tab) _tab = (tab);\
+__typeof__(elem) _elem = (elem);\
+(void)sizeof(**_tab == _elem); /* check that types are compatible */\
+ff_dynarray_add((intptr_t **)_tab, nb_ptr, (intptr_t)_elem);\
+} while(0)
+#else
+#define dynarray_add(tab, nb_ptr, elem)\
+do {\
+ff_dynarray_add((intptr_t **)(tab), nb_ptr, (intptr_t)(elem));\
+} while(0)
+#endif
+
+
+
+
 struct AVOutputFormat* av_guess_format(const char* FormatName,const char* Filename,const char* Extension);
 int av_match_ext(const char* Filename,const char* Ext);
 struct AVDictionaryEntry* av_dict_get(struct AVDictionary*,const char* Key,void*,int);
 
 void* av_mallocz(size_t Size);
 void* av_malloc(size_t Size);
+void* av_realloc(void* Data,size_t Size);
+
 void av_free(void*);
 void av_freep(void*);
 char* av_strdup(const char* s);
-void dynarray_add(intptr_t** Items, int* Counter,intptr_t NewItem);
 
 int64_t av_rescale(size_t Pos,uint64_t Time, uint64_t TimeBase);
 
