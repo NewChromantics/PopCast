@@ -1,6 +1,7 @@
 extern "C"
 {
 #include "avformat.h"
+#include "libavutil/intreadwrite.h"
 	extern AVOutputFormat ff_mpegts_muxer;
 	void assert()
 	{
@@ -8,16 +9,30 @@ extern "C"
 	}
 };
 #include "LibavWrapper.h"
-
+#include <SoyStream.h>
+#include <SoyString.h>
 
 namespace Libav
 {
 	template<typename TYPE>
-	std::shared_ptr<TYPE>			GetPoolPointer(TYPE* Object,bool Alloc);	//	alloc/find this object's smart pointer
+	class TAvWrapperBase;
+	template<typename TYPE>
+	class TAvWrapper;
+	
+	template<typename TYPE>
+	std::shared_ptr<TAvWrapper<TYPE>>	GetPoolPointer(TYPE* Object,bool Alloc);	//	alloc/find this object's smart pointer
+	template<typename TYPE>
+	void								FreePoolPointer(TYPE* Object);
 
-	std::shared_ptr<Array<uint8>>	GetPoolArray(size_t Size);	//	alloc some data as an array
-	std::shared_ptr<Array<uint8>>	GetPoolArray(void* Data);	//	get shared ptr to existing data
-	void							FreePoolArray(void* Data);
+	//	alloc and free a libav object
+	template<typename TYPE>
+	std::shared_ptr<TAvWrapper<TYPE>>	GetPoolPointer(TYPE* Object,bool Alloc);	//	alloc/find this object's smart pointer
+	template<typename TYPE>
+	void								FreePoolPointer(TYPE* Object);
+
+	std::shared_ptr<Array<uint8>>		GetPoolArray(size_t Size);	//	alloc some data as an array
+	std::shared_ptr<Array<uint8>>		GetPoolArray(void* Data);	//	get shared ptr to existing data
+	void								FreePoolArray(void* Data);
 	
 	namespace Private
 	{
@@ -33,6 +48,42 @@ std::ostream& operator<<(std::ostream& out,const AVError& in)
 	out << (int)(in);
 	return out;
 }
+
+
+
+template<typename TYPE>
+class Libav::TAvWrapper : public TAvWrapperBase<TYPE>
+{
+public:
+};
+
+
+template<>
+class Libav::TAvWrapper<struct AVFormatContext> : public TAvWrapperBase<struct AVFormatContext>
+{
+public:
+	~TAvWrapper()
+	{
+		//	free sub objects
+		Libav::FreePoolPointer( mObject.oformat );
+		Libav::FreePoolPointer( mObject.pb );
+	}
+};
+
+
+template<>
+class Libav::TAvWrapper<struct AVStream> : public TAvWrapperBase<struct AVStream>
+{
+public:
+	~TAvWrapper()
+	{
+		//	free sub objects
+		Libav::FreePoolPointer( mObject.codec );
+	}
+};
+
+
+
 
 void Libav::IsOkay(int LibavError,const std::string& Context,bool Throw)
 {
@@ -50,9 +101,10 @@ AVCodecID Libav::GetCodecId(SoyMediaFormat::Type Format)
 {
 	switch ( Format )
 	{
-		case SoyMediaFormat::H264_16:
-		case SoyMediaFormat::H264_8:
-		case SoyMediaFormat::H264_32:
+		//	AV h264 expects annexb
+		//case SoyMediaFormat::H264_16:
+		//case SoyMediaFormat::H264_8:
+		//case SoyMediaFormat::H264_32:
 		case SoyMediaFormat::H264_ES:
 		case SoyMediaFormat::H264_PPS_ES:
 		case SoyMediaFormat::H264_SPS_ES:
@@ -74,6 +126,9 @@ AVCodecID Libav::GetCodecId(SoyMediaFormat::Type Format)
 			AV_CODEC_ID_AAC_LATM,
 			AV_CODEC_ID_AC3,
 			 */
+			
+		default:
+			break;
 	};
 	
 	std::stringstream Error;
@@ -99,14 +154,14 @@ AVMediaType Libav::GetCodecType(SoyMediaFormat::Type Format)
 
 
 template<typename TYPE>
-std::shared_ptr<TYPE> Libav::GetPoolPointer(TYPE* Object,bool Alloc)
+std::shared_ptr<Libav::TAvWrapper<TYPE>> Libav::GetPoolPointer(TYPE* Object,bool Alloc)
 {
 	//	may want a lock here sometime
-	static Array<std::shared_ptr<TYPE>> Pool;
+	static Array<std::shared_ptr<TAvWrapper<TYPE>>> Pool;
 	for ( int i=0;	i<Pool.GetSize();	i++ )
 	{
 		auto& Element = Pool[i];
-		if ( Element.get() == Object )
+		if ( Element->GetObject() == Object )
 			return Element;
 	}
 	
@@ -114,14 +169,48 @@ std::shared_ptr<TYPE> Libav::GetPoolPointer(TYPE* Object,bool Alloc)
 	if ( !Alloc )
 		throw Soy::AssertException("Object missing from pool");
 
-	std::shared_ptr<TYPE> NewObject( new TYPE );
-	//	clear C object...
-	memset( NewObject.get(), 0, sizeof(TYPE) );
+	std::shared_ptr<Libav::TAvWrapper<TYPE>> NewObject( new TAvWrapper<TYPE>() );
 	
 	//	save and double check alloc
 	Pool.PushBack( NewObject );
-	return GetPoolPointer( NewObject.get(), false );
+	return GetPoolPointer( NewObject->GetObject(), false );
 }
+
+
+template<typename TYPE>
+void Libav::FreePoolPointer(TYPE* Object)
+{
+	//	may want a lock here sometime
+	static Array<std::shared_ptr<TAvWrapper<TYPE>>> Pool;
+
+	std::shared_ptr<Libav::TAvWrapper<TYPE>> pObject;
+	for ( int i=0;	i<Pool.GetSize();	i++ )
+	{
+		auto& Element = Pool[i];
+		if ( Element->GetObject() != Object )
+			continue;
+		
+		pObject = Element;
+		Pool.RemoveBlock( i, 1 );
+		break;
+	}
+	
+	//	doesnt exist, warning
+	if ( !pObject )
+	{
+		std::Debug << __func__ << " warning, missing object from pool" << std::endl;
+		return;
+	}
+
+	if ( pObject.use_count() > 1 )
+	{
+		std::Debug << __func__ << " warning, freeing object from pool but refcount " << pObject.use_count() << " > 1" << std::endl;
+	}
+
+	//	should dealloc
+	pObject.reset();
+}
+
 
 std::shared_ptr<Array<uint8>> Libav::GetPoolArray(size_t Size)
 {
@@ -173,11 +262,6 @@ void Libav::FreePoolArray(void* Data)
 }
 
 
-void av_dict_get()
-{
-	
-}
-
 void av_free(void* Object)
 {
 	Libav::FreePoolArray( Object );
@@ -190,43 +274,34 @@ void av_freep(void* Object)
 
 struct AVOutputFormat* av_guess_format(const char* FormatName,const char* Filename,const char* Extension)
 {
-	if ( std::string(FormatName) == "ts" )
+	//	build map
+	std::map<std::string,struct AVOutputFormat*> FormatMap;
+	
+	Array<struct AVOutputFormat*> AllFormats;
+	AllFormats.PushBack( &ff_mpegts_muxer );
+	for ( int f=0;	f<AllFormats.GetSize();	f++ )
 	{
-		return &ff_mpegts_muxer;
+		auto* Format = AllFormats[f];
+		auto UpdateMap = [&](const std::string& Part,const char& Delin)
+		{
+			FormatMap[Part] = Format;
+			return true;
+		};
+		Soy::StringSplitByMatches( UpdateMap, Format->extensions, ",", false );
 	}
-	return nullptr;
+	
+	return FormatMap[FormatName];
 }
 
-void av_init_packet()
-{
-	
-}
 
-void av_log(void *avcl, int level, const char *fmt, ...)
+void av_log(AVFormatContext *avcl, int level, const char *fmt, ...)
 {
-	
+	std::Debug << "av_log; " << fmt << std::endl;
 }
 
 int av_match_ext(const char* Filename,const char* Ext)
 {
 	return false;
-}
-
-void av_rescale()
-{
-	
-}
-
-
-void _av_strdup()
-{
-	
-}
-
-
-void av_write_frame()
-{
-	
 }
 
 
@@ -235,11 +310,6 @@ int avcodec_copy_context(const AVFormatContext* Source,struct AVFormatContext* D
 	return AVERROR_SUCESS;
 }
 
-
-void avformat_free_context()
-{
-	
-}
 
 template<typename TYPE>	//	TYPE=TYPE*
 void ReallocArray(TYPE*& Data,unsigned int& Size,unsigned int NewSize)
@@ -329,10 +399,10 @@ struct AVStream* avformat_new_stream(struct AVFormatContext* Context,const struc
 {
 	Soy::Assert( Codec==nullptr, "Handle codec!=null");
 	
-	auto pStream = Libav::GetPoolPointer<struct AVStream>( nullptr, true ).get();
+	auto pStream = Libav::GetPoolPointer<struct AVStream>( nullptr, true )->GetObject();
 	
 	pStream->priv_data = nullptr;	//	alloc how much is needed by format
-	pStream->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true ).get();
+	pStream->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true )->GetObject();
 	Init(*pStream->codec);
 
 	
@@ -351,58 +421,10 @@ int avformat_write_header(struct AVFormatContext* Context,void*)
 }
 
 
-void avio_close_dyn_buf()
-{
-	
-}
-
-
-void avio_flush()
-{
-}
-
-
-void avio_open_dyn_buf()
-{
-	
-}
-
-
-void avio_tell()
-{
-	
-}
-
-
-void avio_write()
-{
-	
-}
-
-
-void avpriv_find_start_code()
-{
-	
-}
-
-
 void avpriv_set_pts_info(struct AVStream* Stream,int Pts,int,int Base)
 {
 	
 }
-
-
-void dynarray_add()
-{
-	
-}
-
-
-void ffio_free_dyn_buf()
-{
-	
-}
-
 
 
 struct AVDictionaryEntry* av_dict_get(struct AVDictionary*,const char* Key,void*,int)
@@ -455,58 +477,113 @@ int av_compare_ts(int64_t Timestamp,struct AVRational Base,int64_t Delay,int Fla
 struct AVFormatContext* avformat_alloc_context()
 {
 	auto Context = Libav::GetPoolPointer<struct AVFormatContext>( nullptr, true );
-	return Context.get();
+	return Context->GetObject();
 }
 
 void avformat_free_context(struct AVFormatContext* Context)
 {
+	Soy_AssertTodo();
 }
 
 void av_init_packet(struct AVPacket* Packet)
 {
-	
+	Soy_AssertTodo();
 }
 
 int avio_open_dyn_buf(struct AVIOContext** Context)
 {
+	Soy_AssertTodo();
 	return 0;
 }
 
 int ffio_free_dyn_buf(struct AVIOContext** Context)
 {
+	Soy_AssertTodo();
 	return 0;
 }
 
 size_t avio_close_dyn_buf(struct AVIOContext* Context,void* Data)
 {
+	Soy_AssertTodo();
 	return 0;
 }
 
-size_t avio_tell(AVIOContext* Context)
+size_t avio_tell(AVIOContext* ContextIo)
 {
-	return 0;
-}
-
-void avio_flush(AVIOContext* Context)
-{
-}
-
-void avio_write(AVIOContext* Context,const uint8_t* Data,size_t Size)
-{
+	Soy::Assert( ContextIo, "avio_tell AVIOContext expected");
+	Soy::Assert( ContextIo->pLibav_TContext, "avio_tell AVIOContext->pLibav_TContext expected");
 	
+	auto& Context = *reinterpret_cast<Libav::TContext*>( ContextIo->pLibav_TContext );
+	return Context.IoTell();
+}
+
+void avio_flush(AVIOContext* ContextIo)
+{
+	Soy::Assert( ContextIo, "avio_tell AVIOContext expected");
+	Soy::Assert( ContextIo->pLibav_TContext, "avio_tell AVIOContext->pLibav_TContext expected");
+	
+	auto& Context = *reinterpret_cast<Libav::TContext*>( ContextIo->pLibav_TContext );
+	return Context.IoFlush();
+}
+
+void avio_write(AVIOContext* ContextIo,const uint8_t* Data,size_t Size)
+{
+	//	data to array
+	if ( Data && !Size )
+		return;
+	if ( Size && !Data )
+		Soy::Assert( Data!=nullptr, "avio_write size, but missing data");
+	if ( !Size && !Data )
+		return;
+	auto Array = GetRemoteArray( Data, Size );
+	
+	Soy::Assert( ContextIo, "avio_tell AVIOContext expected");
+	Soy::Assert( ContextIo->pLibav_TContext, "avio_tell AVIOContext->pLibav_TContext expected");
+	
+	auto& Context = *reinterpret_cast<Libav::TContext*>( ContextIo->pLibav_TContext );
+	return Context.IoWrite( GetArrayBridge(Array) );
 }
 
 int av_write_frame(struct AVFormatContext* Context,struct AVPacket* Packet)
 {
+	Soy_AssertTodo();
 	return 0;
 }
 
 
-const uint8_t* avpriv_find_start_code(const uint8_t* Start,const uint8_t* End,uint32_t* State)
-{
-	return nullptr;
-}
 
+const uint8_t *avpriv_find_start_code(const uint8_t * p,
+									  const uint8_t *end,
+									  uint32_t *  state)
+{
+	int i;
+	
+	assert(p <= end);
+	if (p >= end)
+		return end;
+	
+	for (i = 0; i < 3; i++) {
+		uint32_t tmp = *state << 8;
+		*state = tmp + *(p++);
+		if (tmp == 0x100 || p == end)
+			return p;
+	}
+	
+	while (p < end) {
+		if      (p[-1] > 1      ) p += 3;
+		else if (p[-2]          ) p += 2;
+		else if (p[-3]|(p[-1]-1)) p++;
+		else {
+			p++;
+			break;
+		}
+	}
+	
+	p = std::min(p, end) - 4;
+	*state = AV_RB32(p);
+	
+	return p + 4;
+}
 
 
 Libav::TContext::TContext(const std::string& FormatName,std::shared_ptr<TStreamBuffer> Output) :
@@ -519,8 +596,11 @@ Libav::TContext::TContext(const std::string& FormatName,std::shared_ptr<TStreamB
 	
 	//	alloc context
 	mFormat = Libav::GetPoolPointer( avformat_alloc_context(), false );
-	mFormat->priv_data = Libav::GetPoolArray( Format->priv_data_size )->GetArray();
-	mFormat->oformat = Format;
+	auto& FormatContext = *mFormat->GetObject();
+	FormatContext.priv_data = Libav::GetPoolArray( Format->priv_data_size )->GetArray();
+	FormatContext.oformat = Format;
+	FormatContext.pb = Libav::GetPoolPointer<AVIOContext>( nullptr, true )->GetObject();
+	FormatContext.pb->pLibav_TContext = this;
 }
 
 void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
@@ -529,32 +609,67 @@ void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
 	for ( int s=0;	s<Streams.GetSize();	s++ )
 	{
 		auto& StreamSoy = Streams[s];
-		auto* StreamAv = avformat_new_stream( mFormat.get(), nullptr );
+		auto* StreamAv = avformat_new_stream( mFormat->GetObject(), nullptr );
 		
 		//	setup stream
 		StreamAv->id = StreamSoy.mStreamIndex;
-		StreamAv->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true ).get();
+		StreamAv->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true )->GetObject();
 		StreamAv->codec->codec_id = GetCodecId( StreamSoy.mCodec );
 		StreamAv->codec->codec_type = GetCodecType( StreamSoy.mCodec );
 		
 	}
 	
 	//	write
-	auto& Format = *mFormat->oformat;
-	auto Result = Format.write_header( mFormat.get() );
+	auto& Format = *mFormat->GetObject()->oformat;
+	auto Result = Format.write_header( mFormat->GetObject() );
 	IsOkay( Result, "Write muxing header" );
 }
 
 void Libav::TContext::WritePacket(const Libav::TPacket& Packet)
 {
-	auto& Format = *mFormat->oformat;
-	auto Result = Format.write_packet( mFormat.get(), Packet.mAvPacket.get() );
+	auto& Format = *mFormat->GetObject()->oformat;
+	auto Result = Format.write_packet( mFormat->GetObject(), Packet.mAvPacket->GetObject() );
 	IsOkay( Result, "Write packet" );
+}
+
+
+size_t Libav::TContext::IoTell()
+{
+	Soy_AssertTodo();
+	return 0;
+}
+
+
+void Libav::TContext::IoFlush()
+{
+	//	n/a for stream buffers
+}
+
+void Libav::TContext::IoWrite(const ArrayBridge<uint8>&& Data)
+{
+	mOutput->Push( Data );
 }
 
 
 Libav::TPacket::TPacket(std::shared_ptr<TMediaPacket> Packet) :
 	mSoyPacket	( Packet )
 {
+	Soy::Assert( mSoyPacket != nullptr, "TMediaPacket expected");
+	
 	//	alloc an avpacket
+	mAvPacket = Libav::GetPoolPointer<AVPacket>( nullptr, true );
+	auto& AvPacket = *mAvPacket->GetObject();
+	AvPacket.stream_index = Packet->mMeta.mStreamIndex;
+	AvPacket.size = Packet->mData.GetDataSize();
+	AvPacket.data = Packet->mData.GetArray();
+	
+	//	todo: convert these properly to the... codec? stream? format? time scalar
+	AvPacket.pts = Packet->mTimecode.GetTime();
+	AvPacket.pts = Packet->mDecodeTimecode.GetTime();
+	AvPacket.flags = 0;
+	if ( Packet->mIsKeyFrame )
+		AvPacket.flags |= AV_PKT_FLAG_KEY;
+	
 }
+
+

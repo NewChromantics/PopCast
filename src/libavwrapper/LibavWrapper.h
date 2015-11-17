@@ -14,10 +14,16 @@ namespace Libav
 {
 	class TContext;
 	class TPacket;
+
+	template<typename TYPE>
+	class TAvWrapperBase;
+	template<typename TYPE>
+	class TAvWrapper;
 	
 	void		IsOkay(int LibavError,const std::string& Context,bool Throw=true);
+	
+	
 };
-
 
 
 class Libav::TContext
@@ -28,10 +34,12 @@ public:
 	void		WriteHeader(const ArrayBridge<TStreamMeta>& Streams);
 	void		WritePacket(const Libav::TPacket& Packet);
 
+	size_t		IoTell();
+	void		IoFlush();
+	void		IoWrite(const ArrayBridge<uint8>&& Data);
+	
 private:
-	std::shared_ptr<AVPacket>			mAvPacket;
-	std::shared_ptr<AVFormatContext>	mFormat;
-	std::shared_ptr<AVIOContext>		mIo;
+	std::shared_ptr<TAvWrapper<AVFormatContext>>	mFormat;
 	std::shared_ptr<TStreamBuffer>		mOutput;
 };
 
@@ -42,9 +50,25 @@ public:
 	TPacket(std::shared_ptr<TMediaPacket> Packet);
 	
 public:
-	std::shared_ptr<AVPacket>		mAvPacket;
-	std::shared_ptr<TMediaPacket>	mSoyPacket;
+	std::shared_ptr<TAvWrapper<AVPacket>>	mAvPacket;
+	std::shared_ptr<TMediaPacket>			mSoyPacket;
 };
 
+
+
+template<typename TYPE>
+class Libav::TAvWrapperBase
+{
+public:
+	TAvWrapperBase()
+	{
+		memset( &mObject, 0, sizeof(mObject) );
+	}
+	
+	TYPE*	GetObject()	{	return &mObject;	}
+	
+public:
+	TYPE	mObject;
+};
 
 

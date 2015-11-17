@@ -26,8 +26,6 @@
 #define AV_TIME_BASE_Q	0
 
 
-void assert();
-void av_log(void *avcl, int level, const char *fmt, ...);
 #define AV_LOG_ERROR	0
 #define AV_LOG_WARNING	1
 #define AV_LOG_VERBOSE	2
@@ -202,7 +200,7 @@ typedef struct AVClass {
 } AVClass;
 
 typedef struct AVIOContext {
-	
+	void*			pLibav_TContext;	//	unsafe Libav::TContext
 } AVIOContext;
 
 typedef struct AVProgram {
@@ -632,4 +630,6 @@ struct AVStream* avformat_new_stream(struct AVFormatContext* Context,const struc
 int avcodec_copy_context(const AVFormatContext* Source,struct AVFormatContext* Dest);
 
 const uint8_t* avpriv_find_start_code(const uint8_t* Start,const uint8_t* End,uint32_t* State);
+void assert();
+void av_log(AVFormatContext *avcl, int level, const char *fmt, ...);
 
