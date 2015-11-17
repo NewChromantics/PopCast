@@ -24,4 +24,5 @@ protected:
 private:
 	std::shared_ptr<TStreamBuffer>		mLibavOutput;
 	std::shared_ptr<Libav::TContext>	mContext;
+	std::shared_ptr<SoyWorkerThread>	mLibavToOutputRelay;
 };
