@@ -15,44 +15,8 @@
 #include "AvfPixelBuffer.h"
 #include <SoyStream.h>
 #include <SoyMedia.h>
-#include "SoyH264.h"
-
-
-
-class Platform::TMediaFormat
-{
-public:
-	TMediaFormat(CMFormatDescriptionRef Desc) :
-	mDesc	( Desc )
-	{
-		CFRetain( mDesc );
-	}
-	~TMediaFormat()
-	{
-		CFRelease( mDesc );
-	}
-	
-	
-	CMFormatDescriptionRef	mDesc;
-};
-
-
-std::map<H264ProfileLevel::Type, std::string> H264ProfileLevel::EnumMap =
-{
-	{ H264ProfileLevel::Invalid,	"Invalid" },
-	{ H264ProfileLevel::Baseline,	"Baseline" },
-};
-
-
-namespace Avf
-{
-	void			IsOkay(OSStatus Error,const std::string& Context);
-	void			IsOkay(CVReturn Error,const std::string& Context);
-	CFStringRef		GetProfile(H264ProfileLevel::Type Profile);
-	std::string		GetString(OSStatus Status);
-}
-
-
+#include <SoyH264.h>
+#include "SoyAvf.h"
 
 
 class Avf::TSession
@@ -75,44 +39,6 @@ public:
 	VTCompressionSessionRef	mSession;
 	size_t					mStreamIndex;
 };
-
-
-//	lots of errors in macerrors.h with no string conversion :/
-#define TESTENUMERROR(e,Enum)	if ( (e) == (Enum)	return ##Enum ;
-
-//	http://stackoverflow.com/questions/2196869/how-do-you-convert-an-iphone-osstatus-code-to-something-useful
-std::string Avf::GetString(OSStatus Status)
-{
-//	TESTENUMERROR(Status,x);
-	
-	//	could be fourcc?
-	return Soy::FourCCToString( CFSwapInt32HostToBig(Status) );
-	
-	NSBundle *bundle = [NSBundle bundleWithIdentifier:@"com.apple.security"];
-	NSString *key = [NSString stringWithFormat:@"%d", Status];
-	auto* StringNs = [bundle localizedStringForKey:key value:key table:@"SecErrorMessages"];
-	return Soy::NSStringToString( StringNs );
-}
-
-/*
-void Avf::IsOkay(CVReturn Error,const std::string& Context)
-{
-	if ( Error == kCVReturnSuccess )
-		return;
-	
-	throw Soy::AssertException( Context );
-}
-*/
-
-void Avf::IsOkay(OSStatus Error,const std::string& Context)
-{
-	if ( Error == noErr )
-		return;
-	
-	std::stringstream ErrorString;
-	ErrorString << "OSStatus error in " << Context << ": " << GetString(Error);
-	throw Soy::AssertException( ErrorString.str() );
-}
 
 
 
@@ -147,20 +73,6 @@ void OnCompressionOutput(void *outputCallbackRefCon,
 		This->OnError( e.what() );
 	}
 };
-
-
-
-CFStringRef Avf::GetProfile(H264ProfileLevel::Type Profile)
-{
-	switch ( Profile )
-	{
-		case H264ProfileLevel::Baseline:	return kVTProfileLevel_H264_Baseline_AutoLevel;
-			
-		default:
-			std::Debug << "Unhandled profile type " << Profile << " using baseline" << std::endl;
-			return kVTProfileLevel_H264_Baseline_AutoLevel;
-	}
-}
 
 
 Avf::TSession::TSession(TEncoder& Parent,SoyPixelsMeta OutputMeta,TParams& Params,size_t StreamIndex,std::function<void(std::shared_ptr<TMediaPacket>&)> PushFrameFunc) :
@@ -330,117 +242,6 @@ void GetNalPackets(const ArrayBridge<uint8>&& H264Data,ArrayBridge<TNalPacket>&&
 		Reader.Read( Packet.mData, nal_size );
 	}
  */
-}
-
-
-std::shared_ptr<TMediaPacket> GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format)
-{
-	auto Desc = CMSampleBufferGetFormatDescription( SampleBuffer );
-	size_t ParamCount = 0;
-	auto Result = CMVideoFormatDescriptionGetH264ParameterSetAtIndex( Desc, 0, nullptr, nullptr, &ParamCount, nullptr );
-	Avf::IsOkay( Result, "Get H264 param 0");
-	
-	/*
-	 //	known bug on ios?
-	 if (status ==
-		CoreMediaGlue::kCMFormatDescriptionBridgeError_InvalidParameter) {
-		DLOG(WARNING) << " assuming 2 parameter sets and 4 bytes NAL length header";
-		pset_count = 2;
-		nal_size_field_bytes = 4;
-	 */
-
-	Soy::Assert( ParamIndex < ParamCount, "SPS missing");
-
-	const uint8_t* ParamsData = nullptr;;
-	size_t ParamsSize = 0;
-	Result = CMVideoFormatDescriptionGetH264ParameterSetAtIndex( Desc, ParamIndex, &ParamsData, &ParamsSize, nullptr, nullptr);
-		
-	Avf::IsOkay( Result, "Failed to get H264 param X" );
-
-	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
-	auto& Packet = *pPacket;
-	Packet.mMeta.mCodec = Format;
-	Packet.mData.PushBack(0);
-	Packet.mData.PushBack(0);
-	Packet.mData.PushBack(0);
-	Packet.mData.PushBack(1);
-	//	http://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream
-	if ( Format == SoyMediaFormat::H264_SPS_ES )
-	{
-		//	https://cardinalpeak.com/blog/the-h-264-sequence-parameter-set/
-		//	https://tools.ietf.org/html/rfc6184#section-7.4.1
-		auto Byte = H264::EncodeNaluByte( H264NaluContent::SequenceParameterSet,H264NaluPriority::Important );
-		Packet.mData.PushBack( Byte );
-	}
-	
-	if ( Format == SoyMediaFormat::H264_PPS_ES )
-	{
-		auto Byte = H264::EncodeNaluByte(H264NaluContent::PictureParameterSet, H264NaluPriority::Important );
-		Packet.mData.PushBack( Byte );
-	}
-	
-	Packet.mData.PushBackArray( GetRemoteArray( ParamsData, ParamsSize ) );
-	return pPacket;
-}
-
-
-std::shared_ptr<TMediaPacket> GetH264Packet(CMSampleBufferRef SampleBuffer,size_t StreamIndex)
-{
-	auto Desc = CMSampleBufferGetFormatDescription( SampleBuffer );
-
-	//	need length-byte-size to get proper h264 format
-	int nal_size_field_bytes = 0;
-	auto Result = CMVideoFormatDescriptionGetH264ParameterSetAtIndex( Desc, 0, nullptr, nullptr, nullptr, &nal_size_field_bytes );
-	Avf::IsOkay( Result, "Get H264 param NAL size");
-
-	//	extract SPS/PPS packet
-	auto Fourcc = CFSwapInt32HostToBig( CMFormatDescriptionGetMediaSubType(Desc) );
-	auto Codec = SoyMediaFormat::FromFourcc( Fourcc, nal_size_field_bytes );
-	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
-	auto& Packet = *pPacket;
-	//	Packet.mMeta = GetStreamMeta( CMSampleBufferGetFormatDescription(SampleBuffer) );
-	Packet.mMeta.mCodec = Codec;
-	Packet.mMeta.mStreamIndex = StreamIndex;
-	Packet.mFormat.reset( new Platform::TMediaFormat( Desc ) );
-	
-	CMTime PresentationTimestamp = CMSampleBufferGetPresentationTimeStamp(SampleBuffer);
-	CMTime DecodeTimestamp = CMSampleBufferGetDecodeTimeStamp(SampleBuffer);
-	CMTime SampleDuration = CMSampleBufferGetDuration(SampleBuffer);
-	Packet.mTimecode = Soy::Platform::GetTime(PresentationTimestamp);
-	Packet.mDecodeTimecode = Soy::Platform::GetTime(DecodeTimestamp);
-	Packet.mDuration = Soy::Platform::GetTime(SampleDuration);
-	//GetPixelBufferManager().mOnFrameFound.OnTriggered( Timestamp );
-	
-	
-	//	get bytes, either blocks of data or a CVImageBuffer
-	{
-		CMBlockBufferRef BlockBuffer = CMSampleBufferGetDataBuffer( SampleBuffer );
-		CVImageBufferRef ImageBuffer = CMSampleBufferGetImageBuffer( SampleBuffer );
-			
-		if ( BlockBuffer )
-		{
-			//	read bytes from block
-			auto DataSize = CMBlockBufferGetDataLength( BlockBuffer );
-			Packet.mData.SetSize( DataSize );
-			auto Result = CMBlockBufferCopyDataBytes( BlockBuffer, 0, Packet.mData.GetDataSize(), Packet.mData.GetArray() );
-			Avf::IsOkay( Result, "CMBlockBufferCopyDataBytes" );
-		}
-		else
-		{
-			throw Soy::AssertException("Expecting block buffer");
-		}
-		
-		//if ( BlockBuffer )
-		//	CFRelease( BlockBuffer );
-		
-		//if ( ImageBuffer )
-		//	CFRelease( ImageBuffer );
-	}
-	
-	//	verify/convert h264 AVCC to ES/annexb
-	H264::ConvertToFormat( Packet.mMeta.mCodec, SoyMediaFormat::H264_ES, GetArrayBridge(Packet.mData) );
-	
-	return pPacket;
 }
 
 
