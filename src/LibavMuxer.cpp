@@ -1,6 +1,7 @@
 #include "LibavMuxer.h"
 #include <SoyStream.h>
 #include <SoyProtocol.h>
+#include "TFileCaster.h"
 
 
 class TRelay : public SoyWorkerThread
@@ -15,17 +16,6 @@ public:
 	std::shared_ptr<TStreamWriter>	mOutput;
 };
 
-
-class TRawWriteProtocol : public Soy::TWriteProtocol
-{
-public:
-	virtual void					Encode(TStreamBuffer& Buffer) override
-	{
-		Buffer.Push( GetArrayBridge( mData ) );
-	}
-	
-	Array<char>	mData;
-};
 
 TRelay::TRelay(std::shared_ptr<TStreamBuffer> Input,std::shared_ptr<TStreamWriter> Output) :
 	SoyWorkerThread		( "TRelay", SoyWorkerWaitMode::Wake ),
@@ -48,7 +38,7 @@ bool TRelay::Iteration()
 		return true;
 	
 	//	pop some data
-	std::shared_ptr<TRawWriteProtocol> WriteData( new TRawWriteProtocol );
+	std::shared_ptr<TRawWriteDataProtocol> WriteData( new TRawWriteDataProtocol );
 	auto& Buffer = WriteData->mData;
 	static size_t ReadSizeMax = 1 * 1024 * 1024;
 	size_t ReadSize = std::min( mInput->GetBufferedSize(), ReadSizeMax );

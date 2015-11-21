@@ -872,12 +872,12 @@ void TMpeg2TsMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStreamW
 		}
 	}
 }
-
+/*
 void TMpeg2TsMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 {
 
 }
-
+*/
 
 void TMpeg2TsMuxer::UpdatePatPmt(const TMediaPacket& Packet)
 {

@@ -20,17 +20,20 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	//	alloc muxer
 	mFileStream.reset( new TFileStreamWriter( Filename ) );
 	
-	mMuxer.reset( new Libav::TMuxer( mFileStream, mFrameBuffer ) );
-	/*
-	if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
-	{
-		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
-	}
-	else
+	if ( Soy::StringEndsWith( Params.mName, ".raw", false ) )
 	{
 		mMuxer.reset( new TRawMuxer( mFileStream, mFrameBuffer ) );
 	}
-*/
+	/*
+	 else if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
+	 {
+		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
+	 }
+	 */
+	else
+	{
+		mMuxer.reset( new Libav::TMuxer( mFileStream, mFrameBuffer ) );
+	}
 	mFileStream->Start();
 	Start();
 }
@@ -280,22 +283,6 @@ void SoyMediaAtom::Write(TStreamBuffer& Data)
 }
 */
 
-class TRawWriteProtocol : public Soy::TWriteProtocol
-{
-public:
-	TRawWriteProtocol(std::shared_ptr<TMediaPacket> Packet) :
-		mPacket	( Packet )
-	{
-	}
-
-	virtual void					Encode(TStreamBuffer& Buffer) override
-	{
-		Buffer.Push( GetArrayBridge( mPacket->mData ) );
-	}
-	
-	std::shared_ptr<TMediaPacket>	mPacket;
-};
-
 TRawMuxer::TRawMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
 	TMediaMuxer		( Output, Input, "TRawMuxer" ),
 	mStreamIndex	( -1 )
@@ -326,7 +313,7 @@ void TRawMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter
 	}
 	
 	//	write out
-	std::shared_ptr<Soy::TWriteProtocol> Protocol( new TRawWriteProtocol( Packet ) );
+	std::shared_ptr<Soy::TWriteProtocol> Protocol( new TRawWritePacketProtocol( Packet ) );
 	Output.Push( Protocol );
 }
 	

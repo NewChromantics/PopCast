@@ -114,6 +114,34 @@ protected:
 
 
 
+class TRawWritePacketProtocol : public Soy::TWriteProtocol
+{
+public:
+	TRawWritePacketProtocol(std::shared_ptr<TMediaPacket> Packet) :
+		mPacket	( Packet )
+	{
+	}
+	
+	virtual void					Encode(TStreamBuffer& Buffer) override
+	{
+		Buffer.Push( GetArrayBridge( mPacket->mData ) );
+	}
+	
+	std::shared_ptr<TMediaPacket>	mPacket;
+};
+
+
+class TRawWriteDataProtocol : public Soy::TWriteProtocol
+{
+public:
+	virtual void					Encode(TStreamBuffer& Buffer) override
+	{
+		Buffer.Push( GetArrayBridge( mData ) );
+	}
+	
+	Array<char>	mData;
+};
+
 
 
 
