@@ -68,6 +68,10 @@ public:
 		Libav::FreePoolPointer( mObject.oformat );
 		Libav::FreePoolPointer( mObject.pb );
 	}
+	
+	void	SetDefaults(const TStreamMeta& StreamMeta);
+	void	AddProgram(AVProgram Program);
+	
 };
 
 
@@ -89,6 +93,7 @@ class Libav::TAvWrapper<struct AVCodec> : public TAvWrapperBase<struct AVCodec>
 public:
 	TAvWrapper()
 	{
+		mObject.extradata = (void*) 123;
 		/*
 		enum AVCodecID			codec_id;
 		enum AVMediaType		codec_type;
@@ -212,6 +217,22 @@ AVMediaType Libav::GetCodecType(SoyMediaFormat::Type Format)
 	throw Soy::AssertException( Error.str() );
 }
 
+
+void Libav::TAvWrapper<struct AVFormatContext>::SetDefaults(const TStreamMeta& StreamMeta)
+{
+	auto& Format = mObject;
+	
+	if ( SoyMediaFormat::IsVideo( StreamMeta.mCodec ) && Format.video_codec_id == AV_CODEC_ID_NONE )
+		Format.video_codec_id = GetCodecId( StreamMeta.mCodec );
+	
+	if ( SoyMediaFormat::IsAudio( StreamMeta.mCodec ) && Format.audio_codec_id == AV_CODEC_ID_NONE )
+		Format.audio_codec_id = GetCodecId( StreamMeta.mCodec );
+}
+
+void Libav::TAvWrapper<struct AVFormatContext>::AddProgram(AVProgram Program)
+{
+	
+}
 
 template<typename TYPE>
 std::shared_ptr<Libav::TAvWrapper<TYPE>> Libav::GetPoolPointer(TYPE* Object,bool Alloc)
@@ -642,6 +663,9 @@ Libav::TContext::TContext(const std::string& FormatName,std::shared_ptr<TStreamB
 	FormatContext.oformat = Format;
 	FormatContext.pb = Libav::GetPoolPointer<AVIOContext>( nullptr, true )->GetObject();
 	FormatContext.pb->pLibav_TContext = this;
+	
+	mFormat->AddProgram( AVProgram() );
+	
 }
 
 void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
@@ -650,6 +674,10 @@ void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
 	for ( int s=0;	s<Streams.GetSize();	s++ )
 	{
 		auto& StreamSoy = Streams[s];
+		
+		//	setup some defaults for the format
+		mFormat->SetDefaults( StreamSoy );
+
 		auto* StreamAv = avformat_new_stream( mFormat->GetObject(), nullptr );
 		
 		//	setup stream
@@ -658,7 +686,9 @@ void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
 		StreamAv->codec->codec_id = GetCodecId( StreamSoy.mCodec );
 		StreamAv->codec->codec_type = GetCodecType( StreamSoy.mCodec );
 		
-		
+		//	base of millisecs
+		StreamAv->time_base = (AVRational){1,1000000};
+
 		//	codec settings
 		/*
 		StreamAv->bit_rate = 400000;
