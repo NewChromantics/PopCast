@@ -11,7 +11,6 @@ namespace Libav
 
 
 
-//	raw muxer writes packets straight out, but means we cannot have multiple streams!
 class Libav::TMuxer : public TMediaMuxer
 {
 public:

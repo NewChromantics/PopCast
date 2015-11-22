@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <string.h>	//	memcpy
-#define INT_MAX		100
+#include <limits.h>
 
 #define AV_DISPOSITION_DEFAULT   0x0001
 #define AV_DISPOSITION_DUB       0x0002
@@ -84,8 +84,14 @@ enum AVMediaType {
 enum AVOptionType
 {
 	AV_OPT_TYPE_INT,
+	AV_OPT_TYPE_INT64,
 	AV_OPT_TYPE_FLAGS,
 	AV_OPT_TYPE_CONST,
+	AV_OPT_TYPE_BINARY,
+	AV_OPT_TYPE_DICT,
+	AV_OPT_TYPE_FLOAT,
+	AV_OPT_TYPE_DOUBLE,
+	AV_OPT_TYPE_STRING,
 };
 #define NULL_IF_CONFIG_SMALL(x)	x
 

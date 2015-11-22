@@ -68,7 +68,8 @@ public:
 		Libav::FreePoolPointer( mObject.oformat );
 		Libav::FreePoolPointer( mObject.pb );
 	}
-	
+
+	void	Init(const AVOutputFormat& Format);
 	void	SetDefaults(const TStreamMeta& StreamMeta);
 	void	AddProgram(AVProgram Program);
 	
@@ -91,58 +92,7 @@ template<>
 class Libav::TAvWrapper<struct AVCodec> : public TAvWrapperBase<struct AVCodec>
 {
 public:
-	TAvWrapper()
-	{
-		mObject.extradata = (void*) 123;
-		/*
-		enum AVCodecID			codec_id;
-		enum AVMediaType		codec_type;
-		int						extradata_size;
-		void*					extradata;
-		int						frame_size;
-		int						sample_rate;
-		
-		//	init codec defaults
-		auto& c = mObject;
-	 c.codec_type = codec ? codec->type : AVMEDIA_TYPE_UNKNOWN;
-	 s->codec      = codec;
-	 av_opt_set_defaults(s);
-	 
-	 s->time_base           = (AVRational){0,1};
-	 s->framerate           = (AVRational){ 0, 1 };
-	 s->get_buffer2         = avcodec_default_get_buffer2;
-	 s->get_format          = avcodec_default_get_format;
-	 s->execute             = avcodec_default_execute;
-	 s->execute2            = avcodec_default_execute2;
-	 s->sample_aspect_ratio = (AVRational){0,1};
-	 s->pix_fmt             = AV_PIX_FMT_NONE;
-	 s->sample_fmt          = AV_SAMPLE_FMT_NONE;
-	 
-	 s->reordered_opaque    = AV_NOPTS_VALUE;
-	 if(codec && codec->priv_data_size){
-		 if(!s->priv_data){
-			 s->priv_data= av_mallocz(codec->priv_data_size);
-			 if (!s->priv_data) {
-				 return AVERROR(ENOMEM);
-			 }
-		 }
-		 if(codec->priv_class){
-			 *(const AVClass**)s->priv_data = codec->priv_class;
-			 av_opt_set_defaults(s->priv_data);
-		 }
-	 }
-	 if (codec && codec->defaults) {
-		 int ret;
-		 const AVCodecDefault *d = codec->defaults;
-		 while (d->key) {
-			 ret = av_opt_set(s, d->key, d->value, 0);
-			 av_assert0(ret >= 0);
-			 d++;
-		 }
-	 }
-	 */
-	}
-	
+	TAvWrapper();
 	~TAvWrapper()
 	{
 	}
@@ -218,6 +168,120 @@ AVMediaType Libav::GetCodecType(SoyMediaFormat::Type Format)
 }
 
 
+
+void av_opt_set(int& Member,int64_t Value)
+{
+	Member = size_cast<int>(Value);
+}
+
+void av_opt_set(int& Member,int64_t Value,double Min,double Max)
+{
+	Soy::Assert( Value >= Min && Value < Max, "Setting AvOption out of range");
+	Member = size_cast<int>(Value);
+}
+
+void av_opt_set(int64_t& Member,int64_t Value,double Min,double Max)
+{
+	Soy::Assert( Value >= Min && Value < Max, "Setting AvOption out of range");
+	Member = Value;
+}
+
+void av_opt_set(double& Member,int64_t Value,double Min,double Max)
+{
+	Soy::Assert( Value >= Min && Value < Max, "Setting AvOption out of range");
+	Member = Value;
+}
+
+void av_opt_set(float& Member,int64_t Value,double Min,double Max)
+{
+	Soy::Assert( Value >= Min && Value < Max, "Setting AvOption out of range");
+	Member = Value;
+}
+
+void av_opt_set(char* Member,const char* Value)
+{
+	Soy_AssertTodo();
+}
+
+
+
+void av_opt_set(void* Member,const AVOption& Option)
+{
+	switch ( Option.type )
+	{
+		//	read only
+		case AV_OPT_TYPE_CONST:
+			return;
+
+		//	Cannot set defaults for these types
+		case AV_OPT_TYPE_BINARY:
+		case AV_OPT_TYPE_DICT:
+			return;
+		
+		default:
+			break;
+
+		case AV_OPT_TYPE_FLAGS:
+			av_opt_set( *reinterpret_cast<int*>( Member ), Option.default_val.i64 );
+			return;
+			
+		case AV_OPT_TYPE_INT:
+			av_opt_set( *reinterpret_cast<int*>( Member ), Option.default_val.i64, Option.min, Option.max );
+			return;
+			
+		case AV_OPT_TYPE_INT64:
+			av_opt_set( *reinterpret_cast<int64_t*>( Member ), Option.default_val.i64, Option.min, Option.max );
+			return;
+			
+		case AV_OPT_TYPE_DOUBLE:
+			av_opt_set( *reinterpret_cast<double*>( Member ), Option.default_val.dbl, Option.min, Option.max );
+			return;
+			
+		case AV_OPT_TYPE_FLOAT:
+			av_opt_set( *reinterpret_cast<float*>( Member ), Option.default_val.dbl, Option.min, Option.max );
+			return;
+			
+		case AV_OPT_TYPE_STRING:
+			av_opt_set( reinterpret_cast<char*>(Member), Option.default_val.str );
+			return;
+			/*
+		case AV_OPT_TYPE_RATIONAL:
+			 AVRational val;
+			 val = av_d2q(opt->default_val.dbl, INT_MAX);
+			 av_opt_set_q(s, opt->name, val, 0);
+			if ((int)num == num) *(AVRational*)dst= (AVRational){num*intnum, den};
+			else                 *(AVRational*)dst= av_d2q(num*intnum/den, 1<<24);
+			break;
+			 */
+	}
+
+	std::stringstream Error;
+	Error << "AVOption type " << Option.type << " of option " << Option.name << " not implemented yet" << std::endl;
+	throw Soy::AssertException( Error.str() );
+}
+
+void av_opt_set_defaults(Array<uint8>& ClassObject,const AVClass& Class)
+{
+	size_t OptionIndex = 0;
+	while ( Class.option[OptionIndex].name )
+	{
+		auto& Option = Class.option[OptionIndex];
+		OptionIndex++;
+		
+		if ( Option.flags & AV_OPT_FLAG_READONLY )
+			continue;
+		
+		void* Member = ClassObject.GetArray() + Option.offset;
+		av_opt_set( Member, Option );
+	}
+}
+
+
+
+
+
+
+
 void Libav::TAvWrapper<struct AVFormatContext>::SetDefaults(const TStreamMeta& StreamMeta)
 {
 	auto& Format = mObject;
@@ -233,6 +297,72 @@ void Libav::TAvWrapper<struct AVFormatContext>::AddProgram(AVProgram Program)
 {
 	
 }
+
+void Libav::TAvWrapper<struct AVFormatContext>::Init(const AVOutputFormat& Format)
+{
+	auto& FormatContext = mObject;
+	
+	//	alloc private data and initialsie it
+	auto priv_data_array = Libav::AllocPoolArray( Format.priv_data_size );
+	FormatContext.priv_data = priv_data_array->GetArray();
+	av_opt_set_defaults( *priv_data_array, *Format.priv_class );
+	
+	/*
+	if (codec && codec->defaults) {
+		int ret;
+		const AVCodecDefault *d = codec->defaults;
+		while (d->key) {
+		 ret = av_opt_set(s, d->key, d->value, 0);
+		 av_assert0(ret >= 0);
+		 d++;
+*/
+}
+
+
+Libav::TAvWrapper<struct AVCodec>::TAvWrapper()
+{
+	/*
+	//mObject.extradata = (void*) 123;
+	//	init codec defaults
+	auto& c = mObject;
+	c.codec_type = codec ? codec->type : AVMEDIA_TYPE_UNKNOWN;
+	s->codec      = codec;
+	av_opt_set_defaults(s);
+		 
+		 s->time_base           = (AVRational){0,1};
+		 s->framerate           = (AVRational){ 0, 1 };
+		 s->get_buffer2         = avcodec_default_get_buffer2;
+		 s->get_format          = avcodec_default_get_format;
+		 s->execute             = avcodec_default_execute;
+		 s->execute2            = avcodec_default_execute2;
+		 s->sample_aspect_ratio = (AVRational){0,1};
+		 s->pix_fmt             = AV_PIX_FMT_NONE;
+		 s->sample_fmt          = AV_SAMPLE_FMT_NONE;
+		 
+		 s->reordered_opaque    = AV_NOPTS_VALUE;
+		 if(codec && codec->priv_data_size){
+		 if(!s->priv_data){
+		 s->priv_data= av_mallocz(codec->priv_data_size);
+		 if (!s->priv_data) {
+		 return AVERROR(ENOMEM);
+		 }
+		 }
+		 if(codec->priv_class){
+		 *(const AVClass**)s->priv_data = codec->priv_class;
+		 av_opt_set_defaults(s->priv_data);
+		 }
+		 }
+		 if (codec && codec->defaults) {
+		 int ret;
+		 const AVCodecDefault *d = codec->defaults;
+		 while (d->key) {
+		 ret = av_opt_set(s, d->key, d->value, 0);
+		 av_assert0(ret >= 0);
+		 d++;
+		 }
+		 }
+		 */
+	}
 
 template<typename TYPE>
 std::shared_ptr<Libav::TAvWrapper<TYPE>> Libav::GetPoolPointer(TYPE* Object,bool Alloc)
@@ -658,8 +788,8 @@ Libav::TContext::TContext(const std::string& FormatName,std::shared_ptr<TStreamB
 	
 	//	alloc context
 	mFormat = Libav::GetPoolPointer( avformat_alloc_context(), false );
+	mFormat->Init( *Format );
 	auto& FormatContext = *mFormat->GetObject();
-	FormatContext.priv_data = Libav::AllocPoolArray( Format->priv_data_size )->GetArray();
 	FormatContext.oformat = Format;
 	FormatContext.pb = Libav::GetPoolPointer<AVIOContext>( nullptr, true )->GetObject();
 	FormatContext.pb->pLibav_TContext = this;
@@ -685,6 +815,7 @@ void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
 		StreamAv->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true )->GetObject();
 		StreamAv->codec->codec_id = GetCodecId( StreamSoy.mCodec );
 		StreamAv->codec->codec_type = GetCodecType( StreamSoy.mCodec );
+		
 		
 		//	base of millisecs
 		StreamAv->time_base = (AVRational){1,1000000};
@@ -747,16 +878,15 @@ Libav::TPacket::TPacket(std::shared_ptr<TMediaPacket> Packet) :
 	AvPacket.size = Packet->mData.GetDataSize();
 	AvPacket.data = Packet->mData.GetArray();
 	
-	static bool AutoTimestamp = true;
 	static bool AllKeyframes = true;
 	
 	//	todo: convert these properly to the... codec? stream? format? time scalar
-	if ( !AutoTimestamp && Packet->mTimecode.IsValid() )
+	if ( Packet->mTimecode.IsValid() )
 		AvPacket.pts = Packet->mTimecode.GetTime();
 	else
 		AvPacket.pts = AV_NOPTS_VALUE;
 	
-	if ( !AutoTimestamp && Packet->mDecodeTimecode.IsValid() )
+	if ( Packet->mDecodeTimecode.IsValid() )
 		AvPacket.dts = Packet->mDecodeTimecode.GetTime();
 	else
 		AvPacket.dts = AV_NOPTS_VALUE;
