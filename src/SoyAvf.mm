@@ -15,12 +15,14 @@
 #include <VideoToolbox/VTErrors.h>
 
 
-std::shared_ptr<TMediaPacket> Avf::GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format)
+std::shared_ptr<TMediaPacket> Avf::GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format,size_t StreamIndex)
 {
 	auto Desc = CMSampleBufferGetFormatDescription( SampleBuffer );
 	
 	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
 	auto& Packet = *pPacket;
+	Packet.mMeta = GetStreamMeta( Desc );
+	Packet.mMeta.mStreamIndex = StreamIndex;
 	Packet.mMeta.mCodec = Format;
 	
 	auto& Data = Packet.mData;
@@ -90,7 +92,7 @@ std::shared_ptr<TMediaPacket> Avf::GetH264Packet(CMSampleBufferRef SampleBuffer,
 	auto Codec = SoyMediaFormat::FromFourcc( Fourcc, nal_size_field_bytes );
 	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
 	auto& Packet = *pPacket;
-	//	Packet.mMeta = GetStreamMeta( CMSampleBufferGetFormatDescription(SampleBuffer) );
+	Packet.mMeta = GetStreamMeta( Desc );
 	Packet.mMeta.mCodec = Codec;
 	Packet.mMeta.mStreamIndex = StreamIndex;
 	Packet.mFormat.reset( new Platform::TMediaFormat( Desc ) );
@@ -504,4 +506,77 @@ CFStringRef Avf::GetProfile(H264Profile::Type Profile,Soy::TVersion Level)
 	}
 }
 
+NSString* const Avf::GetFormatType(SoyMediaFormat::Type Format)
+{
+	if ( SoyMediaFormat::IsVideo( Format ) )
+		return AVMediaTypeVideo;
+	if ( SoyMediaFormat::IsAudio( Format ) )
+		return AVMediaTypeAudio;
 
+	std::stringstream Error;
+	Error << "Cannot convert " << Format << " to AVMediaType";
+	throw Soy::AssertException( Error.str() );
+}
+
+NSString* const Avf::GetFileExtensionType(const std::string& Extension)
+{
+	std::map<std::string,NSString *> FileExtensionToType;
+	FileExtensionToType["mov"] = AVFileTypeQuickTimeMovie;
+	FileExtensionToType["qt"] = AVFileTypeQuickTimeMovie;
+	FileExtensionToType["mp4"] = AVFileTypeMPEG4;
+	FileExtensionToType["m4v"] = AVFileTypeAppleM4V;
+	FileExtensionToType["m4a"] = AVFileTypeAppleM4A;
+	FileExtensionToType["3gp"] = AVFileType3GPP;
+	FileExtensionToType["3gpp"] = AVFileType3GPP;
+	FileExtensionToType["sdv"] = AVFileType3GPP;
+	FileExtensionToType["3g2"] = AVFileType3GPP2;
+	FileExtensionToType["3gp2"] = AVFileType3GPP2;
+	FileExtensionToType["caf"] = AVFileTypeCoreAudioFormat;
+	FileExtensionToType["wav"] = AVFileTypeWAVE;
+	FileExtensionToType["wave"] = AVFileTypeWAVE;
+	FileExtensionToType["aif"] = AVFileTypeAIFF;
+	FileExtensionToType["aiff"] = AVFileTypeAIFF;
+	FileExtensionToType["aifc"] = AVFileTypeAIFC;
+	FileExtensionToType["cdda"] = AVFileTypeAIFC;
+	FileExtensionToType["amr"] = AVFileTypeAMR;
+	FileExtensionToType["mp3"] = AVFileTypeMPEGLayer3;
+	FileExtensionToType["au"] = AVFileTypeSunAU;
+	FileExtensionToType["ac3"] = AVFileTypeAC3;
+	FileExtensionToType["eac3"] = AVFileTypeEnhancedAC3;
+	
+	auto FileTypeIt = FileExtensionToType.find( Extension );
+	if ( FileTypeIt == FileExtensionToType.end() )
+	{
+		std::stringstream Error;
+		Error << "Failed to match filename extension (" <<  Extension << ") to file type";
+		throw Soy::AssertException( Error.str() );
+	}
+
+	return FileTypeIt->second;
+}
+
+
+NSURL* Avf::GetUrl(const std::string& Filename)
+{
+	NSString* UrlString = Soy::StringToNSString( Filename );
+	NSError *err;
+	
+	//	try as file which we can test for immediate fail
+	NSURL* Url = [[NSURL alloc]initFileURLWithPath:UrlString];
+	if ([Url checkResourceIsReachableAndReturnError:&err] == NO)
+	{
+		//	FILE is not reachable.
+		
+		//	try as url
+		Url = [[NSURL alloc]initWithString:UrlString];
+		
+		/*	gr: throw this error IF we KNOW it's a file we're trying to reach and not an url.
+		 check for ANY scheme?
+		 std::stringstream Error;
+		 Error << "Failed to reach file from url: " << mParams.mFilename << "; " << Soy::NSErrorToString(err);
+		 throw Soy::AssertException( Error.str() );
+		 */
+	}
+	
+	return Url;
+}

@@ -8,12 +8,15 @@ namespace Avf
 {
 #if defined(__OBJC__)
 	std::shared_ptr<TMediaPacket>	GetH264Packet(CMSampleBufferRef SampleBuffer,size_t StreamIndex);
-	std::shared_ptr<TMediaPacket>	GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format);
+	std::shared_ptr<TMediaPacket>	GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format,size_t StreamIndex);
 	void							GetFormatDescriptionData(ArrayBridge<uint8>&& Data,CMFormatDescriptionRef FormatDesc,size_t ParamIndex,SoyMediaFormat::Type Format);
 	TStreamMeta						GetStreamMeta(CMFormatDescriptionRef FormatDesc);
 	CMFormatDescriptionRef			GetFormatDescription(const TStreamMeta& Stream);
 	void							GetMediaType(CMMediaType& MediaType,FourCharCode& MediaCodec,SoyMediaFormat::Type Format);
 	CFStringRef						GetProfile(H264Profile::Type Profile,Soy::TVersion Level);
+	NSString* const			GetFormatType(SoyMediaFormat::Type Format);
+	NSString* const			GetFileExtensionType(const std::string& Extension);
+	NSURL*							GetUrl(const std::string& Filename);
 
 	//	OSStatus == CVReturn
 	bool							IsOkay(OSStatus Error,const std::string& Context,bool Throw=true);

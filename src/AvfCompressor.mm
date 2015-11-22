@@ -261,8 +261,8 @@ void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInf
 	
 	if ( IsKeyframe )
 	{
-		auto SpsPacket = GetFormatDescriptionPacket( SampleBuffer, 0, SoyMediaFormat::H264_SPS_ES );
-		auto PpsPacket = GetFormatDescriptionPacket( SampleBuffer, 1, SoyMediaFormat::H264_PPS_ES );
+		auto SpsPacket = GetFormatDescriptionPacket( SampleBuffer, 0, SoyMediaFormat::H264_SPS_ES, mStreamIndex );
+		auto PpsPacket = GetFormatDescriptionPacket( SampleBuffer, 1, SoyMediaFormat::H264_PPS_ES, mStreamIndex );
 		mPushFrameFunc( SpsPacket );
 		mPushFrameFunc( PpsPacket );
 	}
