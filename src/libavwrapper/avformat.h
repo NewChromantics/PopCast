@@ -106,6 +106,11 @@ typedef struct AVPacket {
 	int		pts;
 	int		dts;
 	int		flags;	//	AV_PKT_FLAG
+	int		pos;
+	int		duration;
+	void*	buf;
+	void*	side_data;
+	int		side_data_elems;
 } AVPacket;
 
 

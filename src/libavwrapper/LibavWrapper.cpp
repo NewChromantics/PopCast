@@ -98,6 +98,16 @@ public:
 	}
 };
 
+template<>
+class Libav::TAvWrapper<struct AVPacket> : public TAvWrapperBase<struct AVPacket>
+{
+public:
+	TAvWrapper()
+	{
+		av_init_packet( &mObject );
+	}
+};
+
 
 
 void Libav::IsOkay(int LibavError,const std::string& Context,bool Throw)
@@ -298,6 +308,7 @@ void Libav::TAvWrapper<struct AVFormatContext>::AddProgram(AVProgram Program)
 	
 }
 
+
 void Libav::TAvWrapper<struct AVFormatContext>::Init(const AVOutputFormat& Format)
 {
 	auto& FormatContext = mObject;
@@ -321,8 +332,8 @@ void Libav::TAvWrapper<struct AVFormatContext>::Init(const AVOutputFormat& Forma
 
 Libav::TAvWrapper<struct AVCodec>::TAvWrapper()
 {
+	mObject.extradata = (void*) 123;
 	/*
-	//mObject.extradata = (void*) 123;
 	//	init codec defaults
 	auto& c = mObject;
 	c.codec_type = codec ? codec->type : AVMEDIA_TYPE_UNKNOWN;
@@ -577,6 +588,58 @@ struct AVStream* avformat_new_stream(struct AVFormatContext* Context,const struc
 	ReallocArray( Context->streams, Context->nb_streams, Context->nb_streams+1 );
 	Context->streams[Context->nb_streams-1] = pStream;
 	
+	
+	/*
+		st = av_mallocz(sizeof(AVStream));
+		if (!st)
+			return NULL;
+		if (!(st->info = av_mallocz(sizeof(*st->info)))) {
+			av_free(st);
+			return NULL;
+		}
+		
+		st->codec = avcodec_alloc_context3(c);
+		if (!st->codec) {
+			av_free(st->info);
+			av_free(st);
+			return NULL;
+		}
+		
+		st->internal = av_mallocz(sizeof(*st->internal));
+		if (!st->internal)
+			goto fail;
+		
+		if (s->iformat) {
+			// no default bitrate if decoding
+			st->codec->bit_rate = 0;
+			
+			//default pts setting is MPEG-like
+			avpriv_set_pts_info(st, 33, 1, 90000);
+			/// we set the current DTS to 0 so that formats without any timestamps
+			// but durations get some timestamps, formats with some unknown
+			// timestamps have their first few packets buffered and the
+			// timestamps corrected before they are returned to the user
+			st->cur_dts = 0;
+		} else {
+			st->cur_dts = AV_NOPTS_VALUE;
+		}
+		
+		st->index      = s->nb_streams;
+		st->start_time = AV_NOPTS_VALUE;
+		st->duration   = AV_NOPTS_VALUE;
+		st->first_dts     = AV_NOPTS_VALUE;
+		st->probe_packets = MAX_PROBE_PACKETS;
+		
+		st->last_IP_pts = AV_NOPTS_VALUE;
+		for (i = 0; i < MAX_REORDER_DELAY + 1; i++)
+			st->pts_buffer[i] = AV_NOPTS_VALUE;
+		
+		st->sample_aspect_ratio = (AVRational) { 0, 1 };
+		
+		st->info->fps_first_dts = AV_NOPTS_VALUE;
+		st->info->fps_last_dts  = AV_NOPTS_VALUE;
+
+	 */
 	return pStream;
 }
 
@@ -677,9 +740,22 @@ void avformat_free_context(struct AVFormatContext* Context)
 	Soy_AssertTodo();
 }
 
-void av_init_packet(struct AVPacket* Packet)
+void av_init_packet(struct AVPacket* pkt)
 {
-	Soy_AssertTodo();
+	pkt->pts                  = AV_NOPTS_VALUE;
+	pkt->dts                  = AV_NOPTS_VALUE;
+	pkt->pos                  = -1;
+	pkt->duration             = 0;
+#if FF_API_CONVERGENCE_DURATION
+	FF_DISABLE_DEPRECATION_WARNINGS
+	pkt->convergence_duration = 0;
+	FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+	pkt->flags                = 0;
+	pkt->stream_index         = 0;
+	pkt->buf                  = NULL;
+	pkt->side_data            = NULL;
+	pkt->side_data_elems      = 0;
 }
 
 int avio_open_dyn_buf(struct AVIOContext** Context)
@@ -818,7 +894,8 @@ void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
 		
 		
 		//	base of millisecs
-		StreamAv->time_base = (AVRational){1,1000000};
+		int fps = 30;
+		StreamAv->time_base = (AVRational){1,fps};
 
 		//	codec settings
 		/*
@@ -878,18 +955,15 @@ Libav::TPacket::TPacket(std::shared_ptr<TMediaPacket> Packet) :
 	AvPacket.size = Packet->mData.GetDataSize();
 	AvPacket.data = Packet->mData.GetArray();
 	
+	static bool AutoTimestamp = false;
 	static bool AllKeyframes = true;
 	
 	//	todo: convert these properly to the... codec? stream? format? time scalar
-	if ( Packet->mTimecode.IsValid() )
+	if ( !AutoTimestamp && Packet->mTimecode.IsValid() )
 		AvPacket.pts = Packet->mTimecode.GetTime();
-	else
-		AvPacket.pts = AV_NOPTS_VALUE;
 	
-	if ( Packet->mDecodeTimecode.IsValid() )
+	if ( !AutoTimestamp && Packet->mDecodeTimecode.IsValid() )
 		AvPacket.dts = Packet->mDecodeTimecode.GetTime();
-	else
-		AvPacket.dts = AV_NOPTS_VALUE;
 
 	AvPacket.flags = 0;
 	if ( AllKeyframes || Packet->mIsKeyFrame )
