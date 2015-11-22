@@ -155,6 +155,7 @@ public:
 protected:
 	virtual void	SetupStreams(const ArrayBridge<TStreamMeta>&& Streams) override;
 	virtual void	ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
+	virtual void	Finish() override	{}
 	
 public:
 	int				mStreamIndex;	//	once set, ignore packets from other streams

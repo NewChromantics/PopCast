@@ -3,6 +3,10 @@
 #include "AvfCompressor.h"
 #include "LibavMuxer.h"
 
+#if defined(TARGET_OSX)
+#include "AvfMuxer.h"
+#endif
+
 
 TFileCaster::TFileCaster(const TCasterParams& Params) :
 	SoyWorkerThread	( std::string("TFileCaster/")+Params.mName, SoyWorkerWaitMode::Wake )
@@ -17,24 +21,39 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	size_t StreamIndex = 0;
 	mEncoder.reset( new Avf::TEncoder( Params, mFrameBuffer, StreamIndex ) );
 	
-	//	alloc muxer
-	mFileStream.reset( new TFileStreamWriter( Filename ) );
 	
+	
+#if defined(TARGET_OSX)
+	static bool UseAvfMuxer = true;
+	if ( UseAvfMuxer )
+	{
+		mMuxer.reset( new Avf::TFileMuxer( Filename, mFileStream, mFrameBuffer ) );
+	}
+	else
+#endif
 	if ( Soy::StringEndsWith( Params.mName, ".raw", false ) )
 	{
+		//	alloc muxer
+		mFileStream.reset( new TFileStreamWriter( Filename ) );
 		mMuxer.reset( new TRawMuxer( mFileStream, mFrameBuffer ) );
 	}
 	/*
 	 else if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
 	 {
+	 //	alloc muxer
+	 mFileStream.reset( new TFileStreamWriter( Filename ) );
 		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
 	 }
 	 */
 	else
 	{
+		//	alloc muxer
+		mFileStream.reset( new TFileStreamWriter( Filename ) );
 		mMuxer.reset( new Libav::TMuxer( mFileStream, mFrameBuffer ) );
 	}
-	mFileStream->Start();
+	
+	if ( mFileStream )
+		mFileStream->Start();
 	Start();
 }
 
@@ -42,7 +61,10 @@ TFileCaster::~TFileCaster()
 {
 	//	wait for encoder
 	mEncoder.reset();
+	
+	mMuxer->Finish();
 	mMuxer.reset();
+	
 	mFileStream.reset();
 	
 	WaitToFinish();
