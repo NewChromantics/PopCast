@@ -6,6 +6,8 @@
 
 namespace Avf
 {
+	class TAsset;
+	
 #if defined(__OBJC__)
 	std::shared_ptr<TMediaPacket>	GetH264Packet(CMSampleBufferRef SampleBuffer,size_t StreamIndex);
 	std::shared_ptr<TMediaPacket>	GetFormatDescriptionPacket(CMSampleBufferRef SampleBuffer,size_t ParamIndex,SoyMediaFormat::Type Format,size_t StreamIndex);
@@ -14,8 +16,8 @@ namespace Avf
 	CMFormatDescriptionRef			GetFormatDescription(const TStreamMeta& Stream);
 	void							GetMediaType(CMMediaType& MediaType,FourCharCode& MediaCodec,SoyMediaFormat::Type Format);
 	CFStringRef						GetProfile(H264Profile::Type Profile,Soy::TVersion Level);
-	NSString* const			GetFormatType(SoyMediaFormat::Type Format);
-	NSString* const			GetFileExtensionType(const std::string& Extension);
+	NSString* const					GetFormatType(SoyMediaFormat::Type Format);
+	NSString* const					GetFileExtensionType(const std::string& Extension);
 	NSURL*							GetUrl(const std::string& Filename);
 
 	//	OSStatus == CVReturn
@@ -45,4 +47,22 @@ public:
 };
 #endif
 
+
+
+#if defined(__OBJC__)
+class Avf::TAsset
+{
+public:
+	TAsset(const std::string& Filename);
+	
+	void				LoadTracks();	//	blocking & throwing load of desired track[s]
+	
+	std::shared_ptr<Platform::TMediaFormat>		GetStreamFormat(size_t StreamIndex)	{	return mStreamFormats[StreamIndex];	}
+	
+public:
+	Array<TStreamMeta>	mStreams;
+	ObjcPtr<AVAsset>	mAsset;
+	std::map<size_t,std::shared_ptr<Platform::TMediaFormat>>	mStreamFormats;
+};
+#endif
 

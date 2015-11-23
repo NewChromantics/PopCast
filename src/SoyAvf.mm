@@ -403,6 +403,7 @@ TStreamMeta Avf::GetStreamMeta(CMFormatDescriptionRef FormatDesc)
 		auto TestFormat = GetFormatDescription( Meta );
 		if ( !CMFormatDescriptionEqual ( TestFormat, FormatDesc ) )
 		{
+			/*
 			auto ExtensionsOld = CMFormatDescriptionGetExtensions( FormatDesc );
 			auto MediaSubTypeOld = CMFormatDescriptionGetMediaSubType( FormatDesc );
 			auto MediaTypeOld = CMFormatDescriptionGetMediaType( FormatDesc );
@@ -416,7 +417,7 @@ TStreamMeta Avf::GetStreamMeta(CMFormatDescriptionRef FormatDesc)
 			auto PresentationDimNew = CMVideoFormatDescriptionGetPresentationDimensions( TestFormat, true, true );
 			auto DimNew = CMVideoFormatDescriptionGetDimensions( TestFormat );
 			auto ExtensionsStringNew = Soy::NSDictionaryToString( ExtensionsNew );
-			
+			*/
 			std::Debug << "Warning: generated meta from description, but not equal when converted back again. " << Meta << std::endl;
 		}
 	}
@@ -447,6 +448,143 @@ void Avf::GetMediaType(CMMediaType& MediaType,FourCharCode& MediaCodec,SoyMediaF
 	//		kCMVideoCodecType_H264
 	MediaCodec = SoyMediaFormat::ToFourcc( Format );
 }
+
+
+
+Avf::TAsset::TAsset(const std::string& Filename)
+{
+	//	alloc asset
+	auto Url = GetUrl( Filename );
+	
+	NSDictionary *Options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:AVURLAssetPreferPreciseDurationAndTimingKey];
+	AVURLAsset* Asset = [[AVURLAsset alloc] initWithURL:Url options:Options];
+	
+	if ( !Asset )
+		throw Soy::AssertException("Failed to create asset");
+	
+	if ( !Asset.readable )
+		std::Debug << "Warning: Asset " << Filename << " reported as not-readable" << std::endl;
+	
+	mAsset.Retain( Asset );
+	LoadTracks();
+	
+}
+
+
+void Avf::TAsset::LoadTracks()
+{
+	AVAsset* Asset = mAsset.mObject;
+	Soy::Assert( Asset, "Asset expected" );
+	
+	Soy::TSemaphore LoadTracksSemaphore;
+	__block Soy::TSemaphore& Semaphore = LoadTracksSemaphore;
+	
+	auto OnCompleted = ^
+	{
+		NSError* err = nil;
+		auto Status = [Asset statusOfValueForKey:@"tracks" error:&err];
+		if ( Status != AVKeyValueStatusLoaded)
+		{
+			std::stringstream Error;
+			Error << "Error loading tracks: " << Soy::NSErrorToString(err);
+			Semaphore.OnFailed( Error.str().c_str() );
+			return;
+		}
+		
+		Semaphore.OnCompleted();
+	};
+	
+	//	load tracks
+	NSArray* Keys = [NSArray arrayWithObjects:@"tracks",@"playable",@"hasProtectedContent",@"duration",@"preferredTransform",nil];
+	[Asset loadValuesAsynchronouslyForKeys:Keys completionHandler:OnCompleted];
+	
+	LoadTracksSemaphore.Wait();
+	
+	//	grab duration
+	//	gr: not valid here with AVPlayer!
+	//	http://stackoverflow.com/a/7052147/355753
+	auto Duration = Soy::Platform::GetTime( Asset.duration );
+	
+	//	get meta for each track
+	NSArray* Tracks = [Asset tracks];
+	for ( int t=0;	t<[Tracks count];	t++ )
+	{
+		//	get and retain track
+		AVAssetTrack* Track = [Tracks objectAtIndex:t];
+		if ( !Track )
+			continue;
+		
+		TStreamMeta TrackMeta;
+		TrackMeta.mStreamIndex = t;
+		TrackMeta.mEncodingBitRate = Track.estimatedDataRate;
+		
+		//	extract meta from track
+		NSArray* FormatDescriptions = [Track formatDescriptions];
+		std::stringstream MetaDebug;
+		if ( !FormatDescriptions )
+		{
+			MetaDebug << "Format descriptions missing";
+		}
+		else if ( FormatDescriptions.count == 0 )
+		{
+			MetaDebug << "Format description count=0";
+		}
+		else
+		{
+			//	use first description, warn if more
+			if ( FormatDescriptions.count > 1 )
+			{
+				MetaDebug << "Found mulitple(" << FormatDescriptions.count << ") format descriptions. ";
+			}
+			
+			id DescElement = FormatDescriptions[0];
+			CMFormatDescriptionRef Desc = (__bridge CMFormatDescriptionRef)DescElement;
+			
+			
+			TrackMeta = Avf::GetStreamMeta( Desc );
+			
+			//	save format
+			mStreamFormats[t].reset( new Platform::TMediaFormat( Desc ) );
+		}
+		
+		
+		//	grab the transform from the video track
+		TrackMeta.mPixelMeta.DumbSetWidth( Track.naturalSize.width );
+		TrackMeta.mPixelMeta.DumbSetHeight( Track.naturalSize.height );
+		TrackMeta.mTransform = Soy::MatrixToVector( Track.preferredTransform, vec2f(TrackMeta.mPixelMeta.GetWidth(),TrackMeta.mPixelMeta.GetHeight()) );
+		
+		TrackMeta.mDuration = Duration;
+		
+		mStreams.PushBack( TrackMeta );
+	}
+	
+}
+
+NSURL* Avf::GetUrl(const std::string& Filename)
+{
+	NSString* UrlString = Soy::StringToNSString( Filename );
+	NSError *err;
+	
+	//	try as file which we can test for immediate fail
+	NSURL* Url = [[NSURL alloc]initFileURLWithPath:UrlString];
+	if ([Url checkResourceIsReachableAndReturnError:&err] == NO)
+	{
+		//	FILE is not reachable.
+		
+		//	try as url
+		Url = [[NSURL alloc]initWithString:UrlString];
+		
+		/*	gr: throw this error IF we KNOW it's a file we're trying to reach and not an url.
+		 check for ANY scheme?
+		 std::stringstream Error;
+		 Error << "Failed to reach file from url: " << mParams.mFilename << "; " << Soy::NSErrorToString(err);
+		 throw Soy::AssertException( Error.str() );
+		 */
+	}
+	
+	return Url;
+}
+
 
 
 
@@ -488,7 +626,7 @@ CFStringRef Avf::GetProfile(H264Profile::Type Profile,Soy::TVersion Level)
 	HighLevels[500] = kVTProfileLevel_H264_High_5_0;
 	HighLevels[501] = kVTProfileLevel_H264_High_5_1;
 	HighLevels[502] = kVTProfileLevel_H264_High_5_2;
-
+	
 	std::map<size_t,CFStringRef> ExtendedLevels;
 	ExtendedLevels[0] = kVTProfileLevel_H264_Extended_AutoLevel;
 	ExtendedLevels[500] = kVTProfileLevel_H264_Extended_5_0;
@@ -512,7 +650,7 @@ NSString* const Avf::GetFormatType(SoyMediaFormat::Type Format)
 		return AVMediaTypeVideo;
 	if ( SoyMediaFormat::IsAudio( Format ) )
 		return AVMediaTypeAudio;
-
+	
 	std::stringstream Error;
 	Error << "Cannot convert " << Format << " to AVMediaType";
 	throw Soy::AssertException( Error.str() );
@@ -551,32 +689,7 @@ NSString* const Avf::GetFileExtensionType(const std::string& Extension)
 		Error << "Failed to match filename extension (" <<  Extension << ") to file type";
 		throw Soy::AssertException( Error.str() );
 	}
-
+	
 	return FileTypeIt->second;
 }
 
-
-NSURL* Avf::GetUrl(const std::string& Filename)
-{
-	NSString* UrlString = Soy::StringToNSString( Filename );
-	NSError *err;
-	
-	//	try as file which we can test for immediate fail
-	NSURL* Url = [[NSURL alloc]initFileURLWithPath:UrlString];
-	if ([Url checkResourceIsReachableAndReturnError:&err] == NO)
-	{
-		//	FILE is not reachable.
-		
-		//	try as url
-		Url = [[NSURL alloc]initWithString:UrlString];
-		
-		/*	gr: throw this error IF we KNOW it's a file we're trying to reach and not an url.
-		 check for ANY scheme?
-		 std::stringstream Error;
-		 Error << "Failed to reach file from url: " << mParams.mFilename << "; " << Soy::NSErrorToString(err);
-		 throw Soy::AssertException( Error.str() );
-		 */
-	}
-	
-	return Url;
-}
