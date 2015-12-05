@@ -693,3 +693,58 @@ NSString* const Avf::GetFileExtensionType(const std::string& Extension)
 	return FileTypeIt->second;
 }
 
+bool Avf::IsFormatCompressed(SoyMediaFormat::Type Format)
+{
+	switch ( Format )
+	{
+		case SoyMediaFormat::H264_8:
+		case SoyMediaFormat::H264_16:
+		case SoyMediaFormat::H264_32:
+		case SoyMediaFormat::H264_ES:
+
+		case SoyMediaFormat::Aac:
+			return true;
+			
+		default:
+			return false;
+	}
+}
+
+bool Avf::IsKeyframe(CMSampleBufferRef SampleBuffer)
+{
+	if ( !SampleBuffer )
+		return false;
+
+	//	code based on chromium
+	//	https://chromium.googlesource.com/chromium/src/media/+/cea1808de66191f7f1eb48b5579e602c0c781146/cast/sender/h264_vt_encoder.cc
+	auto sample_attachments = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(SampleBuffer, true), 0));
+	// If the NotSync key is not present, it implies Sync, which indicates a
+	// keyframe (at least I think, VT documentation is, erm, sparse). Could
+	// alternatively use kCMSampleAttachmentKey_DependsOnOthers == false.
+	bool NotSync = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_NotSync);
+	bool Keyframe = !NotSync;
+	return Keyframe;
+}
+
+void PixelReleaseCallback(void *releaseRefCon, const void *baseAddress)
+{
+	std::Debug << __func__ << std::endl;
+}
+
+CVPixelBufferRef Avf::PixelsToPixelBuffer(const SoyPixelsImpl& Image)
+{
+	CFAllocatorRef PixelBufferAllocator = nullptr;
+	OSType PixelFormatType = Soy::Platform::GetFormat( Image.GetFormat() );
+	auto& PixelsArray = Image.GetPixelsArray();
+	auto* Pixels = const_cast<uint8*>( PixelsArray.GetArray() );
+	auto BytesPerRow = Image.GetMeta().GetRowDataSize();
+	void* ReleaseContext = nullptr;
+	CFDictionaryRef PixelBufferAttributes = nullptr;
+
+	CVPixelBufferRef PixelBuffer = nullptr;
+	auto Result = CVPixelBufferCreateWithBytes( PixelBufferAllocator, Image.GetWidth(), Image.GetHeight(), PixelFormatType, Pixels, BytesPerRow, PixelReleaseCallback, ReleaseContext, PixelBufferAttributes, &PixelBuffer );
+	Avf::IsOkay( Result, "CVPixelBufferCreateWithBytes" );
+	return PixelBuffer;
+}
+
+
