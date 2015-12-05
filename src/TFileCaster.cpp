@@ -19,7 +19,8 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	
 	//	alloc encoder per stream
 	size_t StreamIndex = 0;
-	mEncoder.reset( new Avf::TEncoder( Params, mFrameBuffer, StreamIndex ) );
+	//mEncoder.reset( new Avf::TEncoder( Params, mFrameBuffer, StreamIndex ) );
+	mEncoder.reset( new Avf::TPassThroughEncoder( Params, mFrameBuffer, StreamIndex ) );
 	
 	
 	

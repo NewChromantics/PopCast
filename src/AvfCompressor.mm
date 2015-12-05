@@ -247,17 +247,7 @@ void GetNalPackets(const ArrayBridge<uint8>&& H264Data,ArrayBridge<TNalPacket>&&
 
 void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInfoFlags Flags)
 {
-	bool IsKeyframe = false;
-	{
-		//	code based on chromium
-		//	https://chromium.googlesource.com/chromium/src/media/+/cea1808de66191f7f1eb48b5579e602c0c781146/cast/sender/h264_vt_encoder.cc
-		auto sample_attachments = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(SampleBuffer, true), 0));
-		// If the NotSync key is not present, it implies Sync, which indicates a
-		// keyframe (at least I think, VT documentation is, erm, sparse). Could
-		// alternatively use kCMSampleAttachmentKey_DependsOnOthers == false.
-		bool NotSync = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_NotSync);
-		IsKeyframe = !NotSync;
-	}
+	bool IsKeyframe = Avf::IsKeyframe(SampleBuffer);
 	
 	if ( IsKeyframe )
 	{
@@ -531,11 +521,6 @@ Avf::TEncoder::TEncoder(const TCasterParams& Params,std::shared_ptr<TMediaPacket
 }
 
 
-void PixelReleaseCallback(void *releaseRefCon, const void *baseAddress)
-{
-	
-}
-
 void Avf::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported yet");
@@ -554,18 +539,7 @@ void Avf::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Ti
 	//	grab pool
 	auto Pool = VTCompressionSessionGetPixelBufferPool( mSession->mSession );
 	
-	CVPixelBufferRef PixelBuffer = nullptr;
-	{
-		CFAllocatorRef PixelBufferAllocator = nullptr;
-		OSType PixelFormatType = Soy::Platform::GetFormat( Image.GetFormat() );
-		auto& PixelsArray = Image.GetPixelsArray();
-		auto* Pixels = const_cast<uint8*>( PixelsArray.GetArray() );
-		auto BytesPerRow = Image.GetMeta().GetRowDataSize();
-		void* ReleaseContext = nullptr;
-		CFDictionaryRef PixelBufferAttributes = nullptr;
-		auto Result = CVPixelBufferCreateWithBytes( PixelBufferAllocator, Image.GetWidth(), Image.GetHeight(), PixelFormatType, Pixels, BytesPerRow, PixelReleaseCallback, ReleaseContext, PixelBufferAttributes, &PixelBuffer );
-		Avf::IsOkay( Result, "CVPixelBufferCreateWithBytes" );
-	}
+	CVPixelBufferRef PixelBuffer = Avf::PixelsToPixelBuffer( Image );
 	
 	{
 		/*
@@ -597,7 +571,50 @@ void Avf::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Ti
 
 void Avf::TEncoder::OnError(const std::string& Error)
 {
-	
+	mFatalError << Error;
 }
 
+
+
+
+Avf::TPassThroughEncoder::TPassThroughEncoder(const TCasterParams& Params,std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex) :
+	TMediaEncoder	( OutputBuffer ),
+	mOutputMeta		( 256, 256, SoyPixelsFormat::RGBA )
+{
+}
+
+
+void Avf::TPassThroughEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+{
+	throw Soy::AssertException("todo Avf::TPassThroughEncoder::Write");
+}
+
+
+void Avf::TPassThroughEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
+{
+	Soy::Assert( pImage!=nullptr, "Image expected");
+	auto& Image = *pImage;
+	
+	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
+	auto& Packet = *pPacket;
+	
+	auto& PixelsArray = Image.GetPixelsArray();
+	Packet.mData.Copy( PixelsArray );
+	Packet.mTimecode = Timecode;
+	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Image.GetFormat() );
+	Packet.mMeta.mPixelMeta = Image.GetMeta();
+	
+	auto Block = []()
+	{
+		return false;
+	};
+
+	PushFrame( pPacket, Block );
+}
+
+
+void Avf::TPassThroughEncoder::OnError(const std::string& Error)
+{
+	mFatalError << Error;
+}
 
