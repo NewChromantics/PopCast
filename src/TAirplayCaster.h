@@ -41,8 +41,8 @@ class Airplay::TMirrorDevice : public TCaster
 public:
 	TMirrorDevice(const std::string& Name,const std::string& Address,const TCasterParams& Params);
 	
-	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
-	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
+	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
+	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
 
 protected:
 	bool				mSentHeader;	//	when sent, we're just sending video stream

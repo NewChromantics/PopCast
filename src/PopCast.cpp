@@ -98,7 +98,7 @@ __export void	PopCast_EnumDevices()
 	}
 }
 
-__export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat)
+__export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex)
 {
 	auto pInstance = PopCast::GetInstance( Instance );
 	if ( !pInstance )
@@ -112,7 +112,7 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		GLenum Type = GL_TEXTURE_2D;
 		Opengl::TTexture Texture( TextureId, Meta, Type );
-		pInstance->WriteFrame( Texture, Context );
+		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex), Context );
 		return true;
 	}
 	catch(std::exception& e)
@@ -121,7 +121,7 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 		return false;
 	}
 }
-__export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat)
+__export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex)
 {
 	auto pInstance = PopCast::GetInstance( Instance );
 	if ( !pInstance )
@@ -135,7 +135,7 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		GLenum Type = GL_TEXTURE_2D;
 		Opengl::TTexture Texture( TextureId, Meta, Type );
-		pInstance->WriteFrame( Texture, Context );
+		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex), Context );
 		return true;
 	}
 	catch(std::exception& e)
@@ -247,17 +247,19 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	}
 }
 
-void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,Opengl::TContext& Context)
+void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,size_t StreamIndex,Opengl::TContext& Context)
 {
 	Soy::Assert( mCaster != nullptr, "Expected Caster" );
 	
 	//	make relative timestamp
-	SoyTime Timestamp(true);
-	Timestamp -= mBaseTimestamp;
+	TCastFrameMeta Frame;
+	Frame.mStreamIndex = StreamIndex;
+	Frame.mTimecode = SoyTime(true);
+	Frame.mTimecode -= mBaseTimestamp;
 	
 	try
 	{
-		mCaster->Write( Texture, Timestamp, Context );
+		mCaster->Write( Texture, Frame, Context );
 		return;
 	}
 	catch(std::exception& e)
@@ -269,11 +271,11 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,Opengl::TContext& C
 	try
 	{
 		std::shared_ptr<TCaster> Caster = mCaster;
-		auto ReadPixels = [Texture,Caster,Timestamp]
+		auto ReadPixels = [Texture,Caster,Frame]
 		{
 			std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
 			Texture.Read( *Pixels );
-			Caster->Write( Pixels, Timestamp );
+			Caster->Write( Pixels, Frame );
 		};
 		Context.PushJob( ReadPixels );
 		return;

@@ -122,10 +122,10 @@ public class PopCast
 	private static extern bool		FlushDebug([MarshalAs(UnmanagedType.FunctionPtr)]System.IntPtr FunctionPtr);
 
 	[DllImport (PluginName)]
-	private static extern bool		PopCast_UpdateTexture2D(ulong Instance,System.IntPtr TextureId,int Width,int Height,TextureFormat textureFormat);
+	private static extern bool		PopCast_UpdateTexture2D(ulong Instance,System.IntPtr TextureId,int Width,int Height,TextureFormat textureFormat,int StreamIndex);
 
 	[DllImport (PluginName)]
-	private static extern bool		PopCast_UpdateRenderTexture(ulong Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat);
+	private static extern bool		PopCast_UpdateRenderTexture(ulong Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat,int StreamIndex);
 
 
 	public static void EnumDevices()
@@ -181,17 +181,17 @@ public class PopCast
 		}
 	}
 
-	public void UpdateTexture(RenderTexture Target)
+	public void UpdateTexture(RenderTexture Target,int StreamIndex)
 	{
 		Update ();
-		PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache( ref mRenderTexturePtrCache, Target ), Target.width, Target.height, Target.format );
+		PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache( ref mRenderTexturePtrCache, Target ), Target.width, Target.height, Target.format, StreamIndex );
 		FlushDebug ();
 	}
 
-	public void UpdateTexture(Texture2D Target)
+	public void UpdateTexture(Texture2D Target,int StreamIndex)
 	{
 		Update ();
-		PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache( ref mTexture2DPtrCache, Target ), Target.width, Target.height, Target.format );
+		PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache( ref mTexture2DPtrCache, Target ), Target.width, Target.height, Target.format, StreamIndex );
 		FlushDebug ();
 	}
 

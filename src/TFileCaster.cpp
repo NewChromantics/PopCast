@@ -109,16 +109,16 @@ bool TFileCaster::CanSleep()
 	return mFrameBuffer->HasPackets();
 }
 
-void TFileCaster::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
 	Soy::Assert( mEncoder!=nullptr, "Missing encoder" );
-	mEncoder->Write( Image, Timecode, Context );
+	mEncoder->Write( Image, FrameMeta.mTimecode, Context );
 }
 
-void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
+void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
 	Soy::Assert( mEncoder!=nullptr, "Missing encoder" );
-	mEncoder->Write( Image, Timecode );
+	mEncoder->Write( Image, FrameMeta.mTimecode );
 }
 
 /*
