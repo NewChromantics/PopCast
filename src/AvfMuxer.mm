@@ -72,7 +72,7 @@ Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter
 	 sourceFormatHint:myVideoFormat
 	 CMFormatDescriptionRef videoFormat=NULL;
 	*/
-	static bool SourceCompressed = true;
+	bool SourceCompressed = Avf::IsFormatCompressed( Stream.mCodec );
 	if ( SourceCompressed )
 	{
 		auto Format = GetFormatDescription( Stream );
@@ -81,6 +81,11 @@ Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter
 	else
 	{
 		//	gr: I cannot make this work with nil for output settings :/
+		//	re: nil;
+		//	https://developer.apple.com/library/ios/documentation/AudioVideo/Conceptual/AVFoundationPG/Articles/05_Export.html
+		//	 If you want the media data to be written in the format in which it was stored, pass nil in the outputSettings parameter.
+		//	Pass nil only if the asset writer was initialized with a fileType of AVFileTypeQuickTimeMovie.
+		
 		auto Width = Stream.mPixelMeta.GetWidth();
 		auto Height = Stream.mPixelMeta.GetHeight();
 		NSDictionary* videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -99,7 +104,11 @@ Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter
 		throw Soy::AssertException( Error.str() );
 	}
 	
-	mInput.mObject.expectsMediaDataInRealTime = YES;
+	//	for interleaved data, use NO
+	//mInput.mObject.expectsMediaDataInRealTime = YES;
+	
+	//	set other meta
+	//assetWriterInput.transform = videoAssetTrack.preferredTransform;
 	
 	if ( ![Writer canAddInput:mInput.mObject] )
 	{
@@ -144,7 +153,16 @@ void Avf::TFileMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 
 	}
 	
+	OnPreWrite( SoyTime() );
+}
+
+void Avf::TFileMuxer::OnPreWrite(SoyTime Timecode)
+{
+	//	already started
+	if ( mFirstTimecode.IsValid() )
+		return;
 	
+	mFirstTimecode = Timecode;
 	@try
 	{
 		auto* Writer = mAssetWriter->mAsset.mObject;
@@ -153,9 +171,9 @@ void Avf::TFileMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 			throw Soy::AssertException( Soy::NSErrorToString( Writer.error ) );
 		}
 		
-		SoyTime FirstTimecode;
-		auto FirstTimecodeCm = Soy::Platform::GetTime( FirstTimecode );
-		[Writer startSessionAtSourceTime:FirstTimecodeCm];
+		auto FirstTimecodeCm = Soy::Platform::GetTime( mFirstTimecode );
+		//[Writer startSessionAtSourceTime:FirstTimecodeCm];
+		[Writer startSessionAtSourceTime:kCMTimeZero];
 	}
 	@catch (NSException* e)
 	{
@@ -163,14 +181,34 @@ void Avf::TFileMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	}
 }
 
-void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStreamWriter& Output)
+
+CMSampleBufferRef CreateSampleBufferFromPixels(TMediaPacket& Packet)
 {
-	//	create buffer from packet
-	auto WriterIt = mStreamWriters.find( pPacket->mMeta.mStreamIndex );
-	Soy::Assert( WriterIt != mStreamWriters.end(), "Stream writer missing");
+	SoyPixelsRemote Pixels( GetArrayBridge(Packet.mData), Packet.mMeta.mPixelMeta );
+	CVPixelBufferRef PixelBuffer = Avf::PixelsToPixelBuffer( Pixels );
+
+	CMFormatDescriptionRef NewFormat;
+	CFAllocatorRef Allocator = kCFAllocatorDefault;
+	auto Result = CMVideoFormatDescriptionCreateForImageBuffer( Allocator, PixelBuffer, &NewFormat );
+	Avf::IsOkay( Result, "CMVideoFormatDescriptionCreateForImageBuffer" );
 	
-	auto* Writer = WriterIt->second->mInput.mObject;
-	auto& Packet = *pPacket;
+	BufferArray<CMSampleTimingInfo,1> SampleTimings;
+	auto& FrameTiming = SampleTimings.PushBack();
+	FrameTiming.duration = Soy::Platform::GetTime( Packet.mDuration );
+	FrameTiming.presentationTimeStamp = Soy::Platform::GetTime( Packet.mTimecode );
+	FrameTiming.decodeTimeStamp = Soy::Platform::GetTime( Packet.mDecodeTimecode );
+
+	CMSampleBufferRef NewSampleBuffer = nullptr;
+	Result = CMSampleBufferCreateForImageBuffer( Allocator, PixelBuffer, true, nullptr, nullptr, NewFormat, SampleTimings.GetArray(), &NewSampleBuffer );
+	Avf::IsOkay( Result, "CMSampleBufferCreateForImageBuffer" );
+
+	return NewSampleBuffer;
+}
+
+CMSampleBufferRef CreateSampleBufferFromCompressed(TMediaPacket& Packet,Array<uint8>& Buffer)
+{
+	auto& AvccData = Buffer;
+	
 	
 	CFAllocatorRef Allocator = nil;
 	CMMediaType MediaType;
@@ -180,38 +218,36 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 	auto Result = CMVideoFormatDescriptionCreate( Allocator, MediaCodec, Packet.mMeta.mPixelMeta.GetWidth(), Packet.mMeta.mPixelMeta.GetHeight(), nullptr, &Format );
 	Avf::IsOkay( Result, "CMVideoFormatDescriptionCreate" );
 	/*
-	auto& Data = Packet->mData;
-	
-	
-	CMBlockBufferRef videoBlockBuffer = nullptr;
-	CMSampleBufferRef videoSampleBuffer = nullptr;
-
-	auto Result = CMVideoFormatDescriptionCreate( Allocator, MediaCodec, Packet->mMeta.mPixelMeta.GetWidth(), Packet->mMeta.mPixelMeta.GetHeight(), nullptr, &videoFormat );
-	Avf::IsOkay( Result, "CMVideoFormatDescriptionCreate" );
-	Result = CMBlockBufferCreateWithMemoryBlock(kCFAllocatorDefault, NULL, data.length, kCFAllocatorDefault, NULL, 0, data.length, kCMBlockBufferAssureMemoryNowFlag, &videoBlockBuffer);
-	Avf::IsOkay( Result, "CMBlockBufferCreateWithMemoryBlock" );
-	Result = CMBlockBufferReplaceDataBytes(data.bytes, videoBlockBuffer, 0, data.length);
-	Avf::IsOkay( Result, "CMBlockBufferReplaceDataBytes" );
-
-	BufferArray<size_t,1> SampleSizes;
-	SampleSizes.PushBack( AvccData.GetDataSize() );
-	BufferArray<CMSampleTimingInfo,1> SampleTimings;
-	auto& FrameTiming = SampleTimings.PushBack();
-	FrameTiming.duration = Soy::Platform::GetTime( Packet.mDuration );
-	FrameTiming.presentationTimeStamp = Soy::Platform::GetTime( Packet.mTimecode );
-	FrameTiming.decodeTimeStamp = Soy::Platform::GetTime( Packet.mDecodeTimecode );
-
-	Result = CMSampleBufferCreate(kCFAllocatorDefault, videoBlockBuffer, TRUE, NULL, NULL, videoFormat, numberOfSamples, numberOfSampleTimeEntries, &videoSampleTimingInformation, 1, sampleSizeArray, &videoSampleBuffer);
-	Avf::IsOkay( Result, "CMBlockBufferReplaceDataBytes" );
-	
-	Result = CMSampleBufferMakeDataReady(videoSampleBuffer);
-	Avf::IsOkay( Result, "CMBlockBufferReplaceDataBytes" );
-*/
+	 auto& Data = Packet->mData;
+	 
+	 
+	 CMBlockBufferRef videoBlockBuffer = nullptr;
+	 CMSampleBufferRef videoSampleBuffer = nullptr;
+	 
+	 auto Result = CMVideoFormatDescriptionCreate( Allocator, MediaCodec, Packet->mMeta.mPixelMeta.GetWidth(), Packet->mMeta.mPixelMeta.GetHeight(), nullptr, &videoFormat );
+	 Avf::IsOkay( Result, "CMVideoFormatDescriptionCreate" );
+	 Result = CMBlockBufferCreateWithMemoryBlock(kCFAllocatorDefault, NULL, data.length, kCFAllocatorDefault, NULL, 0, data.length, kCMBlockBufferAssureMemoryNowFlag, &videoBlockBuffer);
+	 Avf::IsOkay( Result, "CMBlockBufferCreateWithMemoryBlock" );
+	 Result = CMBlockBufferReplaceDataBytes(data.bytes, videoBlockBuffer, 0, data.length);
+	 Avf::IsOkay( Result, "CMBlockBufferReplaceDataBytes" );
+	 
+	 BufferArray<size_t,1> SampleSizes;
+	 SampleSizes.PushBack( AvccData.GetDataSize() );
+	 BufferArray<CMSampleTimingInfo,1> SampleTimings;
+	 auto& FrameTiming = SampleTimings.PushBack();
+	 FrameTiming.duration = Soy::Platform::GetTime( Packet.mDuration );
+	 FrameTiming.presentationTimeStamp = Soy::Platform::GetTime( Packet.mTimecode );
+	 FrameTiming.decodeTimeStamp = Soy::Platform::GetTime( Packet.mDecodeTimecode );
+	 
+	 Result = CMSampleBufferCreate(kCFAllocatorDefault, videoBlockBuffer, TRUE, NULL, NULL, videoFormat, numberOfSamples, numberOfSampleTimeEntries, &videoSampleTimingInformation, 1, sampleSizeArray, &videoSampleBuffer);
+	 Avf::IsOkay( Result, "CMBlockBufferReplaceDataBytes" );
+	 
+	 Result = CMSampleBufferMakeDataReady(videoSampleBuffer);
+	 Avf::IsOkay( Result, "CMBlockBufferReplaceDataBytes" );
+	 */
 	//	create buffer from packet
 	
 	CMSampleBufferRef SampleBuffer = nullptr;
-	
-	Array<uint8> AvccData;
 	{
 		uint32_t SubBlockSize = 0;
 		CMBlockBufferFlags Flags = 0;
@@ -241,7 +277,7 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 			if ( AvccData.IsEmpty() )
 			{
 				std::Debug << "Skipping empty AVCC packet" << std::endl;
-				return;
+				return nullptr;
 			}
 			
 			//std::Debug << "AVCC data x" << AvccData.GetDataSize() << "; " << Soy::DataToHexString( GetArrayBridge(AvccData), 20 ) << std::endl;
@@ -282,10 +318,10 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 		//CMFormatDescriptionRef Format = Packet.mFormat->mDesc;
 		//auto Format = Packet.mFormat ? Packet.mFormat->mDesc : mFormatDesc->mDesc;
 		/*
-		if ( !VTDecompressionSessionCanAcceptFormatDescription( mSession->mSession, Format ) )
-		{
+		 if ( !VTDecompressionSessionCanAcceptFormatDescription( mSession->mSession, Format ) )
+		 {
 			std::Debug << "VTDecompressionSessionCanAcceptFormatDescription failed" << std::endl;
-		}
+		 }
 		 */
 		
 		int NumSamples = 1;
@@ -324,6 +360,41 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 		CFRelease( BlockBuffer );
 	}
 	
+	return SampleBuffer;
+}
+
+
+void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStreamWriter& Output)
+{
+	//	correct some stuff on the packet
+	if ( !pPacket->mDuration.IsValid() )
+		pPacket->mDuration = SoyTime( 33ull );
+	
+	//	create buffer from packet
+	auto WriterIt = mStreamWriters.find( pPacket->mMeta.mStreamIndex );
+	Soy::Assert( WriterIt != mStreamWriters.end(), "Stream writer missing");
+	
+	auto* Writer = WriterIt->second->mInput.mObject;
+	auto& Packet = *pPacket;
+	
+	CMSampleBufferRef SampleBuffer = nullptr;
+	Array<uint8> AvccData;
+	
+	if ( SoyMediaFormat::IsPixels( Packet.mMeta.mCodec ) )
+	{
+		SampleBuffer = CreateSampleBufferFromPixels( Packet );
+	}
+	else
+	{
+		SampleBuffer = CreateSampleBufferFromCompressed( Packet, AvccData );
+	}
+
+	while ( !Writer.isReadyForMoreMediaData )
+	{
+		std::Debug << "Writer not ready..." << std::endl;
+		std::this_thread::sleep_for( std::chrono::milliseconds(20) );
+	}
+	
 	@try
 	{
 		[Writer appendSampleBuffer:SampleBuffer];
@@ -353,8 +424,11 @@ void Avf::TFileMuxer::Finish()
 		}
 		auto* Writer = mAssetWriter->mAsset.mObject;
 
+		//	gr: this is optional, so in case there are any bugs... let's skip it
+		/*
 		auto LastTimecodeCm = Soy::Platform::GetTime( mLastTimecode );
 		[Writer endSessionAtSourceTime:LastTimecodeCm];
+		 */
 
 		[Writer finishWritingWithCompletionHandler:OnFinishedWriting];
 	}
