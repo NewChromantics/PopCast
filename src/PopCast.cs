@@ -181,17 +181,18 @@ public class PopCast
 		}
 	}
 
-	public void UpdateTexture(RenderTexture Target,int StreamIndex)
+	public void UpdateTexture(Texture Target,int StreamIndex)
 	{
 		Update ();
-		PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache( ref mRenderTexturePtrCache, Target ), Target.width, Target.height, Target.format, StreamIndex );
-		FlushDebug ();
-	}
 
-	public void UpdateTexture(Texture2D Target,int StreamIndex)
-	{
-		Update ();
-		PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache( ref mTexture2DPtrCache, Target ), Target.width, Target.height, Target.format, StreamIndex );
+		if (Target is RenderTexture) {
+			RenderTexture Target_rt = Target as RenderTexture;
+			PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
+		}
+		if (Target is Texture2D) {
+			Texture2D Target_2d = Target as Texture2D;
+			PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache (ref mTexture2DPtrCache, Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
+		}
 		FlushDebug ();
 	}
 
