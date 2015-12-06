@@ -391,6 +391,9 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 
 	while ( !Writer.isReadyForMoreMediaData )
 	{
+		if ( !IsWorking() )
+			throw Soy::AssertException("Avf::TFileMuxer::ProcessPacket thread aborted");
+		
 		std::Debug << "Writer not ready..." << std::endl;
 		std::this_thread::sleep_for( std::chrono::milliseconds(20) );
 	}
