@@ -38,6 +38,7 @@ void TMemFileHeader::SetError(const std::string& Error)
 
 
 TMemFileCaster::TMemFileCaster(const TCasterParams& Params) :
+	TCaster		( Params ),
 	mFilename	( Params.mName )
 {
 }

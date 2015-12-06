@@ -303,6 +303,7 @@ std::shared_ptr<GoogleCast::TDevice> GoogleCast::TContext::AllocDevice(TCasterPa
 
 
 GoogleCast::TDevice::TDevice(void* _GCKDevice) :
+	TCaster		( TCasterParams() ),
 	mInternal	( new TDeviceInternal(*this) )
 {
 	auto& mDeviceManager = mInternal->mDeviceManager;

@@ -139,6 +139,7 @@ std::shared_ptr<Airplay::TDevice> Airplay::TContext::AllocDevice(TCasterParams P
 
 
 Airplay::TMirrorDevice::TMirrorDevice(const std::string& Name,const std::string& Address,const TCasterParams& Params) :
+	TCaster		( Params ),
 	mInternal	( new TDeviceInternal(*this) ),
 	mSentHeader	( false )
 {
