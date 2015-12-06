@@ -743,7 +743,11 @@ CVPixelBufferRef Avf::PixelsToPixelBuffer(const SoyPixelsImpl& Image)
 
 	CVPixelBufferRef PixelBuffer = nullptr;
 	auto Result = CVPixelBufferCreateWithBytes( PixelBufferAllocator, Image.GetWidth(), Image.GetHeight(), PixelFormatType, Pixels, BytesPerRow, PixelReleaseCallback, ReleaseContext, PixelBufferAttributes, &PixelBuffer );
-	Avf::IsOkay( Result, "CVPixelBufferCreateWithBytes" );
+	
+	std::stringstream Error;
+	Error << "CVPixelBufferCreateWithBytes " << Image.GetMeta() << "(" << Soy::FourCCToString(PixelFormatType) << ")";
+	Avf::IsOkay( Result, Error.str() );
+
 	return PixelBuffer;
 }
 
