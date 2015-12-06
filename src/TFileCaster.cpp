@@ -9,6 +9,7 @@
 
 
 TFileCaster::TFileCaster(const TCasterParams& Params) :
+	TCaster			( Params ),
 	SoyWorkerThread	( std::string("TFileCaster/")+Params.mName, SoyWorkerWaitMode::Wake )
 {
 	auto& Filename = Params.mName;
@@ -16,13 +17,6 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 	this->WakeOnEvent( mFrameBuffer->mOnNewPacket );
-	
-	//	alloc encoder per stream
-	size_t StreamIndex = 0;
-	//mEncoder.reset( new Avf::TEncoder( Params, mFrameBuffer, StreamIndex ) );
-	mEncoder.reset( new Avf::TPassThroughEncoder( Params, mFrameBuffer, StreamIndex ) );
-	
-	
 	
 #if defined(TARGET_OSX)
 	static bool UseAvfMuxer = true;
@@ -61,7 +55,11 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 TFileCaster::~TFileCaster()
 {
 	//	wait for encoder
-	mEncoder.reset();
+	for ( auto& Encoder : mEncoders )
+	{
+		auto& pEncoder = Encoder.second;
+		pEncoder.reset();
+	}
 	
 	mMuxer->Finish();
 	mMuxer.reset();
@@ -111,15 +109,28 @@ bool TFileCaster::CanSleep()
 
 void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
-	Soy::Assert( mEncoder!=nullptr, "Missing encoder" );
-	mEncoder->Write( Image, FrameMeta.mTimecode, Context );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
 void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
-	Soy::Assert( mEncoder!=nullptr, "Missing encoder" );
-	mEncoder->Write( Image, FrameMeta.mTimecode );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	Encoder.Write( Image, FrameMeta.mTimecode );
 }
+
+
+TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
+{
+	auto& pEncoder = mEncoders[StreamIndex];
+	if ( pEncoder )
+		return *pEncoder;
+	pEncoder.reset( new Avf::TPassThroughEncoder( mParams, mFrameBuffer, StreamIndex ) );
+	return *pEncoder;
+}
+
+
+
 
 /*
 const uint32 AP4_FTYP_BRAND_ISOM = AP4_ATOM_TYPE('i','s','o','m');

@@ -104,10 +104,13 @@ public:
 protected:
 	virtual bool		Iteration() override;
 	virtual bool		CanSleep() override;
+	
+private:
+	TMediaEncoder&		AllocEncoder(size_t StreamIndex);
 
 protected:
-	std::shared_ptr<TMediaEncoder>		mEncoder;
-	std::shared_ptr<TMediaPacketBuffer>	mFrameBuffer;
+	std::map<size_t,std::shared_ptr<TMediaEncoder>>	mEncoders;
+	std::shared_ptr<TMediaPacketBuffer>	mFrameBuffer;	//	encoded frames
 	std::shared_ptr<TMediaMuxer>		mMuxer;
 	std::shared_ptr<TStreamWriter>		mFileStream;
 };

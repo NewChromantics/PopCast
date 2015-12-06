@@ -579,14 +579,28 @@ void Avf::TEncoder::OnError(const std::string& Error)
 
 Avf::TPassThroughEncoder::TPassThroughEncoder(const TCasterParams& Params,std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex) :
 	TMediaEncoder	( OutputBuffer ),
-	mOutputMeta		( 256, 256, SoyPixelsFormat::RGBA )
+	mOutputMeta		( 256, 256, SoyPixelsFormat::RGBA ),
+	mStreamIndex	( StreamIndex )
 {
 }
 
 
 void Avf::TPassThroughEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
-	throw Soy::AssertException("todo Avf::TPassThroughEncoder::Write");
+	throw Soy::AssertException("");
+	/*	gr: flawed atm as this is occurring on the main thread from mono, which is also the GL thread, so we deadlock...
+	//	normally we fail here and let the system fallback to the pixel mode, but we know the
+	//	Avf writer won't accept RGBA as a pixel format in CVPixelBufferCreateWithBytes so be explicit
+	std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
+	auto ReadPixels = [&Pixels,&Image]
+	{
+		Image.Read( *Pixels );
+	};
+	Soy::TSemaphore Semaphore;
+	Context.PushJob( ReadPixels, Semaphore );
+	Semaphore.Wait();
+	Write( Pixels, Timecode );
+	 */
 }
 
 
@@ -603,6 +617,7 @@ void Avf::TPassThroughEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage
 	Packet.mTimecode = Timecode;
 	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Image.GetFormat() );
 	Packet.mMeta.mPixelMeta = Image.GetMeta();
+	Packet.mMeta.mStreamIndex = mStreamIndex;
 	
 	auto Block = []()
 	{

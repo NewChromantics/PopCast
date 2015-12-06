@@ -71,6 +71,7 @@ public:
 	std::shared_ptr<TSession>	mSession;
 	SoyPixelsMeta				mOutputMeta;
 	TMediaPacketBuffer			mFrames;
+	size_t						mStreamIndex;	//	may want to be in base
 };
 
 
