@@ -587,20 +587,23 @@ Avf::TPassThroughEncoder::TPassThroughEncoder(const TCasterParams& Params,std::s
 
 void Avf::TPassThroughEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
-	throw Soy::AssertException("");
-	/*	gr: flawed atm as this is occurring on the main thread from mono, which is also the GL thread, so we deadlock...
-	//	normally we fail here and let the system fallback to the pixel mode, but we know the
-	//	Avf writer won't accept RGBA as a pixel format in CVPixelBufferCreateWithBytes so be explicit
-	std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
-	auto ReadPixels = [&Pixels,&Image]
+	//	todo: proper opengl -> CvPixelBuffer
+	
+	//	gr: Avf won't accept RGBA, but it will take RGB so we can force reading that format here
+	if ( Image.GetFormat() != SoyPixelsFormat::RGBA )
 	{
-		Image.Read( *Pixels );
+		throw Soy::AssertException("opengl mode unsupported");
+	}
+	
+	//	gr: cannot currently block for an opengl task, this is called from the main thread on mono, even though the render thread
+	//		is different, it seems to block and our opengl callback isn't called... so, like the higher level code, no block
+	auto ReadPixels = [this,Image,Timecode]
+	{
+		std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
+		Image.Read( *Pixels, SoyPixelsFormat::RGB );
+		Write( Pixels, Timecode );
 	};
-	Soy::TSemaphore Semaphore;
-	Context.PushJob( ReadPixels, Semaphore );
-	Semaphore.Wait();
-	Write( Pixels, Timecode );
-	 */
+	Context.PushJob( ReadPixels );
 }
 
 
