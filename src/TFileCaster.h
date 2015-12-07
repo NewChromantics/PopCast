@@ -98,21 +98,52 @@ public:
 	TFileCaster(const TCasterParams& Params);
 	~TFileCaster();
 	
-	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
-	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
+	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
+	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
 	
 protected:
 	virtual bool		Iteration() override;
 	virtual bool		CanSleep() override;
+	
+private:
+	TMediaEncoder&		AllocEncoder(size_t StreamIndex);
 
 protected:
-	std::shared_ptr<TMediaEncoder>		mEncoder;
-	std::shared_ptr<TMediaPacketBuffer>	mFrameBuffer;
+	std::map<size_t,std::shared_ptr<TMediaEncoder>>	mEncoders;
+	std::shared_ptr<TMediaPacketBuffer>	mFrameBuffer;	//	encoded frames
 	std::shared_ptr<TMediaMuxer>		mMuxer;
 	std::shared_ptr<TStreamWriter>		mFileStream;
 };
 
 
+
+class TRawWritePacketProtocol : public Soy::TWriteProtocol
+{
+public:
+	TRawWritePacketProtocol(std::shared_ptr<TMediaPacket> Packet) :
+		mPacket	( Packet )
+	{
+	}
+	
+	virtual void					Encode(TStreamBuffer& Buffer) override
+	{
+		Buffer.Push( GetArrayBridge( mPacket->mData ) );
+	}
+	
+	std::shared_ptr<TMediaPacket>	mPacket;
+};
+
+
+class TRawWriteDataProtocol : public Soy::TWriteProtocol
+{
+public:
+	virtual void					Encode(TStreamBuffer& Buffer) override
+	{
+		Buffer.Push( GetArrayBridge( mData ) );
+	}
+	
+	Array<char>	mData;
+};
 
 
 
@@ -125,7 +156,9 @@ public:
 	TRawMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input);
 	
 protected:
+	virtual void	SetupStreams(const ArrayBridge<TStreamMeta>&& Streams) override;
 	virtual void	ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
+	virtual void	Finish() override	{}
 	
 public:
 	int				mStreamIndex;	//	once set, ignore packets from other streams

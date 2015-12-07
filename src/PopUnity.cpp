@@ -140,6 +140,7 @@ SoyPixelsFormat::Type Unity::GetPixelFormat(RenderTexturePixelFormat::Type Forma
 	switch ( Format )
 	{
 		//	gr: this appears to be RGBA (opengl texture format is RGBA8 on osx)
+		//	gr: possibly it IS ARGB but opengl reinterprets it?
 		case RenderTexturePixelFormat::ARGB32:	return SoyPixelsFormat::RGBA;
 	
 		//	todo: test this
@@ -158,8 +159,10 @@ SoyPixelsFormat::Type Unity::GetPixelFormat(Texture2DPixelFormat::Type Format)
 		case Texture2DPixelFormat::RGBA32:	return SoyPixelsFormat::RGBA;
 		case Texture2DPixelFormat::RGB24:	return SoyPixelsFormat::RGB;
 		case Texture2DPixelFormat::BGRA32:	return SoyPixelsFormat::BGRA;
-		//case Texture2DPixelFormat::ARGB32:	return SoyPixelsFormat::ARGB;
 		case Texture2DPixelFormat::Alpha8:	return SoyPixelsFormat::Greyscale;
+
+		//	gr: this was commented out... but it comes up...
+		case Texture2DPixelFormat::ARGB32:	return SoyPixelsFormat::ARGB;
 			
 		default:
 			return SoyPixelsFormat::Invalid;

@@ -37,9 +37,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
---- !u!127 &3
-LevelGameManager:
-  m_ObjectHideFlags: 0
 --- !u!157 &4
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -68,6 +65,7 @@ LightmapSettings:
     m_TextureCompression: 1
     m_FinalGather: 0
     m_FinalGatherRayCount: 1024
+    m_ReflectionCompression: 2
   m_LightmapSnapshot: {fileID: 0}
   m_RuntimeCPUUsage: 25
 --- !u!196 &5
@@ -215,9 +213,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d01ae05e90fd44fd7a9ed97c7b6799ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Wait: 1
-  mOutputTarget: file:/Volumes/Assets/PopCastTest.ts
-  mOutputTexture: {fileID: 2800000, guid: 682cea168666a4ea3b084d7865818eb1, type: 3}
+  OutputRenderTextures:
+  - {fileID: 8400000, guid: f4db5c6f1b2024f00951375869fa75c2, type: 2}
+  OutputTextures:
+  - {fileID: 2800000, guid: 682cea168666a4ea3b084d7865818eb1, type: 3}
+  mOutputTarget: file:/Volumes/Assets/PopCastTest.mp4
 --- !u!4 &843894333
 Transform:
   m_ObjectHideFlags: 0

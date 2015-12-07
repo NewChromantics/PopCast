@@ -38,16 +38,17 @@ void TMemFileHeader::SetError(const std::string& Error)
 
 
 TMemFileCaster::TMemFileCaster(const TCasterParams& Params) :
+	TCaster		( Params ),
 	mFilename	( Params.mName )
 {
 }
 
-void TMemFileCaster::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+void TMemFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("todo");
 }
 
-void TMemFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
+void TMemFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
 {
 	auto& Image = *pImage;
 	
@@ -69,7 +70,7 @@ void TMemFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime T
 	auto ColourArray = GetArrayBridge( MemFile->GetArray() ).GetSubArray<uint8>( sizeof(TMemFileHeader), Pixels.GetDataSize() );
 
 	//	write new header
-	Header = TMemFileHeader( Image.GetMeta(), Timecode );
+	Header = TMemFileHeader( Image.GetMeta(), FrameMeta.mTimecode );
 	
 	//	write new data
 	memcpy( ColourArray.GetArray(), Pixels.GetArray(), ColourArray.GetDataSize() );

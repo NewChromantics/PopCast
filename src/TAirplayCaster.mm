@@ -139,6 +139,7 @@ std::shared_ptr<Airplay::TDevice> Airplay::TContext::AllocDevice(TCasterParams P
 
 
 Airplay::TMirrorDevice::TMirrorDevice(const std::string& Name,const std::string& Address,const TCasterParams& Params) :
+	TCaster		( Params ),
 	mInternal	( new TDeviceInternal(*this) ),
 	mSentHeader	( false )
 {
@@ -217,12 +218,12 @@ Airplay::TMirrorDevice::TMirrorDevice(const std::string& Name,const std::string&
 }
 
 
-void Airplay::TMirrorDevice::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+void Airplay::TMirrorDevice::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported");
 }
 
-void Airplay::TMirrorDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
+void Airplay::TMirrorDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
 	throw Soy::AssertException("Not supported");
 }

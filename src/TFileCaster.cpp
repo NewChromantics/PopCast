@@ -1,9 +1,15 @@
 #include "TFileCaster.h"
 #include <SoyMedia.h>
 #include "AvfCompressor.h"
+#include "LibavMuxer.h"
+
+#if defined(TARGET_OSX)
+#include "AvfMuxer.h"
+#endif
 
 
 TFileCaster::TFileCaster(const TCasterParams& Params) :
+	TCaster			( Params ),
 	SoyWorkerThread	( std::string("TFileCaster/")+Params.mName, SoyWorkerWaitMode::Wake )
 {
 	auto& Filename = Params.mName;
@@ -12,31 +18,52 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 	this->WakeOnEvent( mFrameBuffer->mOnNewPacket );
 	
-	//	alloc encoder per stream
-	size_t StreamIndex = 0;
-	mEncoder.reset( new Avf::TEncoder( Params, mFrameBuffer, StreamIndex ) );
-	
-	//	alloc muxer
-	mFileStream.reset( new TFileStreamWriter( Filename ) );
-	
-	if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
+#if defined(TARGET_OSX)
+	static bool UseAvfMuxer = true;
+	if ( UseAvfMuxer )
 	{
-		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
+		mMuxer.reset( new Avf::TFileMuxer( Filename, mFileStream, mFrameBuffer ) );
 	}
 	else
+#endif
+	if ( Soy::StringEndsWith( Params.mName, ".raw", false ) )
 	{
+		//	alloc muxer
+		mFileStream.reset( new TFileStreamWriter( Filename ) );
 		mMuxer.reset( new TRawMuxer( mFileStream, mFrameBuffer ) );
 	}
-
-	mFileStream->Start();
+	/*
+	 else if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
+	 {
+	 //	alloc muxer
+	 mFileStream.reset( new TFileStreamWriter( Filename ) );
+		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
+	 }
+	 */
+	else
+	{
+		//	alloc muxer
+		mFileStream.reset( new TFileStreamWriter( Filename ) );
+		mMuxer.reset( new Libav::TMuxer( mFileStream, mFrameBuffer ) );
+	}
+	
+	if ( mFileStream )
+		mFileStream->Start();
 	Start();
 }
 
 TFileCaster::~TFileCaster()
 {
 	//	wait for encoder
-	mEncoder.reset();
+	for ( auto& Encoder : mEncoders )
+	{
+		auto& pEncoder = Encoder.second;
+		pEncoder.reset();
+	}
+	
+	mMuxer->Finish();
 	mMuxer.reset();
+	
 	mFileStream.reset();
 	
 	WaitToFinish();
@@ -80,17 +107,30 @@ bool TFileCaster::CanSleep()
 	return mFrameBuffer->HasPackets();
 }
 
-void TFileCaster::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
-	Soy::Assert( mEncoder!=nullptr, "Missing encoder" );
-	mEncoder->Write( Image, Timecode, Context );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
-void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
+void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
-	Soy::Assert( mEncoder!=nullptr, "Missing encoder" );
-	mEncoder->Write( Image, Timecode );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	Encoder.Write( Image, FrameMeta.mTimecode );
 }
+
+
+TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
+{
+	auto& pEncoder = mEncoders[StreamIndex];
+	if ( pEncoder )
+		return *pEncoder;
+	pEncoder.reset( new Avf::TPassThroughEncoder( mParams, mFrameBuffer, StreamIndex ) );
+	return *pEncoder;
+}
+
+
+
 
 /*
 const uint32 AP4_FTYP_BRAND_ISOM = AP4_ATOM_TYPE('i','s','o','m');
@@ -277,28 +317,19 @@ void SoyMediaAtom::Write(TStreamBuffer& Data)
 }
 */
 
-class TRawWriteProtocol : public Soy::TWriteProtocol
-{
-public:
-	TRawWriteProtocol(std::shared_ptr<TMediaPacket> Packet) :
-		mPacket	( Packet )
-	{
-	}
-
-	virtual void					Encode(TStreamBuffer& Buffer) override
-	{
-		Buffer.Push( GetArrayBridge( mPacket->mData ) );
-	}
-	
-	std::shared_ptr<TMediaPacket>	mPacket;
-};
-
 TRawMuxer::TRawMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
 	TMediaMuxer		( Output, Input, "TRawMuxer" ),
 	mStreamIndex	( -1 )
 {
 	
 }
+
+
+void TRawMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
+{
+	
+}
+
 
 void TRawMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
 {
@@ -316,7 +347,7 @@ void TRawMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter
 	}
 	
 	//	write out
-	std::shared_ptr<Soy::TWriteProtocol> Protocol( new TRawWriteProtocol( Packet ) );
+	std::shared_ptr<Soy::TWriteProtocol> Protocol( new TRawWritePacketProtocol( Packet ) );
 	Output.Push( Protocol );
 }
 	

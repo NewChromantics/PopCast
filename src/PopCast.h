@@ -10,8 +10,8 @@ class TCasterParams;
 __export Unity::ulong	PopCast_Alloc(const char* Filename);
 __export bool			PopCast_Free(Unity::ulong Instance);
 __export void			PopCast_EnumDevices();
-__export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat);
-__export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat);
+__export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
+__export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 
 
 
@@ -37,7 +37,7 @@ public:
 	
 	TInstanceRef	GetRef() const		{	return mRef;	}
 	
-	void			WriteFrame(Opengl::TTexture Texture,Opengl::TContext& Context);
+	void			WriteFrame(Opengl::TTexture Texture,size_t StreamIndex,Opengl::TContext& Context);
 	
 public:
 	std::shared_ptr<TCaster>	mCaster;
