@@ -53,7 +53,8 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         FilePath = "/Applications/Unity 5.1.3p3/Unity.app">
+         BundleIdentifier = "com.unity3d.UnityEditor5.x"
+         FilePath = "/Applications/Unity 5.2.2p3/Unity.app">
       </PathRunnable>
       <MacroExpansion>
          <BuildableReference

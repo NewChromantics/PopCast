@@ -247,7 +247,7 @@ void GetNalPackets(const ArrayBridge<uint8>&& H264Data,ArrayBridge<TNalPacket>&&
 
 void Avf::TSession::OnCompressedFrame(CMSampleBufferRef SampleBuffer,VTEncodeInfoFlags Flags)
 {
-	bool IsKeyframe = Avf::IsKeyframe(SampleBuffer);
+	bool IsKeyframe = Avf::IsKeyframe(SampleBuffer,false);
 	
 	if ( IsKeyframe )
 	{
