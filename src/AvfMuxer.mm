@@ -6,7 +6,11 @@ class Avf::TAssetWriterInput
 public:
 	TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter& Parent);
 	
+	void							Finish();
+	
 public:
+	std::atomic<bool>				mFinished;
+	std::mutex						mLock;		//	to coordinate cleanup
 	ObjcPtr<AVAssetWriterInput>		mInput;
 };
 
@@ -56,7 +60,8 @@ Avf::TAssetWriter::TAssetWriter(const std::string& Filename)
 }
 
 
-Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter& Parent)
+Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter& Parent) :
+	mFinished	( false )
 {
 	auto* Type = Avf::GetFormatType( Stream.mCodec );
 	auto* Writer = Parent.mAsset.mObject;
@@ -121,6 +126,15 @@ Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter
 	[Writer addInput:mInput.mObject];
 }
 
+void Avf::TAssetWriterInput::Finish()
+{
+	if ( !mInput )
+		return;
+	
+	std::lock_guard<std::mutex> Lock(mLock);
+	mFinished = true;
+	[mInput.mObject markAsFinished];
+}
 
 Avf::TFileMuxer::TFileMuxer(const std::string& Filename,std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input) :
 	TMediaMuxer		( Output, Input )
@@ -374,7 +388,8 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 	auto WriterIt = mStreamWriters.find( pPacket->mMeta.mStreamIndex );
 	Soy::Assert( WriterIt != mStreamWriters.end(), "Stream writer missing");
 	
-	auto* Writer = WriterIt->second->mInput.mObject;
+	auto& WriterWrapper = *WriterIt->second;
+	auto* Writer = WriterWrapper.mInput.mObject;
 	auto& Packet = *pPacket;
 	
 	CMSampleBufferRef SampleBuffer = nullptr;
@@ -389,8 +404,11 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 		SampleBuffer = CreateSampleBufferFromCompressed( Packet, AvccData );
 	}
 
+	//	lock here?
 	while ( !Writer.isReadyForMoreMediaData )
 	{
+		if ( WriterWrapper.mFinished )
+			throw Soy::AssertException("Avf::TFileMuxer::ProcessPacket writer has been stopped");
 		if ( !IsWorking() )
 			throw Soy::AssertException("Avf::TFileMuxer::ProcessPacket thread aborted");
 		
@@ -400,8 +418,12 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 	
 	@try
 	{
-		[Writer appendSampleBuffer:SampleBuffer];
-		mLastTimecode = std::max( mLastTimecode, Packet.mTimecode );
+		std::lock_guard<std::mutex> Lock(WriterWrapper.mLock);
+		if ( !WriterWrapper.mFinished )
+		{
+			[Writer appendSampleBuffer:SampleBuffer];
+			mLastTimecode = std::max( mLastTimecode, Packet.mTimecode );
+		}
 	}
 	@catch(NSException* e)
 	{
@@ -423,7 +445,7 @@ void Avf::TFileMuxer::Finish()
 		for ( auto it=mStreamWriters.begin();	it!=mStreamWriters.end();	it++ )
 		{
 			auto& Stream = it->second;
-			[Stream->mInput.mObject markAsFinished];
+			Stream->Finish();
 		}
 		auto* Writer = mAssetWriter->mAsset.mObject;
 

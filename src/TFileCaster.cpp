@@ -61,8 +61,11 @@ TFileCaster::~TFileCaster()
 		pEncoder.reset();
 	}
 	
-	mMuxer->Finish();
-	mMuxer.reset();
+	if ( mMuxer )
+	{
+		mMuxer->Finish();
+		mMuxer.reset();
+	}
 	
 	mFileStream.reset();
 	
