@@ -19,7 +19,7 @@ namespace Avf
 	NSString* const					GetFormatType(SoyMediaFormat::Type Format);
 	NSString* const					GetFileExtensionType(const std::string& Extension);
 	NSURL*							GetUrl(const std::string& Filename);
-	bool							IsKeyframe(CMSampleBufferRef SampleBuffer);
+	bool							IsKeyframe(CMSampleBufferRef SampleBuffer,bool DefaultValue);
 	bool							IsFormatCompressed(SoyMediaFormat::Type Format);
 	CVPixelBufferRef				PixelsToPixelBuffer(const SoyPixelsImpl& Pixels);
 

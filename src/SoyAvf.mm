@@ -710,19 +710,34 @@ bool Avf::IsFormatCompressed(SoyMediaFormat::Type Format)
 	}
 }
 
-bool Avf::IsKeyframe(CMSampleBufferRef SampleBuffer)
+bool Avf::IsKeyframe(CMSampleBufferRef SampleBuffer,bool DefaultValue)
 {
 	if ( !SampleBuffer )
-		return false;
-
+		return DefaultValue;
+	
 	//	code based on chromium
 	//	https://chromium.googlesource.com/chromium/src/media/+/cea1808de66191f7f1eb48b5579e602c0c781146/cast/sender/h264_vt_encoder.cc
-	auto sample_attachments = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(CMSampleBufferGetSampleAttachmentsArray(SampleBuffer, true), 0));
+	auto Attachments = CMSampleBufferGetSampleAttachmentsArray(SampleBuffer,false);
+	if ( !Attachments )
+		return DefaultValue;
+	
+	//	gr: why 0? more documentation please chromium
+	if ( CFArrayGetCount(Attachments) < 1 )
+		return DefaultValue;
+	auto sample_attachments = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(Attachments, 0));
+	if ( !sample_attachments )
+		return DefaultValue;
+	
 	// If the NotSync key is not present, it implies Sync, which indicates a
 	// keyframe (at least I think, VT documentation is, erm, sparse). Could
 	// alternatively use kCMSampleAttachmentKey_DependsOnOthers == false.
+	bool IsDependent = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_DependsOnOthers);
 	bool NotSync = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_NotSync);
-	bool Keyframe = !NotSync;
+	bool PartialSync = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_PartialSync);
+	bool IsDependedOnByOthers = CFDictionaryContainsKey(sample_attachments,kCMSampleAttachmentKey_IsDependedOnByOthers);
+	
+	//	bool Keyframe = (!NotSync) || (!IsDependent);
+	bool Keyframe = (!NotSync);
 	return Keyframe;
 }
 
