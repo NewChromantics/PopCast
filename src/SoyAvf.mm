@@ -729,7 +729,13 @@ bool Avf::IsKeyframe(CMSampleBufferRef SampleBuffer)
 void PixelReleaseCallback(void *releaseRefCon, const void *baseAddress)
 {
 	std::Debug << __func__ << std::endl;
+
+	//	this page says we need to release
+	//	http://codefromabove.com/2015/01/av-foundation-saving-a-sequence-of-raw-rgb-frames-to-a-movie/
+	CFDataRef bufferData = (CFDataRef)releaseRefCon;
+	CFRelease(bufferData);
 }
+
 
 CVPixelBufferRef Avf::PixelsToPixelBuffer(const SoyPixelsImpl& Image)
 {
@@ -741,6 +747,16 @@ CVPixelBufferRef Avf::PixelsToPixelBuffer(const SoyPixelsImpl& Image)
 	void* ReleaseContext = nullptr;
 	CFDictionaryRef PixelBufferAttributes = nullptr;
 
+#if defined(TARGET_OSX)
+	//	gr: hack, cannot create RGBA pixel buffer on OSX. do a last-min conversion here, but ideally it's done beforehand
+	//		REALLY ideally we can go from texture to CVPixelBuffer
+	if ( Image.GetFormat() == SoyPixelsFormat::RGBA && PixelFormatType == kCVPixelFormatType_32RGBA )
+	{
+		std::Debug << "CVPixelBufferCreateWithBytes will fail with RGBA, forcing BGRA" << std::endl;
+		PixelFormatType = kCVPixelFormatType_32BGRA;
+	}
+#endif
+	
 	CVPixelBufferRef PixelBuffer = nullptr;
 	auto Result = CVPixelBufferCreateWithBytes( PixelBufferAllocator, Image.GetWidth(), Image.GetHeight(), PixelFormatType, Pixels, BytesPerRow, PixelReleaseCallback, ReleaseContext, PixelBufferAttributes, &PixelBuffer );
 	
