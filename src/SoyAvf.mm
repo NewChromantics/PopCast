@@ -189,6 +189,22 @@ std::string Avf::GetString(OSStatus Status)
 	TESTENUMERROR(Status,kCMBlockBufferUnallocatedBlockErr);
 	TESTENUMERROR(Status,kCMBlockBufferInsufficientSpaceErr);
 	
+	TESTENUMERROR(Status,kCVReturnInvalidArgument);
+	TESTENUMERROR(Status,kCVReturnAllocationFailed);
+	TESTENUMERROR(Status,kCVReturnUnsupported);
+	TESTENUMERROR(Status,kCVReturnInvalidDisplay);
+	TESTENUMERROR(Status,kCVReturnDisplayLinkAlreadyRunning);
+	TESTENUMERROR(Status,kCVReturnDisplayLinkNotRunning);
+	TESTENUMERROR(Status,kCVReturnDisplayLinkCallbacksNotSet);
+	TESTENUMERROR(Status,kCVReturnInvalidPixelFormat);
+	TESTENUMERROR(Status,kCVReturnInvalidSize);
+	TESTENUMERROR(Status,kCVReturnInvalidPixelBufferAttributes);
+	TESTENUMERROR(Status,kCVReturnPixelBufferNotOpenGLCompatible);
+	TESTENUMERROR(Status,kCVReturnPixelBufferNotMetalCompatible);
+	TESTENUMERROR(Status,kCVReturnWouldExceedAllocationThreshold);
+	TESTENUMERROR(Status,kCVReturnPoolAllocationFailed);
+	TESTENUMERROR(Status,kCVReturnInvalidPoolAttributes);
+	
 	switch ( static_cast<sint32>(Status) )
 	{
 		case -8961:	return "kVTPixelTransferNotSupportedErr -8961";
@@ -355,6 +371,7 @@ TStreamMeta Avf::GetStreamMeta(CMFormatDescriptionRef FormatDesc)
 	TStreamMeta Meta;
 	auto Fourcc = CFSwapInt32HostToBig( CMFormatDescriptionGetMediaSubType(FormatDesc) );
 	int H264LengthSize = -1;
+	
 	//if ( SoyMediaFormat::IsH264Fourcc(Fourcc) )
 	{
 		//	gr: this is okay if it goes wrong, probably just doesn't apply to this format
@@ -362,6 +379,25 @@ TStreamMeta Avf::GetStreamMeta(CMFormatDescriptionRef FormatDesc)
 		CMVideoFormatDescriptionGetH264ParameterSetAtIndex( FormatDesc, 0, nullptr, nullptr, nullptr, &H264LengthSize );
 		//AvfCompressor::IsOkay( Result, "Get H264 param NAL size", false );
 	}
+	
+	//	PCM needs a number too
+	{
+		auto* pAudioFormat = CMAudioFormatDescriptionGetStreamBasicDescription( FormatDesc );
+		if ( pAudioFormat )
+		{
+			auto& AudioFormat = *pAudioFormat;
+			Meta.mAudioSampleRate = AudioFormat.mSampleRate;
+			Meta.mAudioBytesPerPacket = AudioFormat.mBytesPerPacket;
+			Meta.mAudioBytesPerFrame = AudioFormat.mBytesPerFrame;
+			Meta.mAudioFramesPerPacket = AudioFormat.mFramesPerPacket;
+			Meta.mChannelCount = AudioFormat.mChannelsPerFrame;
+
+			//	change this to be like H264 different formats; AAC_8, AAC_16, AAC_float etc
+			Meta.mAudioBitsPerChannel = AudioFormat.mBitsPerChannel;
+			H264LengthSize = Meta.mAudioBitsPerChannel;
+		}
+	}
+	
 	Meta.mCodec = SoyMediaFormat::FromFourcc( Fourcc, H264LengthSize );
 	
 	if ( SoyMediaFormat::IsH264( Meta.mCodec ) )
@@ -394,7 +430,29 @@ TStreamMeta Avf::GetStreamMeta(CMFormatDescriptionRef FormatDesc)
 	//	get specific bits
 	//GetExtension( Desc, "FullRangeVideo", mMeta.mFullRangeYuv );
 	
-	
+	//	pull out audio meta
+	{
+		auto* pAudioFormat = CMAudioFormatDescriptionGetStreamBasicDescription( FormatDesc );
+		if ( pAudioFormat )
+		{
+			auto& AudioFormat = *pAudioFormat;
+			Meta.mAudioSampleRate = AudioFormat.mSampleRate;
+			Meta.mAudioBytesPerPacket = AudioFormat.mBytesPerPacket;
+			Meta.mAudioBytesPerFrame = AudioFormat.mBytesPerFrame;
+			Meta.mAudioFramesPerPacket = AudioFormat.mFramesPerPacket;
+			Meta.mChannelCount = AudioFormat.mChannelsPerFrame;
+
+			//	change this to be like H264 different formats; AAC_8, AAC_16, AAC_float etc
+			Meta.mAudioBitsPerChannel = AudioFormat.mBitsPerChannel;
+			
+			//	flags per format
+			std::Debug << Meta.mCodec << " sample flags: " << AudioFormat.mFormatFlags << std::endl;
+		}
+		else if ( SoyMediaFormat::IsAudio(Meta.mCodec) )
+		{
+			std::Debug << "Warning, format has audio data, but we've detected non-audio format (" << Meta.mCodec << ")" << std::endl;
+		}
+	}
 	
 	//	test validity of the conversion (slow!)
 	static bool DoCompareFormatIntegrity = false;
@@ -714,13 +772,13 @@ bool Avf::IsKeyframe(CMSampleBufferRef SampleBuffer,bool DefaultValue)
 {
 	if ( !SampleBuffer )
 		return DefaultValue;
-	
+
 	//	code based on chromium
 	//	https://chromium.googlesource.com/chromium/src/media/+/cea1808de66191f7f1eb48b5579e602c0c781146/cast/sender/h264_vt_encoder.cc
 	auto Attachments = CMSampleBufferGetSampleAttachmentsArray(SampleBuffer,false);
 	if ( !Attachments )
 		return DefaultValue;
-	
+
 	//	gr: why 0? more documentation please chromium
 	if ( CFArrayGetCount(Attachments) < 1 )
 		return DefaultValue;
