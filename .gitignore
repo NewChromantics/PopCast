@@ -1,6 +1,8 @@
 # Everything in plugins is generated at compile time
 Unity/Assets/Plugins
 Unity/Assets/Plugins.meta
+MakePackage.log
+*.unitypackage
 
 # streaming assets are massive, dont commit them
 Unity/Assets/StreamingAssets
