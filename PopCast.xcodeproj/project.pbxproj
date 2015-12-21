@@ -181,7 +181,6 @@
 		BF7A8DF31B652DF400A6C403 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7A8DF21B652DF400A6C403 /* CoreMedia.framework */; };
 		BF7A8DF51B652DFB00A6C403 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7A8DF41B652DFB00A6C403 /* CoreVideo.framework */; };
 		BF7A8DF71B652E0100A6C403 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7A8DF61B652E0100A6C403 /* OpenGL.framework */; };
-		BF89908F1BDFE07900FF81FB /* Core in Resources */ = {isa = PBXBuildFile; fileRef = BF89908E1BDFE07900FF81FB /* Core */; };
 		BF8990AD1BE019FC00FF81FB /* SoySocketStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990AC1BE019FC00FF81FB /* SoySocketStream.cpp */; };
 		BF8990AE1BE019FC00FF81FB /* SoySocketStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990AC1BE019FC00FF81FB /* SoySocketStream.cpp */; };
 		BF8990B01BE01A5E00FF81FB /* SoySocketStream.h in Headers */ = {isa = PBXBuildFile; fileRef = BF8990AF1BE01A5E00FF81FB /* SoySocketStream.h */; };
@@ -192,11 +191,14 @@
 		BF8990BC1BE654CB00FF81FB /* SoyMpeg2Ts.h in Headers */ = {isa = PBXBuildFile; fileRef = BF8990B71BE654CB00FF81FB /* SoyMpeg2Ts.h */; };
 		BF8990C51BE7F2E700FF81FB /* array.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C41BE7F2E700FF81FB /* array.hpp */; };
 		BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C61BE7F31400FF81FB /* heaparray.hpp */; };
-		BF9CCA991B6B83F4000B19EA /* PopCast.cs in CopyFiles */ = {isa = PBXBuildFile; fileRef = BFAD33D51B624D4300D3E7A6 /* PopCast.cs */; };
-		BF9CCA9B1B6B840F000B19EA /* PopCast.cs in CopyFiles */ = {isa = PBXBuildFile; fileRef = BFAD33D51B624D4300D3E7A6 /* PopCast.cs */; };
 		BFAD33C41B61720400D3E7A6 /* PopMovieTextureOsxFramework.h in Headers */ = {isa = PBXBuildFile; fileRef = BFAD33C31B61720400D3E7A6 /* PopMovieTextureOsxFramework.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BFAD33C81B61730300D3E7A6 /* TCaster.cpp in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AB1B4D640D00DA2575 /* TCaster.cpp */; settings = {ATTRIBUTES = (Public, ); }; };
 		BFAD33C91B61730300D3E7A6 /* PopCast.cpp in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AD1B4D640D00DA2575 /* PopCast.cpp */; settings = {ATTRIBUTES = (Public, ); }; };
+		BFAEE89B1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
+		BFAEE89C1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
+		BFAEE89D1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
+		BFAEE89E1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
+		BFAEE89F1C2774A500E25C47 /* SoyGif.h in Headers */ = {isa = PBXBuildFile; fileRef = BFAEE89A1C2774A500E25C47 /* SoyGif.h */; };
 		BFB255EF1BA1BCD200F30239 /* libOpenCast.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BFB255EE1BA1BCD200F30239 /* libOpenCast.a */; };
 		BFB255FE1BA1EA5A00F30239 /* SoyRuntimeLibrary.h in Headers */ = {isa = PBXBuildFile; fileRef = BFB255FC1BA1EA5A00F30239 /* SoyRuntimeLibrary.h */; };
 		BFB255FF1BA1EA5A00F30239 /* SoyRuntimeLibrary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFB255FD1BA1EA5A00F30239 /* SoyRuntimeLibrary.cpp */; };
@@ -256,26 +258,6 @@
 			dstSubfolderSpec = 0;
 			files = (
 				BFEF570D1B614A8B00340796 /* PopCastOsx.bundle in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		BF9CCA961B6B83B2000B19EA /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(SRCROOT)/Unity/Assets/Plugins";
-			dstSubfolderSpec = 0;
-			files = (
-				BF9CCA991B6B83F4000B19EA /* PopCast.cs in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		BFEEDD6B1B46A7E5002F9CFA /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(SRCROOT)/Unity/Assets/Plugins";
-			dstSubfolderSpec = 0;
-			files = (
-				BF9CCA9B1B6B840F000B19EA /* PopCast.cs in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -404,6 +386,13 @@
 		BFA664711B5581A400C33A2A /* SoyEnum.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SoyEnum.h; path = src/SoyEnum.h; sourceTree = "<group>"; };
 		BFAD33C31B61720400D3E7A6 /* PopMovieTextureOsxFramework.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopMovieTextureOsxFramework.h; sourceTree = "<group>"; };
 		BFAD33D51B624D4300D3E7A6 /* PopCast.cs */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PopCast.cs; path = src/PopCast.cs; sourceTree = SOURCE_ROOT; };
+		BFAEE8911C276F5600E25C47 /* AndroidBuild.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = AndroidBuild.sh; sourceTree = "<group>"; };
+		BFAEE8921C276F5600E25C47 /* CopyCSharpFiles.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = CopyCSharpFiles.sh; sourceTree = "<group>"; };
+		BFAEE8931C276F5600E25C47 /* IosPostBuild.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = IosPostBuild.sh; sourceTree = "<group>"; };
+		BFAEE8941C276F5600E25C47 /* MakePackage.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = MakePackage.sh; sourceTree = "<group>"; };
+		BFAEE8951C276F5600E25C47 /* OsxPostBuild.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = OsxPostBuild.sh; sourceTree = "<group>"; };
+		BFAEE8991C2774A500E25C47 /* SoyGif.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoyGif.cpp; sourceTree = "<group>"; };
+		BFAEE89A1C2774A500E25C47 /* SoyGif.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoyGif.h; sourceTree = "<group>"; };
 		BFB255EE1BA1BCD200F30239 /* libOpenCast.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libOpenCast.a; path = build/Debug/libOpenCast.a; sourceTree = OPENCAST_PATH; };
 		BFB255FC1BA1EA5A00F30239 /* SoyRuntimeLibrary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyRuntimeLibrary.h; path = src/SoyRuntimeLibrary.h; sourceTree = "<group>"; };
 		BFB255FD1BA1EA5A00F30239 /* SoyRuntimeLibrary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyRuntimeLibrary.cpp; path = src/SoyRuntimeLibrary.cpp; sourceTree = "<group>"; };
@@ -492,6 +481,7 @@
 				BF1499E01B4D67E800DA2575 /* OpenGL.framework */,
 				BF8F3EC41B4BCDD800D35543 /* Soylib */,
 				BF8F3EA21B4BCC9B00D35543 /* Android */,
+				BFAEE8901C276EF900E25C47 /* BuildScripts */,
 				BFEEDD6F1B46A7E5002F9CFA /* src */,
 				BFEEDD6E1B46A7E5002F9CFA /* Products */,
 			);
@@ -599,6 +589,18 @@
 			name = Soylib;
 			sourceTree = SOY_PATH;
 		};
+		BFAEE8901C276EF900E25C47 /* BuildScripts */ = {
+			isa = PBXGroup;
+			children = (
+				BFAEE8911C276F5600E25C47 /* AndroidBuild.sh */,
+				BFAEE8921C276F5600E25C47 /* CopyCSharpFiles.sh */,
+				BFAEE8931C276F5600E25C47 /* IosPostBuild.sh */,
+				BFAEE8941C276F5600E25C47 /* MakePackage.sh */,
+				BFAEE8951C276F5600E25C47 /* OsxPostBuild.sh */,
+			);
+			name = BuildScripts;
+			sourceTree = SOURCE_ROOT;
+		};
 		BFEEDD6E1B46A7E5002F9CFA /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -636,6 +638,8 @@
 				BFAD33C31B61720400D3E7A6 /* PopMovieTextureOsxFramework.h */,
 				BF1499AF1B4D640D00DA2575 /* PopUnity.cpp */,
 				BF1499B01B4D640D00DA2575 /* PopUnity.h */,
+				BFAEE8991C2774A500E25C47 /* SoyGif.cpp */,
+				BFAEE89A1C2774A500E25C47 /* SoyGif.h */,
 				BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */,
 				BF8990B71BE654CB00FF81FB /* SoyMpeg2Ts.h */,
 				BF406D111BB9A1C600CECF4E /* TAirplayCaster.h */,
@@ -686,6 +690,7 @@
 				BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */,
 				BF1191281BDF9FD400DD627C /* TFileCaster.h in Headers */,
 				BF7225B91BAF38D300550AD8 /* SoyRef.h in Headers */,
+				BFAEE89F1C2774A500E25C47 /* SoyGif.h in Headers */,
 				BF8990C51BE7F2E700FF81FB /* array.hpp in Headers */,
 				BF11911D1BDAF98000DD627C /* SoyMedia.h in Headers */,
 			);
@@ -696,11 +701,11 @@
 /* Begin PBXLegacyTarget section */
 		BF06DEFD1B2ACD3B006F241F /* PopCastAndroid */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = release;
+			buildArgumentsString = "";
 			buildConfigurationList = BF06DF001B2ACD3B006F241F /* Build configuration list for PBXLegacyTarget "PopCastAndroid" */;
 			buildPhases = (
 			);
-			buildToolPath = ./build.sh;
+			buildToolPath = ../AndroidBuild.sh;
 			buildWorkingDirectory = "$(SRCROOT)/Android";
 			dependencies = (
 			);
@@ -756,7 +761,7 @@
 				BF41F9711B4BD0700015614A /* Frameworks */,
 				BF41F9721B4BD0700015614A /* Resources */,
 				BF41F9E81B4BE98B0015614A /* CopyFiles */,
-				BF9CCA961B6B83B2000B19EA /* CopyFiles */,
+				BFAEE8971C276F9200E25C47 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -773,8 +778,7 @@
 			buildPhases = (
 				BFEEDD691B46A7E5002F9CFA /* Sources */,
 				BFEEDD6A1B46A7E5002F9CFA /* Frameworks */,
-				BFEEDD6B1B46A7E5002F9CFA /* CopyFiles */,
-				BF9CCA951B6B825D000B19EA /* ShellScript */,
+				BFAEE8981C27701E00E25C47 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -848,14 +852,13 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BF89908F1BDFE07900FF81FB /* Core in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		BF9CCA951B6B825D000B19EA /* ShellScript */ = {
+		BFAEE8971C276F9200E25C47 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -866,7 +869,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# required as xcode 7 has a bug where it tries to modify the lib;\n# see posts on xcode beta forums (cant find url atm)\necho \"Copying .a to Unity dir\"\nTARGET_PATH=\"$SRCROOT/Unity/Assets/Plugins/Ios\"\nmkdir -p $TARGET_PATH\ncp \"$CODESIGNING_FOLDER_PATH\" $TARGET_PATH\n";
+			shellScript = "chmod +x $SRCROOT/OsxPostBuild.sh\n$SRCROOT/OsxPostBuild.sh";
+		};
+		BFAEE8981C27701E00E25C47 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "chmod +x $SRCROOT/IosPostBuild.sh\n$SRCROOT/IosPostBuild.sh";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -897,6 +913,7 @@
 				BFB256021BA1EA5A00F30239 /* SoyRuntimeLibrary.cpp in Sources */,
 				BF0F68541B76289B00BF6BFE /* SoyCuda.cpp in Sources */,
 				BF1191271BDF9FD400DD627C /* TFileCaster.cpp in Sources */,
+				BFAEE89E1C2774A500E25C47 /* SoyGif.cpp in Sources */,
 				BF0F683E1B76285100BF6BFE /* PopCast.cpp in Sources */,
 				BF0F683F1B76285100BF6BFE /* SoyDebug.mm in Sources */,
 				BF0F68401B76285100BF6BFE /* SoyEvent.cpp in Sources */,
@@ -919,6 +936,7 @@
 				BF7225B21BAF0E2700550AD8 /* SoyMemFile.cpp in Sources */,
 				BF406D161BB9A1C600CECF4E /* TAirplayCaster.mm in Sources */,
 				BF7225B81BAF38D300550AD8 /* SoyRef.cpp in Sources */,
+				BFAEE89D1C2774A500E25C47 /* SoyGif.cpp in Sources */,
 				BF40910A1B5EDB6800643329 /* SoyArray.cpp in Sources */,
 				BF406D231BB9B1A900CECF4E /* SoySocket.cpp in Sources */,
 				BF8990BA1BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */,
@@ -974,6 +992,7 @@
 				BF7225B71BAF38D300550AD8 /* SoyRef.cpp in Sources */,
 				BF41F9C81B4BDB270015614A /* SoyAssert.cpp in Sources */,
 				BF50C37A1BFA09D600A11609 /* LibavMuxer.cpp in Sources */,
+				BFAEE89C1C2774A500E25C47 /* SoyGif.cpp in Sources */,
 				BF406D221BB9B1A900CECF4E /* SoySocket.cpp in Sources */,
 				BF5B071A1B5D06AF00C489C6 /* SoyShader.cpp in Sources */,
 				BF50C3821BFA0D7700A11609 /* mpegtsenc.c in Sources */,
@@ -1023,6 +1042,7 @@
 				BF8990B81BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */,
 				BF1499DA1B4D67AF00DA2575 /* SoyPixels.cpp in Sources */,
 				BF7225B01BAF0E2700550AD8 /* SoyMemFile.cpp in Sources */,
+				BFAEE89B1C2774A500E25C47 /* SoyGif.cpp in Sources */,
 				BF48FF9C1B8E5D15004BCF63 /* TGoogleCaster.mm in Sources */,
 				BF406D141BB9A1C600CECF4E /* TAirplayCaster.mm in Sources */,
 				BF7225B61BAF38D300550AD8 /* SoyRef.cpp in Sources */,

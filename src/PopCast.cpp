@@ -27,7 +27,7 @@ namespace PopCast
 
 __export Unity::ulong	PopCast_Alloc(const char* Filename)
 {
-	ofScopeTimerWarning Timer(__func__, Unity::gParams.mMinTimerMs );
+	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	if ( Filename == nullptr )
 	{
 		std::Debug << "Tried to allocate PopCast with null filename" << std::endl;
@@ -63,7 +63,7 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename)
 
 __export bool	PopCast_Free(Unity::ulong Instance)
 {
-	ofScopeTimerWarning Timer(__func__, Unity::gParams.mMinTimerMs );
+	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	return PopCast::Free( Instance );
 }
 
