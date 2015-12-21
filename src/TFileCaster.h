@@ -113,6 +113,9 @@ protected:
 	std::shared_ptr<TMediaPacketBuffer>	mFrameBuffer;	//	encoded frames
 	std::shared_ptr<TMediaMuxer>		mMuxer;
 	std::shared_ptr<TStreamWriter>		mFileStream;
+	
+	
+	std::function<std::shared_ptr<TMediaEncoder>(size_t)>	mAllocEncoder;
 };
 
 

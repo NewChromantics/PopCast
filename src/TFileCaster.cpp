@@ -2,6 +2,7 @@
 #include <SoyMedia.h>
 #include "AvfCompressor.h"
 #include "LibavMuxer.h"
+#include "SoyGif.h"
 
 #if defined(TARGET_OSX)
 #include "AvfMuxer.h"
@@ -17,10 +18,23 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 	this->WakeOnEvent( mFrameBuffer->mOnNewPacket );
-	
+
 #if defined(TARGET_OSX)
 	static bool UseAvfMuxer = true;
-	if ( UseAvfMuxer )
+#endif
+	
+	if ( Soy::StringEndsWith( Params.mName, ".gif", false ) )
+	{
+		auto AllocGifEncoder = [this](size_t StreamIndex)
+		{
+			return Gif::AllocEncoder( mFrameBuffer, StreamIndex );
+		};
+		mAllocEncoder = AllocGifEncoder;
+		mFileStream.reset( new TFileStreamWriter( Filename ) );
+		mMuxer.reset( new Gif::TMuxer( mFileStream, mFrameBuffer, Filename ) );
+	}
+#if defined(TARGET_OSX)
+	else if ( UseAvfMuxer )
 	{
 		mMuxer.reset( new Avf::TFileMuxer( Filename, mFileStream, mFrameBuffer ) );
 	}
@@ -128,6 +142,14 @@ TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
 	auto& pEncoder = mEncoders[StreamIndex];
 	if ( pEncoder )
 		return *pEncoder;
+	
+	if ( mAllocEncoder )
+	{
+		pEncoder = mAllocEncoder( StreamIndex );
+		if ( pEncoder )
+			return *pEncoder;
+	}
+	
 	pEncoder.reset( new Avf::TPassThroughEncoder( mParams, mFrameBuffer, StreamIndex ) );
 	return *pEncoder;
 }
