@@ -3,6 +3,11 @@
 
 #include "gif.h"
 
+namespace Gif
+{
+	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const uint8* Rgba,size_t Width,size_t Height);
+}
+
 std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex)
 {
 	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex ) );
@@ -103,6 +108,20 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	GifBegin( *mWriter, PixelMeta.GetWidth(), PixelMeta.GetHeight(), Delay );
 }
 
+
+void Gif::MakeIndexedImage(SoyPixelsImpl& IndexedImage,const uint8* Rgba,size_t Width,size_t Height)
+{
+	IndexedImage.Init( Width, Height, SoyPixelsFormat::Greyscale );
+	auto& IndexPixels = IndexedImage.GetPixelsArray();
+	
+	for ( int p=0;	p<Width*Height;	p++ )
+	{
+		auto Alpha = Rgba[ p*4 + 3 ];
+		auto PaletteIndex = Alpha;
+		IndexPixels[p] = PaletteIndex;
+	}
+}
+
 void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
 {
 	std::lock_guard<std::mutex> Lock( mBusy );
@@ -110,16 +129,38 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	if ( !mWriter )
 		return;
 
-	auto Delay = 8;	//	Packet->mDuration
-	auto Width = Packet->mMeta.mPixelMeta.GetWidth();
-	auto Height = Packet->mMeta.mPixelMeta.GetHeight();
-	auto BitDepth = 8;
+	auto delay = 8;	//	Packet->mDuration
+	auto width = Packet->mMeta.mPixelMeta.GetWidth();
+	auto height = Packet->mMeta.mPixelMeta.GetHeight();
 	bool Dither = false;
 	auto Channels = SoyPixelsFormat::GetChannelCount( Packet->mMeta.mPixelMeta.GetFormat() );
 	
 	Soy::TScopeTimerPrint Timer("GifWriteFrame",1);
-	if ( !GifWriteFrame( *mWriter, Packet->mData.GetArray(), Width, Height, Channels, Delay, BitDepth, Dither ) )
-		throw Soy::AssertException("GifWriteFrame failed");
+	auto* RgbaData = Packet->mData.GetArray();
+	auto* image = RgbaData;
+	
+	GifWriter& writer = *mWriter;
+
+	std::shared_ptr<GifPalette>		mPrevPalette;
+	std::shared_ptr<SoyPixelsImpl>	mPrevImage;
+
+	//_assert( Channels == 4, "Currently expect 4 channels" );
+	const uint8_t* oldImage = writer.firstFrame? NULL : writer.oldImage;
+	writer.firstFrame = false;
+	
+	GifPalette pal;
+	GifMakePalette((Dither? NULL : oldImage), image, width, height, Dither, pal);
+	
+	if(Dither)
+		GifDitherImage(oldImage, image, writer.oldImage, width, height, pal);
+	else
+		GifThresholdImage(oldImage, image, writer.oldImage, width, height, pal);
+
+	SoyPixels IndexedImage;
+	MakeIndexedImage( IndexedImage, writer.oldImage, width, height );
+
+	GifWriteLzwImage(writer, IndexedImage, 0, 0, delay, pal);
+
 	
 	std::Debug << "GifWriteFrameFinished" << std::endl;
 }
