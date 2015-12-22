@@ -4,12 +4,15 @@ using System.Collections.Generic;
 
 public class TestCast : MonoBehaviour {
 
-	public List<RenderTexture>	OutputRenderTextures;	//	one per stream
-	public List<Texture2D>		OutputTextures;	//	one per stream
+	public List<Texture>	OutputTextures;	//	one per stream
+
 
 	public PopCast		mCast = null;
 	public string		mOutputTarget = "PopCast.mp4";
-	
+
+	public Camera			mCaptureCamera;
+	public RenderTexture	mCaptureCameraTexture;
+
 	void OnEnable()
 	{
 		if (mCast == null) {
@@ -18,68 +21,61 @@ public class TestCast : MonoBehaviour {
 		}
 	}
 
-	bool IsStreamIndexUsed(int StreamIndex)
+	void LateUpdate()
 	{
-		if (StreamIndex < OutputRenderTextures.Count)
-		if (OutputRenderTextures [StreamIndex] != null)
-			return true;
-		
-		if (StreamIndex < OutputTextures.Count)
-		if (OutputTextures [StreamIndex] != null)
-			return true;
+		//	capture camera
+		if (mCaptureCamera != null) {
+			
+			//	if no texture provided, make one
+			if (mCaptureCameraTexture == null)
+				mCaptureCameraTexture = new RenderTexture (mCaptureCamera.pixelWidth, mCaptureCamera.pixelHeight, 16);
 
-		return false;
-	}
+			//	save settings to restore
+			RenderTexture PreTarget = RenderTexture.active;
+			var PreCameraTarget = mCaptureCamera.targetTexture;
 
-	int GetStreamIndex(int StreamIndex,List<int> UsedStreams)
-	{
-		//	calculate an index we can use
-		var OriginalStreamIndex = StreamIndex;
-		while (UsedStreams.Exists ( Index => Index == StreamIndex )) 
-		{
-			//	look for an alternative
-			if (IsStreamIndexUsed (StreamIndex)) {
-				StreamIndex++;
-				continue;
-			}
+			mCaptureCamera.targetTexture = mCaptureCameraTexture;
+			RenderTexture.active = mCaptureCameraTexture;
+			mCaptureCamera.Render ();
+
+			//	aaaand restore.
+			RenderTexture.active = PreTarget;
+			mCaptureCamera.targetTexture = PreCameraTarget;
 		}
-
-		//	warn if this stream has already been used
-		if (StreamIndex != OriginalStreamIndex)
-			Debug.LogWarning ("Stream index " + OriginalStreamIndex + " is already used, switched to " + StreamIndex);
-		   
-		UsedStreams.Add (StreamIndex);
-		return StreamIndex;
+		
 	}
-	
-	void Update () {
 
+	void Update () {
 
 		//	write latest stream data
 		if (mCast != null) 
 		{
-			//	cope with badly configured components by working out stream indexes at runtime if we need to
-			List<int> UsedStreams = new List<int>();
+			//	check where to output the camera, if we haven't already
+			bool CameraCaptureOutput = false;
+			int FirstStreamUnused = -1;
 
-			for ( int i=0;	i<OutputRenderTextures.Count;	i++ )
-			{
-				var Texture = OutputRenderTextures[i];
-				if ( Texture == null )
-					continue;
-				var StreamIndex = GetStreamIndex( i, UsedStreams );
-				mCast.UpdateTexture( Texture, StreamIndex );
-			}
-
+			//	output textures
 			for ( int i=0;	i<OutputTextures.Count;	i++ )
 			{
-				var Texture = OutputTextures[i];
-				if ( Texture == null )
+				var Tex = OutputTextures[i];
+				if ( Tex == null )
+				{
+					if ( FirstStreamUnused == -1 )
+						FirstStreamUnused = i;
 					continue;
-				var StreamIndex = GetStreamIndex( i, UsedStreams );
-				mCast.UpdateTexture( Texture, StreamIndex );
+				}
+				CameraCaptureOutput |= Tex == mCaptureCameraTexture;
+				mCast.UpdateTexture( Tex, i );
 			}
 
-
+			//	if we want to write the capture texture, and we havent... do it now
+			if ( !CameraCaptureOutput && mCaptureCameraTexture != null )
+			{
+				//	if we haven't left a gap... do it at the end 
+				if ( FirstStreamUnused == -1 )
+					FirstStreamUnused = OutputTextures.Count;
+				mCast.UpdateTexture( mCaptureCameraTexture, FirstStreamUnused );
+			}
 		}
 	
 	}
