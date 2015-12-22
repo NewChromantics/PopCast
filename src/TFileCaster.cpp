@@ -80,6 +80,10 @@ TFileCaster::~TFileCaster()
 		mMuxer->Finish();
 		mMuxer.reset();
 	}
+
+	//	let the stream finish writing file
+	if ( mFileStream )
+		mFileStream->WaitForQueueToFinish();
 	
 	mFileStream.reset();
 	
