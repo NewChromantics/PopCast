@@ -3,21 +3,15 @@
 #include <SoyTypes.h>
 #include <SoyMedia.h>
 
-
 class GifWriter;
+class TRawWriteDataProtocol;
+
 
 //	https://github.com/ginsweater/gif-h/blob/master/gif.h
 namespace Gif
 {
-	typedef vec3x<uint8> TRgb8;
-
 	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex);
-	
-	void	EncodeGifHeader(ArrayBridge<uint8>&& Gif,SoyPixelsMeta Meta,SoyTime FrameDuration);
-	void	EncodeGif(ArrayBridge<uint8>&& Gif,const SoyPixelsImpl& Pixels,SoyTime Duration);
-	void	EncodeGif(ArrayBridge<uint8>& Gif,const SoyPixelsImpl& PalettisedPixels,const ArrayBridge<TRgb8>&& Palette,SoyTime Duration);
-	void	EncodeGifFooter(ArrayBridge<uint8>&& Gif);
-	
+
 	class TMuxer;
 	class TEncoder;
 }
@@ -33,9 +27,15 @@ protected:
 	virtual void			SetupStreams(const ArrayBridge<TStreamMeta>&& Streams) override;
 	virtual void			ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
 
+	void					WriteToBuffer(const ArrayBridge<uint8>&& Data);
+	void					FlushBuffer();
+	
 public:
 	std::mutex					mBusy;
 	std::shared_ptr<GifWriter>	mWriter;
+	
+	//	data being written to by GifWriter
+	std::shared_ptr<TRawWriteDataProtocol>	mBuffer;
 };
 
 
