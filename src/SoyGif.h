@@ -4,6 +4,8 @@
 #include <SoyMedia.h>
 
 
+class GifWriter;
+
 //	https://github.com/ginsweater/gif-h/blob/master/gif.h
 namespace Gif
 {
@@ -24,6 +26,7 @@ class Gif::TMuxer : public TMediaMuxer
 {
 public:
 	TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input,const std::string& ThreadName);
+	~TMuxer();
 	
 protected:
 	virtual void			Finish() override;
@@ -31,6 +34,8 @@ protected:
 	virtual void			ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output) override;
 
 public:
+	std::mutex					mBusy;
+	std::shared_ptr<GifWriter>	mWriter;
 };
 
 

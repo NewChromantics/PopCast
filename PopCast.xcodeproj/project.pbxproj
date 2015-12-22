@@ -71,6 +71,7 @@
 		BF192B091BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; };
 		BF192B0A1BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */; };
 		BF192B0B1BF10A9D00324911 /* SoyHttpConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = BF192B061BF10A9D00324911 /* SoyHttpConnection.h */; };
+		BF1AFF731C29CF43009EBF5F /* gif.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1AFF721C29CF43009EBF5F /* gif.h */; };
 		BF2E8B121B55270D00CBD1AC /* SoyString.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF2E8B111B55270D00CBD1AC /* SoyString.mm */; };
 		BF2E8B131B55270D00CBD1AC /* SoyString.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF2E8B111B55270D00CBD1AC /* SoyString.mm */; };
 		BF3EB6B21C15ACE4002686F6 /* SoyUnity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF3EB6B01C15ACE4002686F6 /* SoyUnity.cpp */; };
@@ -295,6 +296,7 @@
 		BF192AFF1BF10A9400324911 /* SoyH264.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyH264.h; path = src/SoyH264.h; sourceTree = "<group>"; };
 		BF192B051BF10A9D00324911 /* SoyHttpConnection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyHttpConnection.cpp; path = src/SoyHttpConnection.cpp; sourceTree = "<group>"; };
 		BF192B061BF10A9D00324911 /* SoyHttpConnection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyHttpConnection.h; path = src/SoyHttpConnection.h; sourceTree = "<group>"; };
+		BF1AFF721C29CF43009EBF5F /* gif.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gif.h; sourceTree = "<group>"; };
 		BF2E8B051B55268F00CBD1AC /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		BF2E8B071B55269C00CBD1AC /* CoreMediaIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMediaIO.framework; path = System/Library/Frameworks/CoreMediaIO.framework; sourceTree = SDKROOT; };
 		BF2E8B091B5526B800CBD1AC /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
@@ -625,6 +627,7 @@
 				BF89908E1BDFE07900FF81FB /* Core */,
 				BF50C3861BFA2A1F00A11609 /* crc.c */,
 				BF4090E91B5EDA7100643329 /* FrameworkInfo.plist */,
+				BF1AFF721C29CF43009EBF5F /* gif.h */,
 				BF48FF961B8E59B5004BCF63 /* GoogleCast.framework */,
 				BF50C3831BFA0FA700A11609 /* libav */,
 				BF50C3781BFA09D600A11609 /* LibavMuxer.cpp */,
@@ -685,6 +688,7 @@
 				BF4474511C00E7B000122F91 /* AvfCompressor.h in Headers */,
 				BFAD33C81B61730300D3E7A6 /* TCaster.cpp in Headers */,
 				BF3EB6B61C15ACE4002686F6 /* SoyUnity.h in Headers */,
+				BF1AFF731C29CF43009EBF5F /* gif.h in Headers */,
 				BFBC3DBD1BC823F300CEE3D5 /* AvfPixelBuffer.h in Headers */,
 				BF40911D1B5EDC0400643329 /* PopUnity.h in Headers */,
 				BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */,

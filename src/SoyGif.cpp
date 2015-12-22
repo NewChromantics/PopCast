@@ -3,6 +3,7 @@
 
 #include "gif.h"
 
+/*
 namespace Gif
 {
 	uint8	TransparentIndex = 0;
@@ -97,73 +98,6 @@ void Gif::EncodeGif(ArrayBridge<uint8>&& Gif,const SoyPixelsImpl& Pixels,SoyTime
 	EncodeGif( Gif, PalettisedPixels, GetArrayBridge(Palette), Duration );
 }
 
-// The LZW dictionary is a 256-ary tree constructed as the file is encoded,
-// this is one node
-class GifLzwNode
-{
-public:
-	GifLzwNode()
-	{
-		memset( m_next, 0, sizeof(m_next) );
-	}
-			   
-	uint16_t m_next[256];
-};
-			   
-// Simple structure to write out the LZW-compressed portion of the image
-// one bit at a time
-struct GifBitStatus
-{
-	uint8_t bitIndex;  // how many bits in the partial byte written so far
-	uint8_t byte;      // current partial byte
-	
-	uint32_t chunkIndex;
-	uint8_t chunk[256];   // bytes are written in here until we have 256 of them, then written to the file
-};
-
-// insert a single bit
-void GifWriteBit( GifBitStatus& stat, uint32_t bit )
-{
-	bit = bit & 1;
-	bit = bit << stat.bitIndex;
-	stat.byte |= bit;
-	
-	++stat.bitIndex;
-	if( stat.bitIndex > 7 )
-	{
-		// move the newly-finished byte to the chunk buffer
-		stat.chunk[stat.chunkIndex++] = stat.byte;
-		// and start a new byte
-		stat.bitIndex = 0;
-		stat.byte = 0;
-	}
-}
-
-// write all bytes so far to the file
-void GifWriteChunk(ArrayBridge<uint8>& f, GifBitStatus& stat )
-{
-	f.PushBack( stat.chunkIndex );
-	for ( int i=0;	i<stat.chunkIndex;	i++ )
-		f.PushBack( stat.chunk[i] );
-	
-	stat.bitIndex = 0;
-	stat.byte = 0;
-	stat.chunkIndex = 0;
-}
-
-void GifWriteCode(ArrayBridge<uint8>& f, GifBitStatus& stat, uint32_t code, uint32_t length )
-{
-	for( uint32_t ii=0; ii<length; ++ii )
-	{
-		GifWriteBit(stat, code);
-		code = code >> 1;
-		
-		if( stat.chunkIndex == 255 )
-		{
-			GifWriteChunk(f, stat);
-		}
-	}
-}
 
 void EncodeLzf(ArrayBridge<uint8>&& Lzf,const SoyPixelsImpl& PalettisedPixels,uint8 PaletteBitDepth)
 {
@@ -317,7 +251,7 @@ void Gif::EncodeGifFooter(ArrayBridge<uint8>&& Gif)
 	Gif.PushBack( 0x3b );
 }
 
-
+*/
 std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex)
 {
 	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex ) );
@@ -331,8 +265,18 @@ Gif::TMuxer::TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMedi
 {
 }
 
+Gif::TMuxer::~TMuxer()
+{
+	std::lock_guard<std::mutex> Lock( mBusy );
+	
+}
+
 void Gif::TMuxer::Finish()
 {
+	std::lock_guard<std::mutex> Lock( mBusy );
+	GifEnd( *mWriter );
+	mWriter.reset();
+/*
 	//	write gif tail byte
 	std::shared_ptr<Soy::TWriteProtocol> Write( new TRawWriteDataProtocol );
 	auto& Data = dynamic_cast<TRawWriteDataProtocol&>( *Write ).mData;
@@ -340,12 +284,65 @@ void Gif::TMuxer::Finish()
 	auto& CastData = *reinterpret_cast<ArrayInterface<uint8>*>( &DataBridge );
 	Gif::EncodeGifFooter( GetArrayBridge(CastData) );
 	mOutput->Push( Write );
+ */
 }
 
 void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 {
+	std::lock_guard<std::mutex> Lock( mBusy );
 	Soy::Assert( Streams.GetSize() == 1, "Gif must have one stream only" );
 
+	auto Open = [this]
+	{
+		
+	};
+	auto Putc = [this](uint8 c)
+	{
+		std::shared_ptr<Soy::TWriteProtocol> Write( new TRawWriteDataProtocol );
+		auto& Data = dynamic_cast<TRawWriteDataProtocol&>( *Write ).mData;
+		Data.PushBack( c );
+		mOutput->Push( Write );
+	};
+	auto Puts = [this](const char* s)
+	{
+		std::shared_ptr<Soy::TWriteProtocol> Write( new TRawWriteDataProtocol );
+		auto& Data = dynamic_cast<TRawWriteDataProtocol&>( *Write ).mData;
+		while ( *s )
+		{
+			Data.PushBack( *s );
+			s++;
+		}
+		mOutput->Push( Write );
+	};
+	auto fwrite = [this](uint8* Buffer,size_t Length)
+	{
+		std::shared_ptr<Soy::TWriteProtocol> Write( new TRawWriteDataProtocol );
+		auto& Data = dynamic_cast<TRawWriteDataProtocol&>( *Write ).mData;
+		for ( int i=0;	i<Length;	i++ )
+		{
+			Data.PushBack( Buffer[i] );
+		}
+		mOutput->Push( Write );
+	};
+	auto Close = [this]
+	{
+		
+	};
+	
+	if ( !mWriter )
+	{
+		mWriter.reset( new GifWriter );
+		mWriter->Open = Open;
+		mWriter->fputc = Putc;
+		mWriter->fputs = Puts;
+		mWriter->fwrite = fwrite;
+		mWriter->Close = Close;
+	}
+
+	auto PixelMeta = Streams[0].mPixelMeta;
+	GifBegin( *mWriter, PixelMeta.GetWidth(), PixelMeta.GetHeight(), 16 );
+	
+	/*
 	//	write out header
 	std::shared_ptr<Soy::TWriteProtocol> Write( new TRawWriteDataProtocol );
 	auto& Data = dynamic_cast<TRawWriteDataProtocol&>( *Write ).mData;
@@ -354,15 +351,34 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	SoyTime FrameDuration( 33ull );
 	Gif::EncodeGifHeader( GetArrayBridge(CastData), Streams[0].mPixelMeta, FrameDuration );
 	mOutput->Push( Write );
+	 */
 }
 
 void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
 {
+	std::lock_guard<std::mutex> Lock( mBusy );
+	
+	if ( !mWriter )
+		return;
+	/*
 	//	write immediately if data is gif
 	Soy::Assert( Packet->mMeta.mCodec == SoyMediaFormat::GifFrame, "Gif muxer can only eat gif frame data");
 
 	std::shared_ptr<TRawWritePacketProtocol> Protocol( new TRawWritePacketProtocol( Packet ) );
 	Output.Push( Protocol );
+	 */
+	auto Delay = 16;	//	Packet->mDuration
+	auto Width = Packet->mMeta.mPixelMeta.GetWidth();
+	auto Height = Packet->mMeta.mPixelMeta.GetHeight();
+	auto BitDepth = 8;
+	bool Dither = false;
+	auto Channels = SoyPixelsFormat::GetChannelCount( Packet->mMeta.mPixelMeta.GetFormat() );
+	
+	Soy::TScopeTimerPrint Timer("GifWriteFrame",1);
+	if ( !GifWriteFrame( *mWriter, Packet->mData.GetArray(), Width, Height, Channels, Delay, BitDepth, Dither ) )
+		throw Soy::AssertException("GifWriteFrame failed");
+	
+	std::Debug << "GifWriteFrameFinished" << std::endl;
 }
 
 
@@ -414,7 +430,14 @@ bool Gif::TEncoder::Iteration()
 	if ( !pPacket )
 		return true;
 	auto& Packet = *pPacket;
+
+	//	drop packets
+	auto Block = []
+	{
+		return false;
+	};
 	
+	/*
 	//	encode to gif format & write
 	std::shared_ptr<TMediaPacket> pGifPacket( new TMediaPacket );
 	pGifPacket->mMeta = Packet.mMeta;
@@ -423,18 +446,14 @@ bool Gif::TEncoder::Iteration()
 	SoyPixelsRemote Pixels( GetArrayBridge( Packet.mData ), Packet.mMeta.mPixelMeta );
 	EncodeGif( GetArrayBridge( pGifPacket->mData ), Pixels, Packet.mDuration );
 	
-	//	drop packets
-	auto Block = []
-	{
-		return false;
-	};
 	
 	//	only one packet!
 	if ( mPacketsWritten == 0 )
 		TMediaEncoder::PushFrame( pGifPacket, Block );
 	
 	mPacketsWritten++;
-	
+	*/
+	TMediaEncoder::PushFrame( pPacket, Block );
 	return true;
 }
 
