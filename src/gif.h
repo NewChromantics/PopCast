@@ -532,25 +532,13 @@ void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t heigh
 {
 	Array<Rgb8> NewColours;
 	
-	static bool DebugPalette = true;
-	if ( DebugPalette )
+	for (int ii=0; ii<width*height; ++ii)
 	{
-		for ( int i=0;	i<256;	i++ )
-		{
-			Rgb8 ThisRgb( 255, i, 0 );
-			NewColours.PushBack( ThisRgb );
-		}
-	}
-	else
-	{
-		for (int ii=0; ii<width*height; ++ii)
-		{
-			auto r = frame_rgba[ii*ChannelCount+0];
-			auto g = frame_rgba[ii*ChannelCount+1];
-			auto b = frame_rgba[ii*ChannelCount+2];
-			Rgb8 ThisRgb( r,g,b);
-			NewColours.PushBack( ThisRgb );
-		}
+		auto r = frame_rgba[ii*ChannelCount+0];
+		auto g = frame_rgba[ii*ChannelCount+1];
+		auto b = frame_rgba[ii*ChannelCount+2];
+		Rgb8 ThisRgb( r,g,b);
+		NewColours.PushBack( ThisRgb );
 	}
 	
 	//	make a palette image
@@ -560,6 +548,23 @@ void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t heigh
 	pPalette->GetPixelsArray().Copy( NewColoursPixels );
 }
 
+
+void GifDebugPalette(std::shared_ptr<SoyPixelsImpl>& pPalette)
+{
+	Array<Rgb8> NewColours;
+	
+	for ( int i=0;	i<256;	i++ )
+	{
+		Rgb8 ThisRgb( 255, i, 0 );
+		NewColours.PushBack( ThisRgb );
+	}
+	
+	//	make a palette image
+	pPalette.reset( new SoyPixels );
+	pPalette->Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
+	auto NewColoursPixels = GetRemoteArray( reinterpret_cast<uint8*>( NewColours.GetArray() ), NewColours.GetDataSize() );
+	pPalette->GetPixelsArray().Copy( NewColoursPixels );
+}
 
 
 // Creates a palette by placing all the image pixels in a k-d tree and then averaging the blocks at the bottom.
