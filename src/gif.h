@@ -503,7 +503,8 @@ void GifMakeDiffPalette(const SoyPixelsImpl& PrevIndexes,const SoyPixelsImpl& Pr
 
 	for (int ii=0; ii<numPixels; ++ii)
 	{
-		auto Lastrgb = PrevPalette.GetPixel3( LastIndexes[ii], 0 );
+		auto LastIndex = LastIndexes[ii];
+		auto Lastrgb = PrevPalette.GetPixel3( LastIndex, 0 );
 		auto r = frame_rgba[ii*4+0];
 		auto g = frame_rgba[ii*4+1];
 		auto b = frame_rgba[ii*4+2];
@@ -531,13 +532,25 @@ void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t heigh
 {
 	Array<Rgb8> NewColours;
 	
-	for (int ii=0; ii<width*height; ++ii)
+	static bool DebugPalette = true;
+	if ( DebugPalette )
 	{
-		auto r = frame_rgba[ii*ChannelCount+0];
-		auto g = frame_rgba[ii*ChannelCount+1];
-		auto b = frame_rgba[ii*ChannelCount+2];
-		Rgb8 ThisRgb( r,g,b);
-		NewColours.PushBack( ThisRgb );
+		for ( int i=0;	i<256;	i++ )
+		{
+			Rgb8 ThisRgb( 255, i, 0 );
+			NewColours.PushBack( ThisRgb );
+		}
+	}
+	else
+	{
+		for (int ii=0; ii<width*height; ++ii)
+		{
+			auto r = frame_rgba[ii*ChannelCount+0];
+			auto g = frame_rgba[ii*ChannelCount+1];
+			auto b = frame_rgba[ii*ChannelCount+2];
+			Rgb8 ThisRgb( r,g,b);
+			NewColours.PushBack( ThisRgb );
+		}
 	}
 	
 	//	make a palette image
