@@ -33,13 +33,11 @@ protected:
 	
 public:
 	std::mutex					mBusy;
-	std::shared_ptr<GifWriter>	mWriter;
+	std::atomic<bool>			mStarted;
+	std::atomic<bool>			mFinished;
 	
-	std::shared_ptr<GifPalette>		mPrevPalette;
+	std::shared_ptr<SoyPixelsImpl>		mPrevPalette;
 	std::shared_ptr<SoyPixelsImpl>	mPrevImage;
-	
-	//	data being written to by GifWriter
-	std::shared_ptr<TRawWriteDataProtocol>	mBuffer;
 };
 
 

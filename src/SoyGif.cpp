@@ -17,95 +17,123 @@ std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuf
 
 
 Gif::TMuxer::TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input,const std::string& ThreadName) :
-	TMediaMuxer		( Output, Input, ThreadName )
+	TMediaMuxer		( Output, Input, std::string("Gif::TMuxer ")+ThreadName ),
+	mFinished		( false ),
+	mStarted		( false )
 {
 }
 
 Gif::TMuxer::~TMuxer()
 {
-	std::lock_guard<std::mutex> Lock( mBusy );
-	
+	mBusy.lock();
+	if ( !mFinished )
+	{
+		std::Debug << "TMuxer destructor not finished" << std::endl;
+	}
+	mBusy.unlock();
+	WaitToFinish();
 }
 
 void Gif::TMuxer::Finish()
 {
 	std::lock_guard<std::mutex> Lock( mBusy );
-	GifEnd( *mWriter );
-	mWriter.reset();
-}
 
-
-void Gif::TMuxer::WriteToBuffer(const ArrayBridge<uint8>&& Data)
-{
-	if ( !mBuffer )
-	{
-		mBuffer.reset( new TRawWriteDataProtocol );
-	}
-	auto& Buffer = mBuffer->mData;
-
-	Buffer.PushBackArray( Data );
-	
-	//	flush
-	static int FlushSize = 1024 * 64;
-	if ( Buffer.GetDataSize() > FlushSize )
-		FlushBuffer();
-}
-
-void Gif::TMuxer::FlushBuffer()
-{
-	if ( !mBuffer )
+	if ( mFinished )
+		return;
+	if ( !mStarted )
 		return;
 	
-	mOutput->Push( mBuffer );
-	mBuffer.reset();
-}
+	mFinished = true;
 	
-void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
-{
-	std::lock_guard<std::mutex> Lock( mBusy );
-	Soy::Assert( Streams.GetSize() == 1, "Gif must have one stream only" );
-
-	auto Open = [this]
+	std::shared_ptr<Soy::TWriteProtocol> FooterWrite( new TRawWriteDataProtocol );
+	Array<char>& HeaderData = dynamic_cast<TRawWriteDataProtocol&>( *FooterWrite ).mData;
+	
+	auto Open = []
 	{
 		
 	};
-	auto Putc = [this](uint8 c)
+	auto Putc = [this,&HeaderData](uint8 c)
 	{
-		auto Data = GetRemoteArray( &c, 1 );
-		WriteToBuffer( GetArrayBridge(Data) );
+		HeaderData.PushBack(c);
 	};
-	auto Puts = [this](const char* s)
+	auto Puts = [this,&HeaderData](const char* s)
 	{
 		size_t Size = 0;
 		while ( s[Size] )
 			Size++;
 		
-		auto Data = GetRemoteArray( reinterpret_cast<const uint8*>(s), Size );
-		WriteToBuffer( GetArrayBridge(Data) );
+		auto Data = GetRemoteArray( s, Size );
+		HeaderData.PushBackArray( Data );
 	};
-	auto fwrite = [this](uint8* Buffer,size_t Length)
+	auto fwrite = [this,&HeaderData](uint8* Buffer,size_t Length)
 	{
-		auto Data = GetRemoteArray( Buffer, Length );
-		WriteToBuffer( GetArrayBridge(Data) );
-	};
-	auto Close = [this]
-	{
-		FlushBuffer();
+		auto Data = GetRemoteArray( reinterpret_cast<const char*>(Buffer), Length );
+		HeaderData.PushBackArray( Data );
 	};
 	
-	if ( !mWriter )
+	GifWriter Writer;
+	Writer.Open = Open;
+	Writer.fputc = Putc;
+	Writer.fputs = Puts;
+	Writer.fwrite = fwrite;
+	
+
+	GifEnd( Writer );
+	
+	mOutput->Push( FooterWrite );
+}
+
+
+void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
+{
+	std::lock_guard<std::mutex> Lock( mBusy );
+	Soy::Assert( Streams.GetSize() == 1, "Gif must have one stream only" );
+
+	if ( mStarted )
 	{
-		mWriter.reset( new GifWriter );
-		mWriter->Open = Open;
-		mWriter->fputc = Putc;
-		mWriter->fputs = Puts;
-		mWriter->fwrite = fwrite;
-		mWriter->Close = Close;
+		std::Debug << __func__ << " already executed" << std::endl;
+		return;
 	}
+	
+	std::shared_ptr<Soy::TWriteProtocol> HeaderWrite( new TRawWriteDataProtocol );
+	Array<char>& HeaderData = dynamic_cast<TRawWriteDataProtocol&>( *HeaderWrite ).mData;
+	
+	auto Open = []
+	{
+		
+	};
+	auto Putc = [this,&HeaderData](uint8 c)
+	{
+		HeaderData.PushBack(c);
+	};
+	auto Puts = [this,&HeaderData](const char* s)
+	{
+		size_t Size = 0;
+		while ( s[Size] )
+			Size++;
+		
+		auto Data = GetRemoteArray( s, Size );
+		HeaderData.PushBackArray( Data );
+	};
+	auto fwrite = [this,&HeaderData](uint8* Buffer,size_t Length)
+	{
+		auto Data = GetRemoteArray( reinterpret_cast<const char*>(Buffer), Length );
+		HeaderData.PushBackArray( Data );
+	};
+	
+	GifWriter Writer;
+	Writer.Open = Open;
+	Writer.fputc = Putc;
+	Writer.fputs = Puts;
+	Writer.fwrite = fwrite;
 
 	auto PixelMeta = Streams[0].mPixelMeta;
 	auto Delay = 8;	//	Packet->mDuration
-	GifBegin( *mWriter, PixelMeta.GetWidth(), PixelMeta.GetHeight(), Delay );
+	GifBegin( Writer, PixelMeta.GetWidth(), PixelMeta.GetHeight(), Delay );
+
+	mOutput->Push( HeaderWrite );
+	
+	mStarted = true;
 }
 
 
@@ -127,8 +155,16 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 {
 	std::lock_guard<std::mutex> Lock( mBusy );
 	
-	if ( !mWriter )
+	if ( !mStarted )
+	{
+		std::Debug << "Gif muxer not started, dropping packet " << *Packet << std::endl;
 		return;
+	}
+	if ( mFinished )
+	{
+		std::Debug << "Gif muxer finished, dropping packet " << *Packet << std::endl;
+		return;
+	}
 
 	auto delay = 8;	//	Packet->mDuration
 	auto width = Packet->mMeta.mPixelMeta.GetWidth();
@@ -140,44 +176,100 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	auto* RgbaData = Packet->mData.GetArray();
 	auto* image = RgbaData;
 	
-	GifWriter& writer = *mWriter;
+
+	std::shared_ptr<SoyPixelsImpl> PalettisedImage;
+	{
+		std::shared_ptr<GifPalette> pNewPalette;
+		std::shared_ptr<SoyPixelsImpl> pNewPaletteImage;
+		{
+			//	slow ~100ms
+			Soy::TScopeTimerPrint Timer("GifMakePalette",1);
+			
+			if ( !Dither && mPrevImage && mPrevPalette )
+			{
+				GifMakeDiffPalette( *mPrevImage, *mPrevPalette, image, width, height, pNewPaletteImage );
+			}
+			else
+			{
+				GifExtractPalette( image, width, height, Channels, pNewPaletteImage );
+			}
+			
+			GifMakePalette( *pNewPaletteImage, Dither, pNewPalette );
+		}
+		
+		Soy::Assert( pNewPalette != nullptr, "Failed to create palette");
+		auto& NewPalette = *pNewPalette;
+		
+		std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
+		auto& IndexedImage = *pIndexedImage;
+		if(Dither)
+		{
+			Soy::TScopeTimerPrint Timer("GifDitherImage",1);
+			SoyPixels ReducedImage;
+			ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
+			GifDitherImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
+			MakeIndexedImage( IndexedImage, ReducedImage );
+		}
+		else
+		{
+			//	slower ~200ms
+			Soy::TScopeTimerPrint Timer("GifThresholdImage",1);
+			IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
+			GifThresholdImage( mPrevImage.get(), mPrevPalette.get(), image, IndexedImage, width, height, NewPalette);
+		}
+		
+		//	join together
+		PalettisedImage.reset( new SoyPixels );
+		SoyPixelsFormat::MakePaletteised( *PalettisedImage, IndexedImage, NewPalette.GetPalette(), NewPalette.GetTransparentIndex() );
+	}
+	
 
 	
-	std::shared_ptr<GifPalette> pNewPalette( new GifPalette );
-	auto& NewPalette = *pNewPalette;
-	
 	{
-		//	slow ~100ms
-		Soy::TScopeTimerPrint Timer("GifMakePalette",1);
-		GifMakePalette((Dither? NULL : mPrevImage.get()), (Dither? NULL : mPrevPalette.get()), image, width, height, Dither, NewPalette);
-	}
-	
-	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
-	auto& IndexedImage = *pIndexedImage;
-	if(Dither)
-	{
-		Soy::TScopeTimerPrint Timer("GifDitherImage",1);
-		SoyPixels ReducedImage;
-		ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
-		GifDitherImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
-		MakeIndexedImage( IndexedImage, ReducedImage );
-	}
-	else
-	{
-		//	slower ~200ms
-		Soy::TScopeTimerPrint Timer("GifThresholdImage",1);
-		IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
-		GifThresholdImage( mPrevImage.get(), mPrevPalette.get(), image, IndexedImage, width, height, NewPalette);
-	}
+		GifWriter LzwWriter;
+		
+		std::shared_ptr<Soy::TWriteProtocol> LzwWrite( new TRawWriteDataProtocol );
+		Array<char>& LzwData = dynamic_cast<TRawWriteDataProtocol&>( *LzwWrite ).mData;
 
-	{
+		auto Putc = [this,&LzwData](uint8 c)
+		{
+			LzwData.PushBack(c);
+		};
+		auto Puts = [this,&LzwData](const char* s)
+		{
+			size_t Size = 0;
+			while ( s[Size] )
+				Size++;
+			
+			auto Data = GetRemoteArray( s, Size );
+			LzwData.PushBackArray( Data );
+		};
+		auto fwrite = [this,&LzwData](uint8* Buffer,size_t Length)
+		{
+			auto Data = GetRemoteArray( reinterpret_cast<const char*>(Buffer), Length );
+			LzwData.PushBackArray( Data );
+		};
+		
+		LzwWriter.fputc = Putc;
+		LzwWriter.fputs = Puts;
+		LzwWriter.fwrite = fwrite;
+		
+		
+		BufferArray<std::shared_ptr<SoyPixelsImpl>,2> PaletteAndIndexed;
+		PalettisedImage->SplitPlanes( GetArrayBridge(PaletteAndIndexed) );
+		
+		auto& IndexedImage = *PaletteAndIndexed[1];
+		auto& Palette = *PaletteAndIndexed[0];
+		
 		//	fastish ~7ms
 		Soy::TScopeTimerPrint Timer("GifWriteLzwImage",1);
-		GifWriteLzwImage(writer, IndexedImage, 0, 0, delay, NewPalette);
+		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette );
+		
+		Output.Push( LzwWrite );
+
+		mPrevImage = PaletteAndIndexed[1];
+		mPrevPalette = PaletteAndIndexed[0];
 	}
-	
-	mPrevImage = pIndexedImage;
-	mPrevPalette = pNewPalette;
 	
 	std::Debug << "GifWriteFrameFinished" << std::endl;
 }
