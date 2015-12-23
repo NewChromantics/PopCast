@@ -36,8 +36,7 @@ public:
 	std::atomic<bool>			mStarted;
 	std::atomic<bool>			mFinished;
 	
-	std::shared_ptr<SoyPixelsImpl>		mPrevPalette;
-	std::shared_ptr<SoyPixelsImpl>	mPrevImage;
+	std::shared_ptr<SoyPixelsImpl>	mPrevImage;	//	palettised image
 };
 
 
