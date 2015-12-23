@@ -542,20 +542,23 @@ void GifDitherImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const uin
 }
 
 // Picks palette colors for the image using simple thresholding, no dithering
-void GifThresholdImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const uint8_t* nextFrame,SoyPixelsImpl& OutImage, uint32_t width, uint32_t height, GifPalette& Palette )
+void GifThresholdImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const uint8_t* nextFrame,SoyPixelsImpl& OutIndexes, uint32_t width, uint32_t height, GifPalette& Palette )
 {
-	uint8_t* outFrame = OutImage.GetPixelsArray().GetArray();
+	Soy::Assert( OutIndexes.GetFormat() == SoyPixelsFormat::Greyscale, "Output should be indexes" );
+	uint8_t* outIndexes = OutIndexes.GetPixelsArray().GetArray();
 	
 	Array<uint8> Dummy;
 	
 	for( uint32_t yy=0; yy<height; ++yy )
 		for( uint32_t xx=0; xx<width; ++xx )
     {
-		int Index = (yy*width*4) + (xx*4);
+		int RgbaIndex = (yy*width*4) + (xx*4);
+		int PalIndex = (yy*width) + (xx);
+		
         // if a previous color is available, and it matches the current color,
         // set the pixel to transparent
 		bool SamePixel = false;
-		Rgb8 NextRgb( nextFrame[Index+0], nextFrame[Index+1], nextFrame[Index+2] );
+		Rgb8 NextRgb( nextFrame[RgbaIndex+0], nextFrame[RgbaIndex+1], nextFrame[RgbaIndex+2] );
 		Rgb8 LastRgb;
 		
 		if ( LastIndexes && LastPalette )
@@ -566,10 +569,7 @@ void GifThresholdImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const 
 
 		if ( SamePixel )
 		{
-            outFrame[Index+0] = LastRgb.x;
-            outFrame[Index+1] = LastRgb.y;
-            outFrame[Index+2] = LastRgb.z;
-            outFrame[Index+3] = kGifTransIndex;
+            outIndexes[PalIndex] = kGifTransIndex;
         }
         else
         {
@@ -579,11 +579,7 @@ void GifThresholdImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const 
             GifGetClosestPaletteColor( Palette, NextRgb.x, NextRgb.y, NextRgb.z, bestInd, bestDiff);
             
             // Write the resulting color to the output buffer
-			auto rgb = Palette.GetColour( bestInd );
-			outFrame[Index+0] = rgb.x;
-			outFrame[Index+1] = rgb.y;
-			outFrame[Index+2] = rgb.z;
-            outFrame[Index+3] = bestInd;
+			outIndexes[PalIndex] = bestInd;
         }
 	}
 }

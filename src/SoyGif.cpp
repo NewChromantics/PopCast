@@ -146,22 +146,36 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	std::shared_ptr<GifPalette> pNewPalette( new GifPalette );
 	auto& NewPalette = *pNewPalette;
 	
-	GifMakePalette((Dither? NULL : mPrevImage.get()), (Dither? NULL : mPrevPalette.get()), image, width, height, Dither, NewPalette);
+	{
+		//	slow ~100ms
+		Soy::TScopeTimerPrint Timer("GifMakePalette",1);
+		GifMakePalette((Dither? NULL : mPrevImage.get()), (Dither? NULL : mPrevPalette.get()), image, width, height, Dither, NewPalette);
+	}
 	
-	SoyPixels ReducedImage;
-	ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
-	
-	if(Dither)
-		GifDitherImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
-	else
-		GifThresholdImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
-
 	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
 	auto& IndexedImage = *pIndexedImage;
-	MakeIndexedImage( IndexedImage, ReducedImage );
+	if(Dither)
+	{
+		Soy::TScopeTimerPrint Timer("GifDitherImage",1);
+		SoyPixels ReducedImage;
+		ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
+		GifDitherImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
+		MakeIndexedImage( IndexedImage, ReducedImage );
+	}
+	else
+	{
+		//	slower ~200ms
+		Soy::TScopeTimerPrint Timer("GifThresholdImage",1);
+		IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
+		GifThresholdImage( mPrevImage.get(), mPrevPalette.get(), image, IndexedImage, width, height, NewPalette);
+	}
 
-	GifWriteLzwImage(writer, IndexedImage, 0, 0, delay, NewPalette);
-
+	{
+		//	fastish ~7ms
+		Soy::TScopeTimerPrint Timer("GifWriteLzwImage",1);
+		GifWriteLzwImage(writer, IndexedImage, 0, 0, delay, NewPalette);
+	}
+	
 	mPrevImage = pIndexedImage;
 	mPrevPalette = pNewPalette;
 	
