@@ -5,7 +5,7 @@
 
 namespace Gif
 {
-	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const uint8* Rgba,size_t Width,size_t Height);
+	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba);
 }
 
 std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex)
@@ -109,14 +109,15 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 }
 
 
-void Gif::MakeIndexedImage(SoyPixelsImpl& IndexedImage,const uint8* Rgba,size_t Width,size_t Height)
+void Gif::MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& RgbaImage)
 {
-	IndexedImage.Init( Width, Height, SoyPixelsFormat::Greyscale );
+	IndexedImage.Init( RgbaImage.GetWidth(), RgbaImage.GetHeight(), SoyPixelsFormat::Greyscale );
 	auto& IndexPixels = IndexedImage.GetPixelsArray();
+	auto& RgbaPixels = RgbaImage.GetPixelsArray();
 	
-	for ( int p=0;	p<Width*Height;	p++ )
+	for ( int p=0;	p<IndexPixels.GetSize();	p++ )
 	{
-		auto Alpha = Rgba[ p*4 + 3 ];
+		auto Alpha = RgbaPixels[ p*4 + 3 ];
 		auto PaletteIndex = Alpha;
 		IndexPixels[p] = PaletteIndex;
 	}
@@ -141,26 +142,28 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	
 	GifWriter& writer = *mWriter;
 
-	std::shared_ptr<GifPalette>		mPrevPalette;
-	std::shared_ptr<SoyPixelsImpl>	mPrevImage;
-
-	//_assert( Channels == 4, "Currently expect 4 channels" );
-	const uint8_t* oldImage = writer.firstFrame? NULL : writer.oldImage;
-	writer.firstFrame = false;
 	
-	GifPalette pal;
-	GifMakePalette((Dither? NULL : oldImage), image, width, height, Dither, pal);
+	std::shared_ptr<GifPalette> pNewPalette( new GifPalette );
+	auto& NewPalette = *pNewPalette;
+	
+	GifMakePalette((Dither? NULL : mPrevImage.get()), (Dither? NULL : mPrevPalette.get()), image, width, height, Dither, NewPalette);
+	
+	SoyPixels ReducedImage;
+	ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
 	
 	if(Dither)
-		GifDitherImage(oldImage, image, writer.oldImage, width, height, pal);
+		GifDitherImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
 	else
-		GifThresholdImage(oldImage, image, writer.oldImage, width, height, pal);
+		GifThresholdImage( mPrevImage.get(), mPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
 
-	SoyPixels IndexedImage;
-	MakeIndexedImage( IndexedImage, writer.oldImage, width, height );
+	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
+	auto& IndexedImage = *pIndexedImage;
+	MakeIndexedImage( IndexedImage, ReducedImage );
 
-	GifWriteLzwImage(writer, IndexedImage, 0, 0, delay, pal);
+	GifWriteLzwImage(writer, IndexedImage, 0, 0, delay, NewPalette);
 
+	mPrevImage = pIndexedImage;
+	mPrevPalette = pNewPalette;
 	
 	std::Debug << "GifWriteFrameFinished" << std::endl;
 }

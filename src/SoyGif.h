@@ -34,6 +34,7 @@ protected:
 public:
 	std::mutex					mBusy;
 	std::shared_ptr<GifWriter>	mWriter;
+	
 	std::shared_ptr<GifPalette>		mPrevPalette;
 	std::shared_ptr<SoyPixelsImpl>	mPrevImage;
 	

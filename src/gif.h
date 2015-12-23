@@ -60,9 +60,7 @@ typedef vec3x<uint8> Rgb8;
 class GifWriter
 {
 public:
-	GifWriter() :
-		firstFrame	( true ),
-		oldImage	( nullptr )
+	GifWriter()
 	{
 	}
 	
@@ -72,9 +70,6 @@ public:
 	std::function<void(uint8*,size_t)>	fwrite;
  
 	std::function<void()>				Close;
-	
-	uint8_t* oldImage;
-	bool firstFrame;
 };
 
 const int kGifTransIndex = 0;
@@ -364,25 +359,36 @@ void GifSplitPalette(uint8_t* image, int numPixels, int firstElt, int lastElt, i
 // moves them to the fromt of th buffer.
 // This allows us to build a palette optimized for the colors of the
 // changed pixels only.
-int GifPickChangedPixels( const uint8_t* lastFrame, uint8_t* frame, int numPixels )
+int GifPickChangedPixels(SoyPixelsImpl& PrevIndexes,GifPalette& PrevPalette, uint8_t* frame_rgba)
 {
+	Soy::Assert( PrevIndexes.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting indexed iamge");
+	
     int numChanged = 0;
-    uint8_t* writeIter = frame;
-    
+    uint8_t* writeIter = frame_rgba;
+	
+	auto& LastIndexes = PrevIndexes.GetPixelsArray();
+	int numPixels = LastIndexes.GetSize();
+	
     for (int ii=0; ii<numPixels; ++ii)
     {
-        if(lastFrame[0] != frame[0] ||
-           lastFrame[1] != frame[1] ||
-           lastFrame[2] != frame[2])
-        {
-            writeIter[0] = frame[0];
-            writeIter[1] = frame[1];
-            writeIter[2] = frame[2];
+		auto Lastrgb = PrevPalette.GetColour( LastIndexes[ii] );
+		auto r = frame_rgba[ii*4+0];
+		auto g = frame_rgba[ii*4+1];
+		auto b = frame_rgba[ii*4+2];
+		Rgb8 ThisRgb( r,g,b);
+		
+		if( Lastrgb == ThisRgb )
+		{
+			
+		}
+		else
+		{
+            writeIter[0] = ThisRgb.x;
+            writeIter[1] = ThisRgb.y;
+            writeIter[2] = ThisRgb.z;
             ++numChanged;
             writeIter += 4;
         }
-        lastFrame += 4;
-        frame += 4;
     }
     
     return numChanged;
@@ -390,7 +396,7 @@ int GifPickChangedPixels( const uint8_t* lastFrame, uint8_t* frame, int numPixel
 
 // Creates a palette by placing all the image pixels in a k-d tree and then averaging the blocks at the bottom.
 // This is known as the "modified median split" technique
-void GifMakePalette( const uint8_t* lastFrame, const uint8_t* nextFrame, uint32_t width, uint32_t height, bool buildForDither, GifPalette& Palette )
+void GifMakePalette(SoyPixelsImpl* PrevIndexes,GifPalette* PrevPalette, const uint8_t* nextFrame, uint32_t width, uint32_t height, bool buildForDither, GifPalette& Palette )
 {
     // SplitPalette is destructive (it sorts the pixels by color) so
     // we must create a copy of the image for it to destroy
@@ -399,9 +405,11 @@ void GifMakePalette( const uint8_t* lastFrame, const uint8_t* nextFrame, uint32_
     memcpy(destroyableImage, nextFrame, imageSize);
     
     int numPixels = width*height;
-    if(lastFrame)
-        numPixels = GifPickChangedPixels(lastFrame, destroyableImage, numPixels);
-    
+    if(PrevIndexes && PrevPalette)
+	{
+        numPixels = GifPickChangedPixels(*PrevIndexes, *PrevPalette, destroyableImage );
+	}
+	
     const int lastElt = Palette.GetSize();
     const int splitElt = lastElt/2;
     const int splitDist = splitElt/2;
@@ -418,9 +426,10 @@ void GifMakePalette( const uint8_t* lastFrame, const uint8_t* nextFrame, uint32_
 }
 
 // Implements Floyd-Steinberg dithering, writes palette value to alpha
-void GifDitherImage( const uint8_t* lastFrame, const uint8_t* nextFrame, uint8_t* outFrame, uint32_t width, uint32_t height, GifPalette& Palette )
+void GifDitherImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const uint8_t* nextFrame,SoyPixelsImpl& OutImage, uint32_t width, uint32_t height, GifPalette& Palette )
 {
-    int numPixels = width*height;
+	uint8_t* outFrame = OutImage.GetPixelsArray().GetArray();
+	int numPixels = width*height;
     
     // quantPixels initially holds color*256 for all pixels
     // The extra 8 bits of precision allow for sub-single-color error values
@@ -439,19 +448,24 @@ void GifDitherImage( const uint8_t* lastFrame, const uint8_t* nextFrame, uint8_t
         for( uint32_t xx=0; xx<width; ++xx )
         {
             int32_t* nextPix = quantPixels + 4*(yy*width+xx);
-            const uint8_t* lastPix = lastFrame? lastFrame + 4*(yy*width+xx) : NULL;
-            
-            // Compute the colors we want (rounding to nearest)
-            int32_t rr = (nextPix[0] + 127) / 256;
-            int32_t gg = (nextPix[1] + 127) / 256;
-            int32_t bb = (nextPix[2] + 127) / 256;
-            
+			
+			// Compute the colors we want (rounding to nearest)
+			int32_t rr = (nextPix[0] + 127) / 256;
+			int32_t gg = (nextPix[1] + 127) / 256;
+			int32_t bb = (nextPix[2] + 127) / 256;
+
+			bool SamePixel = false;
+			if ( LastIndexes && LastPalette )
+			{
+				auto LastRgb = LastPalette->GetColour( LastIndexes->GetPixel(xx,yy,0) );
+				Rgb8 NewRgb( rr, gg, bb );
+				SamePixel = LastRgb == NewRgb;
+			}
+			
+			
             // if it happens that we want the color from last frame, then just write out
             // a transparent pixel
-            if( lastFrame &&
-               lastPix[0] == rr &&
-               lastPix[1] == gg &&
-               lastPix[2] == bb )
+            if( SamePixel )
             {
                 nextPix[0] = rr;
                 nextPix[1] = gg;
@@ -528,42 +542,50 @@ void GifDitherImage( const uint8_t* lastFrame, const uint8_t* nextFrame, uint8_t
 }
 
 // Picks palette colors for the image using simple thresholding, no dithering
-void GifThresholdImage( const uint8_t* lastFrame, const uint8_t* nextFrame, uint8_t* outFrame, uint32_t width, uint32_t height, GifPalette& Palette )
+void GifThresholdImage(SoyPixelsImpl* LastIndexes,GifPalette* LastPalette,const uint8_t* nextFrame,SoyPixelsImpl& OutImage, uint32_t width, uint32_t height, GifPalette& Palette )
 {
-    uint32_t numPixels = width*height;
-    for( uint32_t ii=0; ii<numPixels; ++ii )
+	uint8_t* outFrame = OutImage.GetPixelsArray().GetArray();
+	
+	Array<uint8> Dummy;
+	
+	for( uint32_t yy=0; yy<height; ++yy )
+		for( uint32_t xx=0; xx<width; ++xx )
     {
+		int Index = (yy*width*4) + (xx*4);
         // if a previous color is available, and it matches the current color,
         // set the pixel to transparent
-        if(lastFrame &&
-           lastFrame[0] == nextFrame[0] &&
-           lastFrame[1] == nextFrame[1] &&
-           lastFrame[2] == nextFrame[2])
-        {
-            outFrame[0] = lastFrame[0];
-            outFrame[1] = lastFrame[1];
-            outFrame[2] = lastFrame[2];
-            outFrame[3] = kGifTransIndex;
+		bool SamePixel = false;
+		Rgb8 NextRgb( nextFrame[Index+0], nextFrame[Index+1], nextFrame[Index+2] );
+		Rgb8 LastRgb;
+		
+		if ( LastIndexes && LastPalette )
+		{
+			LastRgb = LastPalette->GetColour( LastIndexes->GetPixel(xx,yy,0) );
+			SamePixel = LastRgb == NextRgb;
+		}
+
+		if ( SamePixel )
+		{
+            outFrame[Index+0] = LastRgb.x;
+            outFrame[Index+1] = LastRgb.y;
+            outFrame[Index+2] = LastRgb.z;
+            outFrame[Index+3] = kGifTransIndex;
         }
         else
         {
             // palettize the pixel
             int32_t bestDiff = 1000000;
             int32_t bestInd = 1;
-            GifGetClosestPaletteColor( Palette, nextFrame[0], nextFrame[1], nextFrame[2], bestInd, bestDiff);
+            GifGetClosestPaletteColor( Palette, NextRgb.x, NextRgb.y, NextRgb.z, bestInd, bestDiff);
             
             // Write the resulting color to the output buffer
 			auto rgb = Palette.GetColour( bestInd );
-			outFrame[0] = rgb.x;
-			outFrame[1] = rgb.y;
-			outFrame[2] = rgb.z;
-            outFrame[3] = bestInd;
+			outFrame[Index+0] = rgb.x;
+			outFrame[Index+1] = rgb.y;
+			outFrame[Index+2] = rgb.z;
+            outFrame[Index+3] = bestInd;
         }
-        
-        if(lastFrame) lastFrame += 4;
-        outFrame += 4;
-        nextFrame += 4;
-    }
+	}
 }
 
 // Simple structure to write out the LZW-compressed portion of the image
@@ -772,11 +794,6 @@ bool GifBegin( GifWriter& writer, uint32_t width, uint32_t height, uint32_t dela
 {
 	writer.Open();
 	
-    writer.firstFrame = true;
-    
-    // allocate 
-    writer.oldImage = (uint8_t*)GIF_MALLOC(width*height*4);
-    
     writer.fputs("GIF89a");
     
     // screen descriptor
@@ -826,8 +843,6 @@ void GifEnd( GifWriter& writer )
 {
 	writer.fputc(0x3b); // end of file
 	writer.Close();
-	GIF_FREE(writer.oldImage);
-	writer.oldImage = NULL;
 }
 
 #endif
