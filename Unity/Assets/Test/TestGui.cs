@@ -23,7 +23,7 @@ public class TestGui : MonoBehaviour {
 
 	void Update()
 	{
-		PopCast.FlushDebug( Log );
+		//PopCast.FlushDebug( Log );
 	}
 
 	void OnGUI() {
