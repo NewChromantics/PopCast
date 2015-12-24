@@ -202,21 +202,24 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		std::shared_ptr<SoyPixelsImpl> pNewPaletteImage;
 		{
 			//	slow ~100ms
-			Soy::TScopeTimerPrint Timer("GifMakePalette",1);
 			
 			if ( MakeDebugPalette )
 			{
+				Soy::TScopeTimerPrint Timer("GifDebugPalette",1);
 				GifDebugPalette( pNewPaletteImage );
 			}
 			else if ( !Dither && mPrevImage )
 			{
+				Soy::TScopeTimerPrint Timer("GifMakeDiffPalette",1);
 				GifMakeDiffPalette( *pPrevIndexedImage, *pPrevPalette, image, width, height, pNewPaletteImage );
 			}
 			else
 			{
+				Soy::TScopeTimerPrint Timer("GifExtractPalette",1);
 				GifExtractPalette( image, width, height, Channels, pNewPaletteImage );
 			}
 			
+			Soy::TScopeTimerPrint Timer("GifMakePalette",1);
 			GifMakePalette( *pNewPaletteImage, Dither, pNewPalette );
 		}
 		
@@ -225,7 +228,7 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		
 		std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
 		auto& IndexedImage = *pIndexedImage;
-		static bool DebugDrawPalette = true;
+		static bool DebugDrawPalette = false;
 		
 
 		
