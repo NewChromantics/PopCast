@@ -169,7 +169,7 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	auto delay = 8;	//	Packet->mDuration
 	auto width = Packet->mMeta.mPixelMeta.GetWidth();
 	auto height = Packet->mMeta.mPixelMeta.GetHeight();
-	static bool Dither = true;
+	static bool Dither = false;
 	auto Channels = SoyPixelsFormat::GetChannelCount( Packet->mMeta.mPixelMeta.GetFormat() );
 	
 	Soy::TScopeTimerPrint Timer("GifWriteFrame",1);
@@ -196,7 +196,7 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		auto pPrevIndexedImage = PrevPaletteAndIndexed[1];
 		auto pPrevPalette = PrevPaletteAndIndexed[0];
 
-		static bool MakeDebugPalette = true;
+		static bool MakeDebugPalette = false;
 		
 		std::shared_ptr<GifPalette> pNewPalette;
 		std::shared_ptr<SoyPixelsImpl> pNewPaletteImage;
@@ -225,11 +225,11 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		
 		std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
 		auto& IndexedImage = *pIndexedImage;
-		static bool DebugPalette = false;
+		static bool DebugDrawPalette = true;
 		
 
 		
-		if ( DebugPalette )
+		if ( DebugDrawPalette )
 		{
 			IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
 			auto* PaletteRgb = &NewPalette.mPalette->GetPixelPtr(0,0,0);

@@ -545,7 +545,14 @@ void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t heigh
 	pPalette.reset( new SoyPixels );
 	pPalette->Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
 	auto NewColoursPixels = GetRemoteArray( reinterpret_cast<uint8*>( NewColours.GetArray() ), NewColours.GetDataSize() );
-	pPalette->GetPixelsArray().Copy( NewColoursPixels );
+	auto& OldColoursPixels = pPalette->GetPixelsArray();
+	
+	auto NewCount = NewColoursPixels.GetSize();
+	auto OldCount = OldColoursPixels.GetSize();
+	
+	Soy::Assert( NewCount == OldCount, "Size mismatch. Was 16bit issue");
+	
+	OldColoursPixels.Copy( NewColoursPixels );
 }
 
 
@@ -555,7 +562,17 @@ void GifDebugPalette(std::shared_ptr<SoyPixelsImpl>& pPalette)
 	
 	for ( int i=0;	i<256;	i++ )
 	{
+		Rgb8 ThisRgb( i, i, i );
+		NewColours.PushBack( ThisRgb );
+	}
+	for ( int i=0;	i<256;	i++ )
+	{
 		Rgb8 ThisRgb( 255, i, 0 );
+		NewColours.PushBack( ThisRgb );
+	}
+	for ( int i=0;	i<256;	i++ )
+	{
+		Rgb8 ThisRgb( 0, 255, i );
 		NewColours.PushBack( ThisRgb );
 	}
 	
