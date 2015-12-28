@@ -3,6 +3,9 @@
 
 #include "gif.h"
 
+//	watermark
+//	https://www.shadertoy.com/view/ld33zX
+
 namespace Gif
 {
 	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba);
