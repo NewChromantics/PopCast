@@ -411,8 +411,8 @@ std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const Opengl::
 
 void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe)
 {
-	uint32 width = Rgba.GetWidth();
-	uint32 height = Rgba.GetHeight();
+	auto width = size_cast<uint32>(Rgba.GetWidth());
+	auto height = size_cast<uint32>(Rgba.GetHeight());
 	static bool Dither = false;
 	auto Channels = SoyPixelsFormat::GetChannelCount( PalettisedImage.GetFormat() );
 	
