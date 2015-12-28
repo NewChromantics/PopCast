@@ -135,6 +135,8 @@ public class PopCast
 
 	public PopCast(string Filename,PopCastParams Params)
 	{
+		Filename = ResolveFilename (Filename);
+		Debug.LogWarning ("resolved filename: " + Filename);
 		mInstance = PopCast_Alloc ( Filename );
 
 		//	if this fails, capture the flush and throw an exception
@@ -207,5 +209,59 @@ public class PopCast
 		return "GIT_REVISION";
 	}
 
+
+	public static string ResolveFilename(string Filename)
+	{
+		//	if the filename has a protocol, don't change it
+		//	file:		Export to a file. if there isn't an explicit path found in the filename (eg. c:/gifs from c:/gifs/cast.gif) the persistent path will be pre-pended. so file:cast.gif turns into <persistent-path>/cast.gif
+		
+		//	resolve local filenames automatically regardless of prefix
+		string Prefix = null;
+		char[] Delin = ":".ToCharArray ();
+		string[] Parts = Filename.Split (Delin, 2);
+		if (Parts.Length > 1) {
+			Prefix = Parts [0] + ":";
+			Filename = Parts [1];
+		}
+
+		string StreamingAssetsPrefix_A = "StreamingAssets" + System.IO.Path.DirectorySeparatorChar;
+		string StreamingAssetsPrefix_B = "StreamingAssets" + System.IO.Path.AltDirectorySeparatorChar;
+
+		//	gr: being explicit with files atm
+		if ( Prefix == "file:" )
+		{
+			//	if not a full path, put it in persistent data
+			if ( !System.IO.Path.IsPathRooted(Filename) )
+			{
+				if ( Filename.StartsWith(StreamingAssetsPrefix_A,StringComparison.CurrentCultureIgnoreCase) )
+				{
+					Filename = Filename.Remove(0,StreamingAssetsPrefix_A.Length);
+					Filename = System.IO.Path.Combine (Application.streamingAssetsPath, Filename);
+				}
+				else if ( Filename.StartsWith(StreamingAssetsPrefix_B,StringComparison.CurrentCultureIgnoreCase) )
+				{
+					Filename = Filename.Remove(0,StreamingAssetsPrefix_B.Length);
+					Filename = System.IO.Path.Combine (Application.streamingAssetsPath, Filename);
+				}
+				else
+				{
+					Filename = System.IO.Path.Combine (Application.persistentDataPath, Filename);
+				}
+
+				//	if there is a * in the filename, insert time. That allows file:*.gif or file:streamingassets/*.gif
+				string DateString = System.DateTime.Now.ToShortDateString() + "_" + System.DateTime.Now.ToShortTimeString();
+				DateString = DateString.Replace(System.IO.Path.DirectorySeparatorChar,'_');
+				DateString = DateString.Replace(System.IO.Path.AltDirectorySeparatorChar,'_');
+				DateString = DateString.Replace(' ','_');
+				DateString = DateString.Replace(':','_');
+				Filename = Filename.Replace("*",DateString);
+			}
+		}
+
+		if (Prefix != null)
+			Filename = Prefix + Filename;
+		
+		return Filename;
+	}
 }
 
