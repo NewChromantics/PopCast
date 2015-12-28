@@ -202,6 +202,10 @@ public class PopCast
 		FlushDebug();
 	}
 
+	static public string GetVersion()
+	{
+		return "GIT_REVISION";
+	}
 
 }
 
