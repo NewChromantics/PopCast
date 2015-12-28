@@ -299,7 +299,8 @@ bool Gif::TEncoder::Iteration()
 		auto& Texture = dynamic_cast<TTextureBuffer&>( *Packet.mPixelBuffer );
 		auto Read = [&]
 		{
-			Texture.mImage->Read( Rgba );
+			static bool Flip = false;
+			Texture.mImage->Read( Rgba, SoyPixelsFormat::RGBA, Flip );
 		};
 		Soy::TSemaphore Semaphore;
 		mOpenglContext->PushJob( Read, Semaphore );
