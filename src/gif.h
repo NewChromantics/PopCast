@@ -894,12 +894,12 @@ void GifWritePalette( const SoyPixelsImpl& Palette,GifWriter& Writer)
 }
 
 // write the image header, LZW-compress and write out the image
-void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint32_t left, uint32_t top,uint32_t delay,const SoyPixelsImpl& Palette)
+void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette)
 {
 	Soy::Assert( Image.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting palette-index iamge format");
 	Soy::Assert( Palette.GetFormat()==SoyPixelsFormat::RGB, "Expecting palette to be RGB");
-	auto width = Image.GetWidth();
-	auto height = Image.GetHeight();
+	auto width = size_cast<uint16>( Image.GetWidth() );
+	auto height = size_cast<uint16>( Image.GetHeight() );
 	
     // graphics control extension
     Writer.fputc(0x21);
@@ -1019,7 +1019,7 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint32_t lef
 // Creates a gif file.
 // The input GIFWriter is assumed to be uninitialized.
 // The delay value is the time between frames in hundredths of a second - note that not all viewers pay much attention to this value.
-bool GifBegin( GifWriter& writer, uint32_t width, uint32_t height, uint32_t delay, int32_t bitDepth = 8, bool dither = false )
+bool GifBegin( GifWriter& writer, uint16 width, uint16 height, uint16 delay, int32_t bitDepth = 8, bool dither = false )
 {
 	writer.Open();
 	

@@ -134,8 +134,12 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	Writer.fwrite = fwrite;
 
 	auto PixelMeta = Streams[0].mPixelMeta;
-	auto Delay = 8;	//	Packet->mDuration
-	GifBegin( Writer, PixelMeta.GetWidth(), PixelMeta.GetHeight(), Delay );
+	//	1/100ths of a sec *10 for ms.
+	//	gr: add this to stream to estimates
+	static uint16 Delay = 1;	//	Packet->mDuration
+	auto Width = size_cast<uint16>( PixelMeta.GetWidth() );
+	auto Height = size_cast<uint16>( PixelMeta.GetHeight() );
+	GifBegin( Writer, Width, Height, Delay );
 
 	mOutput->Push( HeaderWrite );
 	
@@ -178,7 +182,9 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	Soy::Assert( PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_8_8, "Expected palettised image in pixel meta");
 	
 	//	ms to 100th's
-	auto delay = std::max<int>( 1, Packet->mDuration.GetTime() / 100 );
+	//	https://bugzilla.mozilla.org/show_bug.cgi?id=232822
+	static uint16 MinDurationMs = 1;
+	auto delay = std::max( MinDurationMs, size_cast<uint16>( Packet->mDuration.GetTime() / 10 ) );
 	
 
 	{
@@ -241,6 +247,9 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 
 Gif::TEncoder::~TEncoder()
 {
+	//	stop thread
+	WaitToFinish();
+	
 	//	deffered delete of stuff
 	if ( mOpenglContext )
 	{
@@ -275,6 +284,7 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 		Image.Read( Pixels );
 	}
 	Packet.mTimecode = Timecode;
+	Packet.mDuration = SoyTime( 16ull );
 	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	
 	PushFrame( pPacket );
@@ -373,12 +383,11 @@ std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const Opengl::
 
 void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe)
 {
-	auto width = Rgba.GetWidth();
-	auto height = Rgba.GetHeight();
+	uint32 width = Rgba.GetWidth();
+	uint32 height = Rgba.GetHeight();
 	static bool Dither = false;
 	auto Channels = SoyPixelsFormat::GetChannelCount( PalettisedImage.GetFormat() );
 	
-	Soy::TScopeTimerPrint Timer("GifWriteFrame",1);
 	auto& RgbaArray = PalettisedImage.GetPixelsArray();
 	auto* RgbaData = RgbaArray.GetArray();
 	auto* image = RgbaData;
@@ -462,6 +471,7 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	}
 	
 	//	join together
+	Soy::TScopeTimerPrint Timer("MakePaletteised",1);
 	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, NewPalette.GetPalette(), NewPalette.GetTransparentIndex() );
 }
 	
