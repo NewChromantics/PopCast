@@ -225,6 +225,10 @@
 		BFBC3DBF1BC823F300CEE3D5 /* AvfPixelBuffer.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFBC3DBC1BC823F300CEE3D5 /* AvfPixelBuffer.mm */; };
 		BFBC3DC01BC823F300CEE3D5 /* AvfPixelBuffer.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFBC3DBC1BC823F300CEE3D5 /* AvfPixelBuffer.mm */; };
 		BFBC3DC11BC823F300CEE3D5 /* AvfPixelBuffer.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFBC3DBC1BC823F300CEE3D5 /* AvfPixelBuffer.mm */; };
+		BFC4E1C31C308B71008D13EC /* TBlitter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1BD1C308B71008D13EC /* TBlitter.cpp */; };
+		BFC4E1C51C308B71008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
+		BFC4E1C61C3097BB008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
+		BFC4E1C71C3097BC008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
 		BFEF570A1B613B0800340796 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0F1B5526D300CBD1AC /* CoreVideo.framework */; };
 		BFEF570B1B613B1200340796 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0B1B5526B800CBD1AC /* CoreMedia.framework */; };
 		BFEF570C1B613B2300340796 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B051B55268F00CBD1AC /* AVFoundation.framework */; };
@@ -408,6 +412,12 @@
 		BFBC3DBC1BC823F300CEE3D5 /* AvfPixelBuffer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AvfPixelBuffer.mm; sourceTree = "<group>"; };
 		BFC0CAFE1B76222E00D1FAA1 /* SoyCuda.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyCuda.cpp; path = src/SoyCuda.cpp; sourceTree = "<group>"; };
 		BFC0CAFF1B76222E00D1FAA1 /* SoyCuda.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyCuda.h; path = src/SoyCuda.h; sourceTree = "<group>"; };
+		BFC4E1BD1C308B71008D13EC /* TBlitter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitter.cpp; sourceTree = "<group>"; };
+		BFC4E1BE1C308B71008D13EC /* TBlitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitter.h; sourceTree = "<group>"; };
+		BFC4E1BF1C308B71008D13EC /* TBlitterDirectx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitterDirectx.cpp; sourceTree = "<group>"; };
+		BFC4E1C01C308B71008D13EC /* TBlitterDirectx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitterDirectx.h; sourceTree = "<group>"; };
+		BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitterOpengl.cpp; sourceTree = "<group>"; };
+		BFC4E1C21C308B71008D13EC /* TBlitterOpengl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitterOpengl.h; sourceTree = "<group>"; };
 		BFEEDD6D1B46A7E5002F9CFA /* libPopCastIos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPopCastIos.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFEF57071B6139DE00340796 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -641,6 +651,12 @@
 				BFAD33C31B61720400D3E7A6 /* PopMovieTextureOsxFramework.h */,
 				BF1499AF1B4D640D00DA2575 /* PopUnity.cpp */,
 				BF1499B01B4D640D00DA2575 /* PopUnity.h */,
+				BFC4E1BD1C308B71008D13EC /* TBlitter.cpp */,
+				BFC4E1BE1C308B71008D13EC /* TBlitter.h */,
+				BFC4E1BF1C308B71008D13EC /* TBlitterDirectx.cpp */,
+				BFC4E1C01C308B71008D13EC /* TBlitterDirectx.h */,
+				BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */,
+				BFC4E1C21C308B71008D13EC /* TBlitterOpengl.h */,
 				BFAEE8991C2774A500E25C47 /* SoyGif.cpp */,
 				BFAEE89A1C2774A500E25C47 /* SoyGif.h */,
 				BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */,
@@ -961,6 +977,7 @@
 				BFBC3DA21BC8081D00CEE3D5 /* SoyTime.mm in Sources */,
 				BF40910D1B5EDB6800643329 /* SoyDebug.mm in Sources */,
 				BF4091191B5EDB6800643329 /* SoyVector.cpp in Sources */,
+				BFC4E1C71C3097BC008D13EC /* TBlitterOpengl.cpp in Sources */,
 				BFBC3D9D1BC8080B00CEE3D5 /* SoyPixels.mm in Sources */,
 				BF3EB6C31C15ACFB002686F6 /* SoyAvf.mm in Sources */,
 				BF3EB6B41C15ACE4002686F6 /* SoyUnity.cpp in Sources */,
@@ -989,6 +1006,7 @@
 			files = (
 				BF8990B91BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */,
 				BF41F9E11B4BDC1E0015614A /* memheap.cpp in Sources */,
+				BFC4E1C51C308B71008D13EC /* TBlitterOpengl.cpp in Sources */,
 				BF7225B11BAF0E2700550AD8 /* SoyMemFile.cpp in Sources */,
 				BF48FF9D1B8E5D15004BCF63 /* TGoogleCaster.mm in Sources */,
 				BF3EB6C21C15ACFB002686F6 /* SoyAvf.mm in Sources */,
@@ -1034,6 +1052,7 @@
 				BF192B011BF10A9400324911 /* SoyH264.cpp in Sources */,
 				BF1499D71B4D663800DA2575 /* SoyOpenglContext.cpp in Sources */,
 				BF41F9D21B4BDBA80015614A /* SoyArray.cpp in Sources */,
+				BFC4E1C31C308B71008D13EC /* TBlitter.cpp in Sources */,
 				BF1499BF1B4D640D00DA2575 /* TCaster.cpp in Sources */,
 				BF41F9D71B4BDBC60015614A /* SoyDebug.cpp in Sources */,
 			);
@@ -1055,6 +1074,7 @@
 				BF5B07191B5D06AF00C489C6 /* SoyShader.cpp in Sources */,
 				BF406D3E1BB9C8B200CECF4E /* SoyMulticast.mm in Sources */,
 				BF41F9E01B4BDC1E0015614A /* memheap.cpp in Sources */,
+				BFC4E1C61C3097BB008D13EC /* TBlitterOpengl.cpp in Sources */,
 				BF406D311BB9B1C500CECF4E /* SoyProtocol.cpp in Sources */,
 				BF1499DE1B4D67CB00DA2575 /* SoyPng.cpp in Sources */,
 				BF41F9C71B4BDB270015614A /* SoyAssert.cpp in Sources */,
@@ -1117,6 +1137,7 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "POPMOVIE_WATERMARK=1";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;

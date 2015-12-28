@@ -95,7 +95,7 @@ public:
 class TFileCaster : public TCaster, public SoyWorkerThread
 {
 public:
-	TFileCaster(const TCasterParams& Params);
+	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext);
 	~TFileCaster();
 	
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;

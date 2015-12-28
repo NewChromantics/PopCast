@@ -8,9 +8,9 @@ namespace Gif
 	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba);
 }
 
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext)
 {
-	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex ) );
+	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext ) );
 	return Encoder;
 }
 
@@ -153,6 +153,7 @@ void Gif::MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba
 
 void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWriter& Output)
 {
+	Soy::Assert( Packet!=nullptr, "Expected packet");
 	std::lock_guard<std::mutex> Lock( mBusy );
 	
 	if ( !mStarted )
@@ -166,109 +167,14 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		return;
 	}
 
-	auto delay = 8;	//	Packet->mDuration
-	auto width = Packet->mMeta.mPixelMeta.GetWidth();
-	auto height = Packet->mMeta.mPixelMeta.GetHeight();
-	static bool Dither = false;
-	auto Channels = SoyPixelsFormat::GetChannelCount( Packet->mMeta.mPixelMeta.GetFormat() );
+	SoyPixelsDef<Array<uint8>> PalettisedImage( Packet->mData, Packet->mMeta.mPixelMeta );
+	Soy::Assert( Packet->mMeta.mCodec == SoyMediaFormat::Palettised_8_8, "Expected palettised image as codec");
+	Soy::Assert( PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_8_8, "Expected palettised image in pixel meta");
 	
-	Soy::TScopeTimerPrint Timer("GifWriteFrame",1);
-	auto* RgbaData = Packet->mData.GetArray();
-	auto* image = RgbaData;
+	//	ms to 100th's
+	auto delay = std::max<int>( 1, Packet->mDuration.GetTime() / 100 );
 	
 
-	std::shared_ptr<SoyPixelsImpl> PalettisedImage;
-	{
-		static bool TransparentMerge = false;
-		if ( !TransparentMerge )
-			mPrevImage.reset();
-		
-		BufferArray<std::shared_ptr<SoyPixelsImpl>,2> PrevPaletteAndIndexed;
-		if ( mPrevImage )
-		{
-			mPrevImage->SplitPlanes( GetArrayBridge(PrevPaletteAndIndexed) );
-		}
-		else
-		{
-			PrevPaletteAndIndexed.PushBack( nullptr );
-			PrevPaletteAndIndexed.PushBack( nullptr );
-		}
-		auto pPrevIndexedImage = PrevPaletteAndIndexed[1];
-		auto pPrevPalette = PrevPaletteAndIndexed[0];
-
-		static bool MakeDebugPalette = false;
-		
-		std::shared_ptr<GifPalette> pNewPalette;
-		std::shared_ptr<SoyPixelsImpl> pNewPaletteImage;
-		{
-			//	slow ~100ms
-			
-			if ( MakeDebugPalette )
-			{
-				Soy::TScopeTimerPrint Timer("GifDebugPalette",1);
-				GifDebugPalette( pNewPaletteImage );
-			}
-			else if ( !Dither && mPrevImage )
-			{
-				Soy::TScopeTimerPrint Timer("GifMakeDiffPalette",1);
-				GifMakeDiffPalette( *pPrevIndexedImage, *pPrevPalette, image, width, height, pNewPaletteImage );
-			}
-			else
-			{
-				Soy::TScopeTimerPrint Timer("GifExtractPalette",1);
-				GifExtractPalette( image, width, height, Channels, pNewPaletteImage );
-			}
-			
-			Soy::TScopeTimerPrint Timer("GifMakePalette",1);
-			GifMakePalette( *pNewPaletteImage, Dither, pNewPalette );
-		}
-		
-		Soy::Assert( pNewPalette != nullptr, "Failed to create palette");
-		auto& NewPalette = *pNewPalette;
-		
-		std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
-		auto& IndexedImage = *pIndexedImage;
-		static bool DebugDrawPalette = false;
-		
-
-		
-		if ( DebugDrawPalette )
-		{
-			IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
-			auto* PaletteRgb = &NewPalette.mPalette->GetPixelPtr(0,0,0);
-			uint8 PaletteLocal[256*3];
-			memcpy( PaletteLocal, PaletteRgb, 256*3 );
-			for ( int y=0;	y<height;	y++ )
-			{
-				for ( int x=0;	x<width;	x++ )
-				{
-					IndexedImage.SetPixel( x, y, 0, y % NewPalette.GetSize() );
-				}
-			}
-		}
-		else if ( Dither )
-		{
-			Soy::TScopeTimerPrint Timer("GifDitherImage",1);
-			SoyPixels ReducedImage;
-			ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
-			GifDitherImage( pPrevIndexedImage.get(), pPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
-			MakeIndexedImage( IndexedImage, ReducedImage );
-		}
-		else
-		{
-			//	slower ~200ms
-			Soy::TScopeTimerPrint Timer("GifThresholdImage",1);
-			IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
-			GifThresholdImage( pPrevIndexedImage.get(), pPrevPalette.get(), image, IndexedImage, width, height, NewPalette);
-		}
-		
-		//	join together
-		PalettisedImage.reset( new SoyPixels );
-		SoyPixelsFormat::MakePaletteised( *PalettisedImage, IndexedImage, NewPalette.GetPalette(), NewPalette.GetTransparentIndex() );
-	}
-	
-
-	
 	{
 		GifWriter LzwWriter;
 		
@@ -300,7 +206,7 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		
 		
 		BufferArray<std::shared_ptr<SoyPixelsImpl>,2> PaletteAndIndexed;
-		PalettisedImage->SplitPlanes( GetArrayBridge(PaletteAndIndexed) );
+		PalettisedImage.SplitPlanes( GetArrayBridge(PaletteAndIndexed) );
 		
 		auto& IndexedImage = *PaletteAndIndexed[1];
 		auto& Palette = *PaletteAndIndexed[0];
@@ -310,8 +216,6 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette );
 		
 		Output.Push( LzwWrite );
-
-		mPrevImage = PalettisedImage;
 	}
 	
 	std::Debug << "GifWriteFrameFinished" << std::endl;
@@ -319,14 +223,31 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 
 
 
-Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex) :
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext) :
 	SoyWorkerThread	( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder	( OutputBuffer ),
-	mStreamIndex	( StreamIndex )
+	mStreamIndex	( StreamIndex ),
+	mOpenglContext	( OpenglContext )
 {
 	Start();
 }
-	
+
+
+Gif::TEncoder::~TEncoder()
+{
+	//	deffered delete of stuff
+	if ( mOpenglContext )
+	{
+		mPendingFramesLock.lock();
+		mPendingFrames.Clear();
+		mPendingFramesLock.unlock();
+		
+		Opengl::DeferDelete( mOpenglContext, mOpenglBlitter );
+		
+		mOpenglContext.reset();
+	}
+}
+
 void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
 	//	do here in opengl...
@@ -335,19 +256,22 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 	//		read pixels
 	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
 	auto& Packet = *pPacket;
-	
-	//	construct pixels against data and read it
-	SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
-	Image.Read( Pixels );
-	
+
+	static bool DupliateTexture = true;
+	if ( DupliateTexture )
+	{
+		Packet.mPixelBuffer = CopyFrameImmediate( Image );
+	}
+	else
+	{
+		//	construct pixels against data and read it
+		SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
+		Image.Read( Pixels );
+	}
 	Packet.mTimecode = Timecode;
 	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
-
-	PushFrame( pPacket );
 	
-	//	do on thread
-	//		encode to gif format
-	//		queue packet
+	PushFrame( pPacket );
 }
 
 void Gif::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
@@ -367,6 +291,34 @@ bool Gif::TEncoder::Iteration()
 		return true;
 	auto& Packet = *pPacket;
 
+	//	extract pixels
+	SoyPixelsDef<Array<uint8>> Rgba( Packet.mData, Packet.mMeta.mPixelMeta );
+
+	if ( Packet.mPixelBuffer )
+	{
+		auto& Texture = dynamic_cast<TTextureBuffer&>( *Packet.mPixelBuffer );
+		auto Read = [&]
+		{
+			Texture.mImage->Read( Rgba );
+		};
+		Soy::TSemaphore Semaphore;
+		mOpenglContext->PushJob( Read, Semaphore );
+		Semaphore.Wait();
+		Packet.mPixelBuffer.reset();
+	}
+	
+	//	make/find/copy palette
+	//	reduce to 256
+	//	mask
+	//	push Palettised
+	SoyPixels RgbaCopy;
+	RgbaCopy.Copy( Rgba );
+	SoyPixelsDef<Array<uint8>> PalettisedImage( Packet.mData, Packet.mMeta.mPixelMeta );
+	MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame );
+
+	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
+	
+	
 	//	drop packets
 	auto Block = []
 	{
@@ -393,5 +345,129 @@ std::shared_ptr<TMediaPacket> Gif::TEncoder::PopFrame()
 	
 	std::lock_guard<std::mutex> Lock( mPendingFramesLock );
 	return mPendingFrames.PopAt(0);
+}
+
+std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const Opengl::TTexture& Image)
+{
+	std::shared_ptr<TTextureBuffer> Buffer( new TTextureBuffer(mOpenglContext) );
+	Buffer->mImage.reset( new Opengl::TTexture( Image.mMeta, GL_TEXTURE_2D ) );
+	
+	if ( !mOpenglBlitter )
+		mOpenglBlitter.reset( new Opengl::TBlitter );
+
+	BufferArray<Opengl::TTexture,1> ImageAsArray;
+	ImageAsArray.PushBack( Image );
+	Opengl::TTextureUploadParams Params;
+	mOpenglBlitter->BlitTexture( *Buffer->mImage, GetArrayBridge(ImageAsArray), *mOpenglContext, Params );
+
+	return Buffer;
+}
+
+
+void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe)
+{
+	auto width = Rgba.GetWidth();
+	auto height = Rgba.GetHeight();
+	static bool Dither = false;
+	auto Channels = SoyPixelsFormat::GetChannelCount( PalettisedImage.GetFormat() );
+	
+	Soy::TScopeTimerPrint Timer("GifWriteFrame",1);
+	auto& RgbaArray = PalettisedImage.GetPixelsArray();
+	auto* RgbaData = RgbaArray.GetArray();
+	auto* image = RgbaData;
+	
+	
+	static bool TransparentMerge = false;
+	
+	auto pPrevIndexedImage = mPrevImageIndexes;
+	auto pPrevPalette = mPrevPalette;
+
+	if ( !TransparentMerge )
+		pPrevIndexedImage.reset();
+
+	static bool MakeDebugPalette = false;
+		
+	std::shared_ptr<GifPalette> pNewPalette;
+	std::shared_ptr<SoyPixelsImpl> pNewPaletteImage;
+
+	if ( MakeDebugPalette )
+	{
+		Keyframe = true;
+		Soy::TScopeTimerPrint Timer("GifDebugPalette",1);
+		GifDebugPalette( pNewPaletteImage );
+	}
+	else if ( !Dither && pPrevIndexedImage && pPrevPalette )
+	{
+		Keyframe = false;
+		Soy::TScopeTimerPrint Timer("GifMakeDiffPalette",1);
+		GifMakeDiffPalette( *pPrevIndexedImage, *pPrevPalette, image, width, height, pNewPaletteImage );
+	}
+	else
+	{
+		Keyframe = true;
+		Soy::TScopeTimerPrint Timer("GifExtractPalette",1);
+		GifExtractPalette( image, width, height, Channels, pNewPaletteImage );
+	}
+	
+	//	make palette lookup table & shrink to 256 max
+	{
+		Soy::TScopeTimerPrint Timer("GifMakePalette",1);
+		GifMakePalette( *pNewPaletteImage, Dither, pNewPalette );
+	}
+	
+	Soy::Assert( pNewPalette != nullptr, "Failed to create palette");
+	auto& NewPalette = *pNewPalette;
+	
+	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
+	auto& IndexedImage = *pIndexedImage;
+	static bool DebugDrawPalette = false;
+	
+	
+	if ( DebugDrawPalette )
+	{
+		Keyframe = true;
+		IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
+		auto* PaletteRgb = &NewPalette.mPalette->GetPixelPtr(0,0,0);
+		uint8 PaletteLocal[256*3];
+		memcpy( PaletteLocal, PaletteRgb, 256*3 );
+		for ( int y=0;	y<height;	y++ )
+		{
+			for ( int x=0;	x<width;	x++ )
+			{
+				IndexedImage.SetPixel( x, y, 0, y % NewPalette.GetSize() );
+			}
+		}
+	}
+	else if ( Dither )
+	{
+		Soy::TScopeTimerPrint Timer("GifDitherImage",1);
+		SoyPixels ReducedImage;
+		ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
+		GifDitherImage( pPrevIndexedImage.get(), pPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
+		MakeIndexedImage( IndexedImage, ReducedImage );
+	}
+	else
+	{
+		//	slower ~200ms
+		Soy::TScopeTimerPrint Timer("GifThresholdImage",1);
+		IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
+		GifThresholdImage( pPrevIndexedImage.get(), pPrevPalette.get(), image, IndexedImage, width, height, NewPalette);
+	}
+	
+	//	join together
+	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, NewPalette.GetPalette(), NewPalette.GetTransparentIndex() );
+}
+	
+
+TTextureBuffer::TTextureBuffer(std::shared_ptr<Opengl::TContext> OpenglContext) :
+	mOpenglContext	( OpenglContext )
+{
+	
+}
+
+TTextureBuffer::~TTextureBuffer()
+{
+	Opengl::DeferDelete( mOpenglContext, mImage );
+	mOpenglContext.reset();
 }
 
