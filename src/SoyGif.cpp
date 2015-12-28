@@ -315,12 +315,20 @@ bool Gif::TEncoder::Iteration()
 	if ( Packet.mPixelBuffer )
 	{
 		auto& Texture = dynamic_cast<TTextureBuffer&>( *Packet.mPixelBuffer );
-		auto Read = [&]
+		
+		mOpenglSemaphore.reset( new Soy::TSemaphore );
+
+		//	copy for other thread in case the opengl job gets defferred for a long time and the buffer gets deleted in the meantime;
+		//	run -> stop(in editor) -> opengl queue paused, frames deleted -> enable -> job runs -> frame is deleted
+		std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = mOpenglSemaphore;
+		auto Read = [&Rgba,&Texture,SemaphoreCopy]
 		{
 			static bool Flip = false;
+			//	gr: if semaphore has been aborted elsewhere (destructor) we know the Texture & Rgba are deleted!
+			if ( SemaphoreCopy->IsCompleted() )
+				return;
 			Texture.mImage->Read( Rgba, SoyPixelsFormat::RGBA, Flip );
 		};
-		mOpenglSemaphore.reset( new Soy::TSemaphore );
 		mOpenglContext->PushJob( Read, *mOpenglSemaphore );
 		try
 		{
@@ -328,6 +336,10 @@ bool Gif::TEncoder::Iteration()
 		}
 		catch(std::exception& e)
 		{
+			SemaphoreCopy.reset();
+			mOpenglSemaphore.reset();
+			
+			//	data semaphore may be early-aborted, but job still in queue (see above)
 			std::Debug << "Failed to read pixels from pending gif-encoding buffer (dropping packet); " << e.what();
 			//	drop packet
 			return true;
