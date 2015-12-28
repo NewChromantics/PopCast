@@ -10,14 +10,12 @@
 
 
 TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
-	TCaster			( Params ),
-	SoyWorkerThread	( std::string("TFileCaster/")+Params.mName, SoyWorkerWaitMode::Wake )
+	TCaster			( Params )
 {
 	auto& Filename = Params.mName;
 	
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
-	this->WakeOnEvent( mFrameBuffer->mOnNewPacket );
 
 #if defined(TARGET_OSX)
 	static bool UseAvfMuxer = true;
@@ -63,7 +61,6 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 	
 	if ( mFileStream )
 		mFileStream->Start();
-	Start();
 }
 
 TFileCaster::~TFileCaster()
@@ -87,45 +84,7 @@ TFileCaster::~TFileCaster()
 	
 	mFileStream.reset();
 	
-	WaitToFinish();
-	
 	mFrameBuffer.reset();
-}
-
-bool TFileCaster::Iteration()
-{
-	/*
-	//	push frames to muxer
-	while ( true )
-	{
-		try
-		{
-			//	pop frames
-			auto pPacket = mFrameBuffer->PopPacket();
-			if ( !pPacket )
-				break;
-
-			auto& Packet = *pPacket;
-			mMuxer->Push( Packet );
-		
-		}
-		catch (std::exception& e)
-		{
-			std::Debug << "TFileCaster get-packet error: " << e.what() << std::endl;
-			break;
-		}
-	}
-*/
-	return true;
-}
-
-
-bool TFileCaster::CanSleep()
-{
-	if ( !mFrameBuffer )
-		return true;
-	
-	return mFrameBuffer->HasPackets();
 }
 
 void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)

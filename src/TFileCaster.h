@@ -92,7 +92,7 @@ public:
 
 
 	
-class TFileCaster : public TCaster, public SoyWorkerThread
+class TFileCaster : public TCaster
 {
 public:
 	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext);
@@ -100,10 +100,6 @@ public:
 	
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
 	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
-	
-protected:
-	virtual bool		Iteration() override;
-	virtual bool		CanSleep() override;
 	
 private:
 	TMediaEncoder&		AllocEncoder(size_t StreamIndex);
