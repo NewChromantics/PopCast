@@ -18,7 +18,6 @@ public class TestCast : MonoBehaviour {
 		if (mCast == null) {
 			mCast = new PopCast (mOutputTarget, new PopCastParams ());
 			mCast.AddDebugCallback (Debug.Log);
-		//	mCast.AddDebugCallback( TestGui.Log );
 		}
 	}
 
