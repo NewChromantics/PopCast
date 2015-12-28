@@ -54,10 +54,7 @@ void Gif::TMuxer::Finish()
 	std::shared_ptr<Soy::TWriteProtocol> FooterWrite( new TRawWriteDataProtocol );
 	Array<char>& HeaderData = dynamic_cast<TRawWriteDataProtocol&>( *FooterWrite ).mData;
 	
-	auto Open = []
-	{
-		
-	};
+
 	auto Putc = [this,&HeaderData](uint8 c)
 	{
 		HeaderData.PushBack(c);
@@ -78,10 +75,11 @@ void Gif::TMuxer::Finish()
 	};
 	
 	GifWriter Writer;
-	Writer.Open = Open;
+	Writer.Open = []{};
 	Writer.fputc = Putc;
 	Writer.fputs = Puts;
 	Writer.fwrite = fwrite;
+	Writer.Close = []{};
 	
 
 	GifEnd( Writer );
@@ -104,10 +102,6 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	std::shared_ptr<Soy::TWriteProtocol> HeaderWrite( new TRawWriteDataProtocol );
 	Array<char>& HeaderData = dynamic_cast<TRawWriteDataProtocol&>( *HeaderWrite ).mData;
 	
-	auto Open = []
-	{
-		
-	};
 	auto Putc = [this,&HeaderData](uint8 c)
 	{
 		HeaderData.PushBack(c);
@@ -128,7 +122,7 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	};
 	
 	GifWriter Writer;
-	Writer.Open = Open;
+	Writer.Open = []{};
 	Writer.fputc = Putc;
 	Writer.fputs = Puts;
 	Writer.fwrite = fwrite;
@@ -248,6 +242,14 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 Gif::TEncoder::~TEncoder()
 {
 	//	stop thread
+	SoyThread::Stop(false);
+	
+	//	if we're waiting on an opengl job, break it, as unity won't be running the opengl thread whilst destructing(running GC)
+	auto OpenglSemaphore = mOpenglSemaphore;
+	if ( OpenglSemaphore )
+		OpenglSemaphore->OnFailed(__func__);
+	
+	//	wait for thread to finish
 	WaitToFinish();
 	
 	//	deffered delete of stuff
@@ -318,11 +320,25 @@ bool Gif::TEncoder::Iteration()
 			static bool Flip = false;
 			Texture.mImage->Read( Rgba, SoyPixelsFormat::RGBA, Flip );
 		};
-		Soy::TSemaphore Semaphore;
-		mOpenglContext->PushJob( Read, Semaphore );
-		Semaphore.Wait();
+		mOpenglSemaphore.reset( new Soy::TSemaphore );
+		mOpenglContext->PushJob( Read, *mOpenglSemaphore );
+		try
+		{
+			mOpenglSemaphore->Wait();
+		}
+		catch(std::exception& e)
+		{
+			std::Debug << "Failed to read pixels from pending gif-encoding buffer (dropping packet); " << e.what();
+			//	drop packet
+			return true;
+		}
+		mOpenglSemaphore.reset();
 		Packet.mPixelBuffer.reset();
 	}
+	
+	//	break out if the thread is stopped (gr: added here as we may break from the opengl job above)
+	if ( !IsWorking() )
+		return true;
 	
 	//	make/find/copy palette
 	//	reduce to 256

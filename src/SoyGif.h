@@ -86,6 +86,8 @@ public:
 	std::mutex				mPendingFramesLock;
 	Array<std::shared_ptr<TMediaPacket>>	mPendingFrames;
 	
+	//	when unity destructs us, the opengl thread is suspended, so we need to forcily break a semaphore
+	std::shared_ptr<Soy::TSemaphore>	mOpenglSemaphore;	
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;
 	std::shared_ptr<Opengl::TBlitter>	mOpenglBlitter;
 	
