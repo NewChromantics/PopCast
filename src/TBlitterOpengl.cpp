@@ -3,27 +3,6 @@
 #include <SoyMedia.h>
 
 
-#if (POPMOVIE_WATERMARK!=0)
-
-
-//	grahams fancy chevron watermark; https://www.shadertoy.com/view/4lSXRW
-#define APPLY_WATERMARK_GLSL(rgba,uv)	\
-	"float stripexval = mod((1.0-" uv ".y+0.01)*4.0,0.7);\n"	\
-	"float stripeyval = mod((" uv ".x+0.01)*10.0,1.2);\n"	\
-	"bool stripexa = stripexval  >= mix( 0.0, 0.5, stripeyval+0.0 ) && stripexval <= 1.0-mix( 0.0, 0.5, stripeyval+0.0 ) && stripeyval > 0.7;\n"	\
-	"bool stripexb = stripexval  >= mix( 0.0, 0.5, stripeyval+0.2 ) && stripexval <= 1.0-mix( 0.0, 0.5, stripeyval+0.2 );\n"	\
-	"bool stripexc = stripexval >= mix( 0.0, 0.5, stripeyval+0.4 ) && stripexval <= 1.0-mix( 0.0, 0.5, stripeyval+0.4 );\n"	\
-	"bool stripexd = stripexval >= mix( 0.0, 0.5, stripeyval+0.6 ) && stripexval <= 1.0-mix( 0.0, 0.5, stripeyval+0.6 );\n"	\
-	"bool stripex = ( stripexa && !stripexb ) || ( stripexc && !stripexd );\n"	\
-	"bool stripey = stripeyval > 0.30;\n"	\
-	"if ( stripex && stripey  )\n"	\
-	"	" rgba ".rgb = " WATERMARK_RGB_GLSL ";\n"
-
-#else
-
-    #define APPLY_WATERMARK_GLSL(rgba,uv)	"{}"
-
-#endif
 
 
 namespace PopMovie
@@ -32,13 +11,6 @@ namespace PopMovie
 	Soy::TRgb	BlitClearColour = Soy::TRgb(1,1,0);
 }
 
-//	gl es 2 requires precision specification. todo; add this to the shader upgrader if it's the first thing on the line
-//	or a varying
-
-//	ES2 (what glsl?) requires precision, but not on mat?
-//	ES3 glsl 100 (android s6) requires precision on vec's and mat
-//	gr: changed to highprecision to fix sampling aliasing with the bjork video
-#define PREC	"highp "
 
 
 const char* Opengl::BlitVertShader =
@@ -55,7 +27,9 @@ const char* Opengl::BlitVertShader =
 "	oTexCoord = vec2( TexCoord.x, 1.0-TexCoord.y);\n"
 "}\n";
 
+
 static auto BlitFragShader2D =
+"" WATERMARK_PREAMBLE_GLSL ""
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform sampler2D Texture0;\n"
 //"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
@@ -78,6 +52,7 @@ static std::string BlitFragShaderYuv(const Soy::TYuvParams& Yuv,SoyPixelsFormat:
 {
 	std::stringstream Shader;
 	Shader <<
+	"" WATERMARK_PREAMBLE_GLSL ""
 	"varying " PREC " vec2 oTexCoord;\n"
 	"uniform sampler2D Texture0;\n"
 	"uniform sampler2D Texture1;\n"
@@ -136,6 +111,7 @@ static std::string BlitFragShaderYuv(const Soy::TYuvParams& Yuv,SoyPixelsFormat:
 
 
 auto BlitFragShaderRectangle =
+"" WATERMARK_PREAMBLE_GLSL ""
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform sampler2DRect Texture0;\n"
 "uniform " PREC " vec2 Texture0_PixelSize;\n"
@@ -158,6 +134,7 @@ auto BlitFragShaderRectangle =
 //	https://www.khronos.org/registry/gles/extensions/OES/OES_EGL_image_external_essl3.txt
 auto BlitFragShaderOesExternal =
 "#extension GL_OES_EGL_image_external : require\n"
+"" WATERMARK_PREAMBLE_GLSL ""
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform samplerExternalOES Texture0;\n"
 //"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
@@ -172,6 +149,7 @@ auto BlitFragShaderOesExternal =
 "}\n";
 
 static auto BlitFragShaderTest =
+"" WATERMARK_PREAMBLE_GLSL ""
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform " PREC "mat3 Transform;\n"
 "void main()\n"
@@ -186,6 +164,7 @@ APPLY_WATERMARK_GLSL("rgba","uv")
 
 
 static auto BlitFragShaderError =
+"" WATERMARK_PREAMBLE_GLSL ""
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform " PREC "mat3 Transform;\n"
 "void main()\n"
@@ -200,6 +179,7 @@ APPLY_WATERMARK_GLSL("rgba","uv")
 
 //	gr: have this conversion somewhere in the lib
 auto BlitFragShaderFreenectDepth10mm =
+"" WATERMARK_PREAMBLE_GLSL ""
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform sampler2D Texture0;\n"
 "const float DepthInvalid = 0.f/1000.f;\n"

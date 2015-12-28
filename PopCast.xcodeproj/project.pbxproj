@@ -418,6 +418,7 @@
 		BFC4E1C01C308B71008D13EC /* TBlitterDirectx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitterDirectx.h; sourceTree = "<group>"; };
 		BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitterOpengl.cpp; sourceTree = "<group>"; };
 		BFC4E1C21C308B71008D13EC /* TBlitterOpengl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitterOpengl.h; sourceTree = "<group>"; };
+		BFC4E1C81C3173E8008D13EC /* TBlitterWatermark.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TBlitterWatermark.h; sourceTree = "<group>"; };
 		BFEEDD6D1B46A7E5002F9CFA /* libPopCastIos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPopCastIos.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFEF57071B6139DE00340796 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -655,6 +656,7 @@
 				BFC4E1BE1C308B71008D13EC /* TBlitter.h */,
 				BFC4E1BF1C308B71008D13EC /* TBlitterDirectx.cpp */,
 				BFC4E1C01C308B71008D13EC /* TBlitterDirectx.h */,
+				BFC4E1C81C3173E8008D13EC /* TBlitterWatermark.h */,
 				BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */,
 				BFC4E1C21C308B71008D13EC /* TBlitterOpengl.h */,
 				BFAEE8991C2774A500E25C47 /* SoyGif.cpp */,

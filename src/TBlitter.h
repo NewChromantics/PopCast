@@ -1,8 +1,7 @@
 #pragma once
 
 
-#define WATERMARK_RGB_GLSL		"vec3(1,0,0.376)"
-#define WATERMARK_RGB_HLSL		"float3(1,0,0.376)"
+#include "TBlitterWatermark.h"
 
 
 
