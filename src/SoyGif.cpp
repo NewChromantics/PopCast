@@ -1,3 +1,92 @@
+/*
+ 
+ 
+ 
+ int Watermark_00 = 0x7FFF; int Watermark_10 = 0xFFFC;
+ int Watermark_01 = 0xC444; int Watermark_11 = 0x4446;
+ int Watermark_02 = 0xD555;	int Watermark_12 = 0xD5EE;
+ int Watermark_03 = 0xC545;	int Watermark_13 = 0xC46E;
+ int Watermark_04 = 0xDD5D;	int Watermark_14 = 0xD76E;
+ int Watermark_05 = 0xDC5D;	int Watermark_15 = 0x546E;
+ int Watermark_06 = 0x7FFF;	int Watermark_16 = 0xFFFC;
+ int Watermark_07 = 0xE00;	int Watermark_17 = 0;
+ int Watermark_08 = 0xC00;	int Watermark_18 = 0;
+ int Watermark_09 = 0x1800;	int Watermark_19 = 0;
+ 
+ #define BIT_MAX 16
+ 
+ int bitwiseAnd(int a, int bit)
+ {
+ if ( bit > BIT_MAX ) return 0;
+ bit = BIT_MAX-bit;
+ int b = 1;
+ for ( int i=1;i<BIT_MAX;i++ )
+ {
+ if ( bit > 0 )
+ {
+ b *= 2;
+ bit -= 1;
+ }
+ }
+ 
+ int result = 0;
+ int n = 1;
+ for ( int i=0; i<BIT_MAX; i++ )
+ {
+ if ((a > 0) && (b > 0)) {
+ if (((mod(float(a),2.0)) == 1.0) && ((mod(float(b),2.0)) == 1.0)) {
+ result += n;
+ }
+ a = a / 2;
+ b = b / 2;
+ n = n * 2;
+ }
+ else
+ break;
+ }
+ return result;
+ }
+ 
+ 
+ int GetWatermark(int x, int y)
+ {
+ if ( x < 0 )
+ return 0;
+ if ( y == 0 )	return x < 16 ? Watermark_00 : Watermark_10;
+ if ( y == 1 )	return x < 16 ? Watermark_01 : Watermark_11;
+ if ( y == 2 )	return x < 16 ? Watermark_02 : Watermark_12;
+ if ( y == 3 )	return x < 16 ? Watermark_03 : Watermark_13;
+ if ( y == 4 )	return x < 16 ? Watermark_04 : Watermark_14;
+ if ( y == 5 )	return x < 16 ? Watermark_05 : Watermark_15;
+ if ( y == 6 )	return x < 16 ? Watermark_06 : Watermark_16;
+ if ( y == 7 )	return x < 16 ? Watermark_07 : Watermark_17;
+ if ( y == 8 )	return x < 16 ? Watermark_08 : Watermark_18;
+ if ( y == 9 )	return x < 16 ? Watermark_09 : Watermark_19;
+ 
+ return 0;
+ }
+ 
+ void mainImage( out vec4 fragColor, in vec2 fragCoord )
+ {
+ vec2 uv = fragCoord.xy / iResolution.xy;
+	fragColor = vec4(uv,0.5+0.5*sin(iGlobalTime),1.0);
+ 
+ 
+ 
+ int x = int(floor(uv.x * 60.0) )- 10;
+ int y = int((1.0-uv.y) * 60.0 * (iResolution.y/iResolution.x)) - 2;
+ 
+ 
+ int Watermark = GetWatermark( x, y );
+	bool WatermarkPixel = bitwiseAnd( Watermark, x<16 ? x : x-16 ) != 0;
+ 
+ if ( WatermarkPixel )
+ fragColor = vec4( 1,1,1,1 );
+ 
+ }
+ */
+
+
 #include "SoyGif.h"
 #include "TFileCaster.h"
 
