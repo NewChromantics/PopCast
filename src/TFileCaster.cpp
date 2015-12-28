@@ -9,7 +9,7 @@
 #endif
 
 
-TFileCaster::TFileCaster(const TCasterParams& Params) :
+TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
 	TCaster			( Params ),
 	SoyWorkerThread	( std::string("TFileCaster/")+Params.mName, SoyWorkerWaitMode::Wake )
 {
@@ -25,9 +25,9 @@ TFileCaster::TFileCaster(const TCasterParams& Params) :
 	
 	if ( Soy::StringEndsWith( Params.mName, ".gif", false ) )
 	{
-		auto AllocGifEncoder = [this](size_t StreamIndex)
+		auto AllocGifEncoder = [this,OpenglContext](size_t StreamIndex)
 		{
-			return Gif::AllocEncoder( mFrameBuffer, StreamIndex );
+			return Gif::AllocEncoder( mFrameBuffer, StreamIndex, OpenglContext );
 		};
 		mAllocEncoder = AllocGifEncoder;
 		mFileStream.reset( new TFileStreamWriter( Filename ) );

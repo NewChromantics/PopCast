@@ -2,6 +2,8 @@
 
 #include <SoyTypes.h>
 #include <SoyMedia.h>
+#include "TBlitterOpengl.h"
+
 
 class GifWriter;
 class GifPalette;
@@ -11,7 +13,7 @@ class TRawWriteDataProtocol;
 //	https://github.com/ginsweater/gif-h/blob/master/gif.h
 namespace Gif
 {
-	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex);
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext);
 
 	class TMuxer;
 	class TEncoder;
@@ -33,20 +35,37 @@ protected:
 	
 public:
 	std::mutex					mBusy;
-	std::shared_ptr<GifWriter>	mWriter;
+	std::atomic<bool>			mStarted;
+	std::atomic<bool>			mFinished;
 	
-	std::shared_ptr<GifPalette>		mPrevPalette;
-	std::shared_ptr<SoyPixelsImpl>	mPrevImage;
-	
-	//	data being written to by GifWriter
-	std::shared_ptr<TRawWriteDataProtocol>	mBuffer;
+	std::shared_ptr<SoyPixelsImpl>	mPrevImage;	//	palettised image
 };
+
+
+class TTextureBuffer : public TPixelBuffer
+{
+public:
+	TTextureBuffer(std::shared_ptr<Opengl::TContext> OpenglContext);
+	~TTextureBuffer();
+	
+	virtual void		Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context) override	{}
+	virtual void		Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context) override	{}
+	virtual void		Lock(ArrayBridge<SoyPixelsImpl*>&& Textures) override	{}
+	virtual void		Unlock() override	{}
+
+	
+public:
+	std::shared_ptr<Opengl::TContext>	mOpenglContext;
+	std::shared_ptr<Opengl::TTexture>	mImage;	//	copy of the image
+};
+
 
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
 public:
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext>	OpenglContext);
+	~TEncoder();
 	
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
 	virtual void			Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
@@ -57,10 +76,21 @@ protected:
 	void							PushFrame(std::shared_ptr<TMediaPacket> Frame);
 	std::shared_ptr<TMediaPacket>	PopFrame();
 
+	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
+
+	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe);
+	
 public:
 	size_t					mStreamIndex;
-	size_t					mPacketsWritten;
 	
 	std::mutex				mPendingFramesLock;
 	Array<std::shared_ptr<TMediaPacket>>	mPendingFrames;
+	
+	//	when unity destructs us, the opengl thread is suspended, so we need to forcily break a semaphore
+	std::shared_ptr<Soy::TSemaphore>	mOpenglSemaphore;	
+	std::shared_ptr<Opengl::TContext>	mOpenglContext;
+	std::shared_ptr<Opengl::TBlitter>	mOpenglBlitter;
+	
+	std::shared_ptr<SoyPixelsImpl>		mPrevPalette;
+	std::shared_ptr<SoyPixelsImpl>		mPrevImageIndexes;
 };

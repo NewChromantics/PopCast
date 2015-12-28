@@ -215,7 +215,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OutputTextures:
   - {fileID: 0}
-  mOutputTarget: file:/Volumes/Assets/cat.gif
+  mOutputTarget: file:StreamingAssets/*.gif
   mCaptureCamera: {fileID: 572881025}
   mCaptureCameraTexture: {fileID: 0}
 --- !u!4 &843894333

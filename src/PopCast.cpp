@@ -237,7 +237,7 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	}
 	else if ( Soy::StringTrimLeft( Params.mName, "file:", false ) )
 	{
-		mCaster.reset( new TFileCaster(Params) );
+		mCaster.reset( new TFileCaster( Params, Unity::GetOpenglContextPtr() ) );
 	}
 	else
 	{
