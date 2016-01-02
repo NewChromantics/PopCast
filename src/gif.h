@@ -205,7 +205,7 @@ void GifGetClosestPaletteColor(GifPalette& Palette, int r, int g, int b, int& be
     // base case, reached the bottom of the tree
     if(treeRoot > Palette.GetSize()-1)
     {
-        int ind = treeRoot-Palette.GetSize();
+        int ind = treeRoot - size_cast<int>(Palette.GetSize());
         if(ind == kGifTransIndex) return;
         
         // check whether this color is better than the current winner
@@ -442,7 +442,7 @@ int GifPickChangedPixels(SoyPixelsImpl& PrevIndexes,GifPalette& PrevPalette, uin
     uint8_t* writeIter = frame_rgba;
 	
 	auto& LastIndexes = PrevIndexes.GetPixelsArray();
-	int numPixels = LastIndexes.GetSize();
+	auto numPixels = LastIndexes.GetSize();
 	
     for (int ii=0; ii<numPixels; ++ii)
     {
@@ -511,10 +511,8 @@ void GifMakeDiffPalette(const SoyPixelsImpl& PrevIndexes,const SoyPixelsImpl& Pr
 	Soy::Assert( PrevIndexes.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting indexed iamge");
 	Soy::Assert( PrevPalette.GetFormat()==SoyPixelsFormat::RGB, "Expecting RGB palette");
 
-	int numChanged = 0;
-	
 	auto& LastIndexes = PrevIndexes.GetPixelsArray();
-	int numPixels = LastIndexes.GetSize();
+	auto numPixels = LastIndexes.GetSize();
 	Array<Rgb8> NewColours;
 
 	for (int ii=0; ii<numPixels; ++ii)
@@ -620,7 +618,7 @@ void GifMakePalette(const SoyPixelsImpl& BigPalette,bool buildForDither,std::sha
 	const int splitElt = lastElt/2;
 	const int splitDist = splitElt/2;
 	
-	GifSplitPalette(destroyableImage.GetArray(), BigPalette.GetWidth(), 1, lastElt, splitElt, splitDist, 1, buildForDither, SmallPalette );
+	GifSplitPalette( destroyableImage.GetArray(), size_cast<int>(BigPalette.GetWidth()), 1, lastElt, splitElt, splitDist, 1, buildForDither, SmallPalette );
 	
 	
 	// add the bottom node for the transparency index
@@ -947,7 +945,7 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
     Writer.fputc(0x80 + GetBitIndex(PaddedPaletteSize) - 1); // local color table present, 2 ^ bitDepth entries
     GifWritePalette( Palette, PaddedPaletteSize, Writer );
     
-    const int minCodeSize = GetBitIndex(PaddedPaletteSize);
+	auto minCodeSize = size_cast<uint8>( GetBitIndex(PaddedPaletteSize) );
 	const uint32_t clearCode = size_cast<const uint32_t>( PaddedPaletteSize );
 	
     Writer.fputc(minCodeSize); // min code size 8 bits
