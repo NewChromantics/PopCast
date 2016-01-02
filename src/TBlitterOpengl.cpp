@@ -1,7 +1,7 @@
 #include "TBlitterOpengl.h"
 #include "TBlitter.h"
+#include "TBlitterWatermark.h"
 #include <SoyMedia.h>
-
 
 
 
@@ -11,6 +11,13 @@ namespace PopMovie
 	Soy::TRgb	BlitClearColour = Soy::TRgb(1,1,0);
 }
 
+//	gl es 2 requires precision specification. todo; add this to the shader upgrader if it's the first thing on the line
+//	or a varying
+
+//	ES2 (what glsl?) requires precision, but not on mat?
+//	ES3 glsl 100 (android s6) requires precision on vec's and mat
+//	gr: changed to highprecision to fix sampling aliasing with the bjork video
+#define PREC	"highp "
 
 
 const char* Opengl::BlitVertShader =
@@ -26,7 +33,6 @@ const char* Opengl::BlitVertShader =
 //	flip uv in vertex shader to apply to all
 "	oTexCoord = vec2( TexCoord.x, 1.0-TexCoord.y);\n"
 "}\n";
-
 
 static auto BlitFragShader2D =
 "" WATERMARK_PREAMBLE_GLSL ""
@@ -52,7 +58,6 @@ static std::string BlitFragShaderYuv(const Soy::TYuvParams& Yuv,SoyPixelsFormat:
 {
 	std::stringstream Shader;
 	Shader <<
-	"" WATERMARK_PREAMBLE_GLSL ""
 	"varying " PREC " vec2 oTexCoord;\n"
 	"uniform sampler2D Texture0;\n"
 	"uniform sampler2D Texture1;\n"
@@ -133,8 +138,8 @@ auto BlitFragShaderRectangle =
 //	for glsl3 support, try this extension
 //	https://www.khronos.org/registry/gles/extensions/OES/OES_EGL_image_external_essl3.txt
 auto BlitFragShaderOesExternal =
-"#extension GL_OES_EGL_image_external : require\n"
 "" WATERMARK_PREAMBLE_GLSL ""
+"#extension GL_OES_EGL_image_external : require\n"
 "varying " PREC " vec2 oTexCoord;\n"
 "uniform samplerExternalOES Texture0;\n"
 //"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
@@ -404,6 +409,26 @@ void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Err
 }
 
 
+void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::TTexture>&& Sources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
+{
+	//	grab provided shader if it's already compiled
+	std::shared_ptr<Opengl::TShader> OverrideShaderPtr;
+	if ( OverrideShader )
+	{
+		auto& pOverrideShader = mBlitShaders[OverrideShader];
+		if ( !pOverrideShader )
+		{
+			auto BlitGeo = GetGeo( Context );
+			Soy::Assert( BlitGeo!=nullptr, "Cannot allocate shader without geometry");
+			auto& VertexDesc = BlitGeo->mVertexDescription;
+			AllocShader( pOverrideShader, "OverrideShader", BlitVertShader, OverrideShader, VertexDesc, mBlitShaderTest, Context );
+		}
+		OverrideShaderPtr = pOverrideShader;
+	}
+	
+	BlitTexture( Target, GetArrayBridge(Sources), Context, UploadParams, OverrideShaderPtr );
+}
+
 void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::TTexture>&& Sources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,std::shared_ptr<Opengl::TShader> OverrideShader)
 {
 	ofScopeTimerWarning Timer("Blit opengl Texture[s]",4);
@@ -498,7 +523,7 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 	}
 }
 
-void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams)
+void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	ofScopeTimerWarning Timer("Blit SoyPixel Texture[s]",2);
 	
@@ -560,7 +585,7 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixel
 	}
 	
 	//	do normal blit
-	BlitTexture( Target, GetArrayBridge(SourceTextures), Context, UploadParams );
+	BlitTexture( Target, GetArrayBridge(SourceTextures), Context, UploadParams, OverrideShader );
 }
 
 
