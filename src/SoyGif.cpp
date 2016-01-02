@@ -15,19 +15,16 @@ namespace Gif
 }
 
 
-static auto GifFragShaderDebugPalette =
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform sampler2D Texture0;\n"	//	rgba
-"uniform sampler2D Texture1;\n"	//	palette
-//"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC " vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC " vec4 rgba = texture2D(Texture0,uv);\n"
-"	rgba = vec4( oTexCoord.y, oTexCoord.y, oTexCoord.y, oTexCoord.y );\n"
-"	gl_FragColor = rgba;\n"
-"}\n";
+
+const char* GifFragShaderSimpleNearest =
+#include "GifNearest.frag"
+;
+
+
+const char* GifFragShaderDebugPalette =
+#include "GifDebug.frag"
+;
+
 
 
 std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext)
@@ -336,6 +333,8 @@ bool Gif::TEncoder::Iteration()
 		auto& Texture = dynamic_cast<TTextureBuffer&>( *Packet.mPixelBuffer );
 		
 		mOpenglSemaphore.reset( new Soy::TSemaphore );
+		if ( !IsWorking() )
+			return true;
 
 		//	copy for other thread in case the opengl job gets defferred for a long time and the buffer gets deleted in the meantime;
 		//	run -> stop(in editor) -> opengl queue paused, frames deleted -> enable -> job runs -> frame is deleted
@@ -381,7 +380,12 @@ bool Gif::TEncoder::Iteration()
 	
 	try
 	{
-		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame );
+		static bool DebugPaletteShader = false;
+		const char* Shader = GifFragShaderSimpleNearest;
+		if ( DebugPaletteShader )
+			Shader = GifFragShaderDebugPalette;
+		
+		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	
 		//	drop packets
@@ -493,6 +497,8 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 	Soy::Assert( mOpenglContext!=nullptr, "Cannot use shader if no context");
 	
 	mOpenglSemaphore.reset( new Soy::TSemaphore );
+	if ( !IsWorking() )
+		return;
 	std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = mOpenglSemaphore;
 
 	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
@@ -542,12 +548,11 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 }
 
 
-void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe)
+void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader)
 {
 	auto width = size_cast<uint32>(Rgba.GetWidth());
 	auto height = size_cast<uint32>(Rgba.GetHeight());
 	static bool Dither = false;
-	auto Channels = SoyPixelsFormat::GetChannelCount( PalettisedImage.GetFormat() );
 	
 	auto& RgbaArray = PalettisedImage.GetPixelsArray();
 	auto* RgbaData = RgbaArray.GetArray();
@@ -580,10 +585,8 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 		//	gr: sort & shrink palette here, don't use lookup table
 		//	reserve 1 for transparency
 		ShrinkPalette( *pNewPalette, false, 255 );
-	
-		auto* Shader = GifFragShaderDebugPalette;
 		
-		IndexImageWithShader( IndexedImage, *pNewPalette, Rgba, Shader );
+		IndexImageWithShader( IndexedImage, *pNewPalette, Rgba, IndexingShader );
 	}
 	else
 	{

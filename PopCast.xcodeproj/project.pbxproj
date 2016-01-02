@@ -229,6 +229,8 @@
 		BFC4E1C51C308B71008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
 		BFC4E1C61C3097BB008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
 		BFC4E1C71C3097BC008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
+		BFD940DF1C385CC500616856 /* GifDebug.frag in Resources */ = {isa = PBXBuildFile; fileRef = BFD940DD1C385C6600616856 /* GifDebug.frag */; };
+		BFD940E31C385CDA00616856 /* GifNearest.frag in Resources */ = {isa = PBXBuildFile; fileRef = BFD940DE1C385C6600616856 /* GifNearest.frag */; };
 		BFEF570A1B613B0800340796 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0F1B5526D300CBD1AC /* CoreVideo.framework */; };
 		BFEF570B1B613B1200340796 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0B1B5526B800CBD1AC /* CoreMedia.framework */; };
 		BFEF570C1B613B2300340796 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B051B55268F00CBD1AC /* AVFoundation.framework */; };
@@ -419,6 +421,8 @@
 		BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitterOpengl.cpp; sourceTree = "<group>"; };
 		BFC4E1C21C308B71008D13EC /* TBlitterOpengl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitterOpengl.h; sourceTree = "<group>"; };
 		BFC4E1C81C3173E8008D13EC /* TBlitterWatermark.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TBlitterWatermark.h; sourceTree = "<group>"; };
+		BFD940DD1C385C6600616856 /* GifDebug.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = GifDebug.frag; sourceTree = "<group>"; };
+		BFD940DE1C385C6600616856 /* GifNearest.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = GifNearest.frag; sourceTree = "<group>"; };
 		BFEEDD6D1B46A7E5002F9CFA /* libPopCastIos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPopCastIos.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFEF57071B6139DE00340796 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -650,6 +654,8 @@
 				BFAD33D51B624D4300D3E7A6 /* PopCast.cs */,
 				BF1499AE1B4D640D00DA2575 /* PopCast.h */,
 				BFAD33C31B61720400D3E7A6 /* PopMovieTextureOsxFramework.h */,
+				BFD940DD1C385C6600616856 /* GifDebug.frag */,
+				BFD940DE1C385C6600616856 /* GifNearest.frag */,
 				BF1499AF1B4D640D00DA2575 /* PopUnity.cpp */,
 				BF1499B01B4D640D00DA2575 /* PopUnity.h */,
 				BFC4E1BD1C308B71008D13EC /* TBlitter.cpp */,
@@ -874,6 +880,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFD940DF1C385CC500616856 /* GifDebug.frag in Resources */,
+				BFD940E31C385CDA00616856 /* GifNearest.frag in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -74,7 +74,7 @@ public:
 	bool		mShaderPalettisiation;
 	bool		mAllowIntraFrames;	//	use transparency between frames
 	bool		mForcePrevPalette;	//	don't generate new palettes
-	bool		mMakeDebugPalette;	//
+	bool		mMakeDebugPalette;
 };
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
@@ -94,7 +94,7 @@ protected:
 
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
 
-	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe);
+	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader);
 	static void				GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const SoyPixelsImpl* PrevPalette,const SoyPixelsImpl* PrevIndexedImage,TEncodeParams Params,bool& IsKeyframe);
 	static void				ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,size_t MaxPaletteSize);
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
