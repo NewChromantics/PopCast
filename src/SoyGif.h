@@ -66,9 +66,9 @@ public:
 	TEncodeParams() :
 		mAllowIntraFrames		( true ),
 		mForcePrevPalette		( false ),
-		mMakeDebugPalette		( true ),
+		mMakeDebugPalette		( false ),
 		mShaderPalettisiation	( true ),
-		mFindPalettePixelSkip	( 0 )
+		mFindPalettePixelSkip	( 5 )
 	{
 	}
 	
@@ -96,7 +96,7 @@ protected:
 
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
 
-	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader);
+	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params);
 	static void				GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const SoyPixelsImpl* PrevPalette,const SoyPixelsImpl* PrevIndexedImage,TEncodeParams Params,bool& IsKeyframe);
 	static void				ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,size_t MaxPaletteSize,const TEncodeParams& Params);
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
@@ -117,6 +117,7 @@ public:
 	std::shared_ptr<Opengl::TTexture>	mPaletteImage;
 	std::shared_ptr<Opengl::TTexture>	mSourceImage;
 	
+	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
 	std::shared_ptr<SoyPixelsImpl>		mPrevPalette;
 	std::shared_ptr<SoyPixelsImpl>		mPrevImageIndexes;
 };

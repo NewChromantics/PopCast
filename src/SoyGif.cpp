@@ -370,10 +370,7 @@ bool Gif::TEncoder::Iteration()
 	if ( !IsWorking() )
 		return true;
 	
-	//	make/find/copy palette
-	//	reduce to 256
-	//	mask
-	//	push Palettised
+	//	gr: pool this copy and write palettised right back to packet data
 	SoyPixels RgbaCopy;
 	RgbaCopy.Copy( Rgba );
 	SoyPixelsDef<Array<uint8>> PalettisedImage( Packet.mData, Packet.mMeta.mPixelMeta );
@@ -385,7 +382,8 @@ bool Gif::TEncoder::Iteration()
 		if ( DebugPaletteShader )
 			Shader = GifFragShaderDebugPalette;
 		
-		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader );
+		static TEncodeParams Params;
+		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, Params );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	
 		//	drop packets
@@ -446,18 +444,32 @@ void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t 
 	auto PaletteSize = Frame.GetWidth() * Frame.GetHeight();
 	Palette.Init( PaletteSize/PixelStep, 1, SoyPixelsFormat::RGB );
 	
-	if ( Frame.GetMeta() == Palette.GetMeta() )
+	//	gr: pre-determine if we have alphas
+	bool HasAlphas = true;
+	
+	if ( Frame.GetMeta() == Palette.GetMeta() && !HasAlphas )
 	{
 		Palette.GetPixelsArray().Copy( Frame.GetPixelsArray() );
 	}
 	else
 	{
+		int PaletteIndex = 0;
 		for ( int i=0;	i<Palette.GetWidth();	i++ )
 		{
 			auto xy = Frame.GetXy( i*PixelStep );
-			auto rgb = Frame.GetPixel3( xy.x, xy.y );
-			Palette.SetPixel( i, 0, rgb );
+			auto rgba = Frame.GetPixel4( xy.x, xy.y );
+			
+			//	skip alphas
+			if ( rgba.w == 0 )
+				continue;
+			
+			Palette.SetPixel( PaletteIndex, 0, rgba.xyz() );
+			PaletteIndex++;
 		}
+		
+		//	clip unset
+		if ( Palette.GetWidth() != PaletteIndex+1 )
+			Palette.ResizeClip( PaletteIndex+1, Palette.GetHeight() );
 	}
 }
 
@@ -545,8 +557,11 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 		if ( !mSourceImage )
 			mSourceImage.reset( new Opengl::TTexture( Source.GetMeta(), GL_TEXTURE_2D ) );
 
-		mSourceImage->Write( Source );
-		mPaletteImage->Write( Palette );
+		{
+			Soy::TScopeTimerPrint Timer( "opengl: upload source images", 2 );
+			mSourceImage->Write( Source );
+			mPaletteImage->Write( Palette );
+		}
 		
 		if ( !mOpenglBlitter )
 			mOpenglBlitter.reset( new Opengl::TBlitter );
@@ -560,7 +575,10 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 			Soy::TScopeTimerPrint Timer( "Palettising blit", 2 );
 			mOpenglBlitter->BlitTexture( *mIndexImage, GetArrayBridge(Sources), *mOpenglContext, UploadParams, FragShader );
 		}
-		mIndexImage->Read( IndexedImage );
+		{
+			Soy::TScopeTimerPrint Timer( "opengl: read back indexed image", 2 );
+			mIndexImage->Read( IndexedImage );
+		}
 	};
 	
 	mOpenglContext->PushJob( Work, *mOpenglSemaphore );
@@ -579,7 +597,7 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 }
 
 
-void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader)
+void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params)
 {
 	auto width = size_cast<uint32>(Rgba.GetWidth());
 	auto height = size_cast<uint32>(Rgba.GetHeight());
@@ -589,19 +607,36 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	auto* RgbaData = RgbaArray.GetArray();
 	auto* image = RgbaData;
 	
-	
-	static TEncodeParams Params;
-	
 	auto pPrevIndexedImage = mPrevImageIndexes;
 	auto pPrevPalette = mPrevPalette;
 
-	if ( !Params.mAllowIntraFrames )
-		pPrevIndexedImage.reset();
-	
 	std::shared_ptr<SoyPixelsImpl> pNewPalette;
 
 	static int TransparentIndex = 0;
 	//uint8 TransparentIndex = NewPalette.GetTransparentIndex();
+	
+	static bool TestAlpha = false;
+	
+	std::shared_ptr<SoyPixelsImpl> RgbaCopy;
+	if ( TestAlpha && mPrevRgb )
+	{
+		RgbaCopy.reset( new SoyPixels( Rgba ) );
+		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
+		
+		//	mask image
+		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
+		int HoleSize = 40;
+		int Centerx = size_cast<int>(RgbaMutable.GetWidth()) / 2 - HoleSize;
+		int Centery = size_cast<int>(RgbaMutable.GetHeight()) / 2 - HoleSize;
+		for ( int y=-HoleSize;	y<HoleSize;	y++ )
+		{
+			for ( int x=-HoleSize;	x<HoleSize;	x++ )
+			{
+				RgbaMutable.SetPixel( Centerx+x, Centery+y, 3, 0 );
+			}
+		}
+	}
+	
 
 	//	gr: this currently generates a full palette (can be > 256)
 	bool IsPaletteKeyframe = true;
@@ -619,7 +654,7 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 		ShrinkPalette( *pNewPalette, false, 255, Params );
 		
 		//	insert/override transparent
-		//pNewPalette->SetPixel( TransparentIndex, 0, Rgb8(255,0,255) );
+		pNewPalette->SetPixel( TransparentIndex, 0, Rgb8(255,0,255) );
 		
 		IndexImageWithShader( IndexedImage, *pNewPalette, Rgba, IndexingShader );
 	}
@@ -671,6 +706,13 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 		
 		pNewPalette->Copy( pNewGifPalette->GetPalette() );
 	}
+	
+	//	save unmodifed frame
+	//	gr: should this store(accumulate) a flattened image, so comparison with prev is palettised, rather than original
+	if ( RgbaCopy )
+		mPrevRgb = RgbaCopy;
+	else
+		mPrevRgb.reset( new SoyPixels( Rgba ) );
 	
 	//	join together
 	Soy::TScopeTimerPrint Timer("MakePaletteised",1);
