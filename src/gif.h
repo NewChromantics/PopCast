@@ -751,7 +751,7 @@ void GifWritePalette( const SoyPixelsImpl& Palette,size_t PaddedPaletteSize,GifW
 }
 
 // write the image header, LZW-compress and write out the image
-void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette)
+void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette,uint8 TransparentIndex)
 {
 	Soy::Assert( Image.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting palette-index iamge format");
 	Soy::Assert( Palette.GetFormat()==SoyPixelsFormat::RGB, "Expecting palette to be RGB");
@@ -765,7 +765,7 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
     Writer.fputc(0x05); // leave prev frame in place, this frame has transparency
     Writer.fputc(delay & 0xff);
     Writer.fputc((delay >> 8) & 0xff);
-    Writer.fputc(kGifTransIndex); // transparent color index
+    Writer.fputc(TransparentIndex); // transparent color index
     Writer.fputc(0);
     
     Writer.fputc(0x2c); // image descriptor block

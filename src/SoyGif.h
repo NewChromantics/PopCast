@@ -68,15 +68,18 @@ public:
 		mForcePrevPalette		( false ),
 		mMakeDebugPalette		( false ),
 		mShaderPalettisiation	( true ),
-		mFindPalettePixelSkip	( 5 )
+		mFindPalettePixelSkip	( 5 ),
+		mDebugTransparency		( false )
 	{
 	}
 	
+	std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	mMaskPixelFunc;
 	size_t		mFindPalettePixelSkip;
 	bool		mShaderPalettisiation;
 	bool		mAllowIntraFrames;	//	use transparency between frames
 	bool		mForcePrevPalette;	//	don't generate new palettes
 	bool		mMakeDebugPalette;
+	bool		mDebugTransparency;
 };
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread

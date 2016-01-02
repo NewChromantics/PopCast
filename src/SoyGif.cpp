@@ -227,12 +227,15 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		BufferArray<std::shared_ptr<SoyPixelsImpl>,2> PaletteAndIndexed;
 		PalettisedImage.SplitPlanes( GetArrayBridge(PaletteAndIndexed) );
 		
+		size_t PaletteSize,TransparentIndex;
+		SoyPixelsFormat::GetHeaderPalettised( GetArrayBridge( PalettisedImage.GetPixelsArray() ), PaletteSize, TransparentIndex );
+		
 		auto& IndexedImage = *PaletteAndIndexed[1];
 		auto& Palette = *PaletteAndIndexed[0];
 		
 		//	fastish ~7ms
 		Soy::TScopeTimerPrint Timer("GifWriteLzwImage",1);
-		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette );
+		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette, TransparentIndex );
 		
 		Output.Push( LzwWrite );
 	}
@@ -378,11 +381,26 @@ bool Gif::TEncoder::Iteration()
 	try
 	{
 		static bool DebugPaletteShader = false;
+		static bool DebugTransparency = false;
+		static float MaxDiff = 0.01f;
+		static TEncodeParams Params;
+		
 		const char* Shader = GifFragShaderSimpleNearest;
 		if ( DebugPaletteShader )
 			Shader = GifFragShaderDebugPalette;
 		
-		static TEncodeParams Params;
+		auto MaskPixel = [](const vec3x<uint8>& Old,const vec3x<uint8>& New)
+		{
+			int Diff = abs( Old.x - New.x ) + abs( Old.y - New.y ) + abs( Old.z - New.z );
+			float Difff = Diff / (256.f*3.f);
+			if ( Difff >= MaxDiff )
+				return false;
+			return true;
+		};
+		
+		Params.mMaskPixelFunc = MaskPixel;
+		Params.mDebugTransparency = DebugTransparency;
+		
 		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, Params );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	
@@ -618,21 +636,47 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	static bool TestAlpha = false;
 	
 	std::shared_ptr<SoyPixelsImpl> RgbaCopy;
-	if ( TestAlpha && mPrevRgb )
+	if ( (TestAlpha||Params.mAllowIntraFrames) && mPrevRgb )
 	{
 		RgbaCopy.reset( new SoyPixels( Rgba ) );
 		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
 		
-		//	mask image
-		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
-		int HoleSize = 40;
-		int Centerx = size_cast<int>(RgbaMutable.GetWidth()) / 2 - HoleSize;
-		int Centery = size_cast<int>(RgbaMutable.GetHeight()) / 2 - HoleSize;
-		for ( int y=-HoleSize;	y<HoleSize;	y++ )
+		
+		if ( TestAlpha )
 		{
-			for ( int x=-HoleSize;	x<HoleSize;	x++ )
+			//	mask image
+			auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
+			int HoleSize = 40;
+			int Centerx = size_cast<int>(RgbaMutable.GetWidth()) / 2 - HoleSize;
+			int Centery = size_cast<int>(RgbaMutable.GetHeight()) / 2 - HoleSize;
+			for ( int y=-HoleSize;	y<HoleSize;	y++ )
 			{
-				RgbaMutable.SetPixel( Centerx+x, Centery+y, 3, 0 );
+				for ( int x=-HoleSize;	x<HoleSize;	x++ )
+				{
+					RgbaMutable.SetPixel( Centerx+x, Centery+y, 3, 0 );
+				}
+			}
+		}
+
+		//	mask image
+		if ( Params.mMaskPixelFunc )
+		{
+			auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
+			auto& PrevRgba = *mPrevRgb;
+			for ( int y=0;	y<RgbaMutable.GetHeight();	y++ )
+			{
+				for ( int x=0;	x<RgbaMutable.GetWidth();	x++ )
+				{
+					auto* pOldRgba = &PrevRgba.GetPixelPtr( x, y, 0 );
+					auto* pNewRgba = &RgbaMutable.GetPixelPtr( x, y, 0 );
+					auto& OldRgba = *reinterpret_cast<vec3x<uint8>*>(pOldRgba);
+					auto& NewRgba = *reinterpret_cast<vec3x<uint8>*>(pNewRgba);
+					if ( !Params.mMaskPixelFunc( OldRgba, NewRgba ) )
+						continue;
+					
+					//	match, so alpha away
+					pNewRgba[3] = 0;
+				}
 			}
 		}
 	}
@@ -716,7 +760,8 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	
 	//	join together
 	Soy::TScopeTimerPrint Timer("MakePaletteised",1);
-	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, TransparentIndex );
+	auto WriteTransparentIndex = Params.mDebugTransparency ? 1 : TransparentIndex;
+	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, WriteTransparentIndex );
 }
 	
 
