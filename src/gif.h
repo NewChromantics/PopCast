@@ -79,6 +79,22 @@ inline bool isPowerOfTwo(size_t x)
 	return ((x != 0) && !(x & (x - 1)));
 }
 
+uint32 GetNextPowerOfTwo(uint32 n)
+{
+	//	http://stackoverflow.com/a/1322548/355753
+	n--;
+	n |= n >> 1;   // Divide by 2^k for consecutive doublings of k up to 32,
+	n |= n >> 2;   // and then or the results.
+	n |= n >> 4;
+	n |= n >> 8;
+	n |= n >> 16;
+	// The result is a number of 1 bits equal to the number
+	// of bits in the original number, plus 1. That's the
+	// next highest power of 2.
+	n++;
+	return n;
+}
+
 inline size_t GetBitIndex(size_t Integer)
 {
 	//	gr: completely forgotten what the function is called to work out MSB
@@ -490,7 +506,7 @@ void GifMakeDiffPalette(SoyPixelsImpl* PrevIndexes,GifPalette* PrevPalette, cons
 }
 */
 
-void GifMakeDiffPalette(const SoyPixelsImpl& PrevIndexes,const SoyPixelsImpl& PrevPalette,const uint8_t* frame_rgba, uint32_t width, uint32_t height,std::shared_ptr<SoyPixelsImpl>& pPalette)
+void GifMakeDiffPalette(const SoyPixelsImpl& PrevIndexes,const SoyPixelsImpl& PrevPalette,const uint8_t* frame_rgba, uint32_t width, uint32_t height,SoyPixelsImpl& Palette)
 {
 	Soy::Assert( PrevIndexes.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting indexed iamge");
 	Soy::Assert( PrevPalette.GetFormat()==SoyPixelsFormat::RGB, "Expecting RGB palette");
@@ -521,14 +537,13 @@ void GifMakeDiffPalette(const SoyPixelsImpl& PrevIndexes,const SoyPixelsImpl& Pr
 	}
 	
 	//	make a palette image
-	pPalette.reset( new SoyPixels );
-	pPalette->Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
+	Palette.Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
 	auto NewColoursPixels = GetRemoteArray( reinterpret_cast<uint8*>( NewColours.GetArray() ), NewColours.GetDataSize() );
-	pPalette->GetPixelsArray().Copy( NewColoursPixels );
+	Palette.GetPixelsArray().Copy( NewColoursPixels );
 }
 
 
-void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t height,size_t ChannelCount,std::shared_ptr<SoyPixelsImpl>& pPalette)
+void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t height,size_t ChannelCount,SoyPixelsImpl& Palette)
 {
 	Array<Rgb8> NewColours;
 	
@@ -542,10 +557,9 @@ void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t heigh
 	}
 	
 	//	make a palette image
-	pPalette.reset( new SoyPixels );
-	pPalette->Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
+	Palette.Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
 	auto NewColoursPixels = GetRemoteArray( reinterpret_cast<uint8*>( NewColours.GetArray() ), NewColours.GetDataSize() );
-	auto& OldColoursPixels = pPalette->GetPixelsArray();
+	auto& OldColoursPixels = Palette.GetPixelsArray();
 	
 	auto NewCount = NewColoursPixels.GetSize();
 	auto OldCount = OldColoursPixels.GetSize();
@@ -556,31 +570,27 @@ void GifExtractPalette(const uint8_t* frame_rgba, uint32_t width, uint32_t heigh
 }
 
 
-void GifDebugPalette(std::shared_ptr<SoyPixelsImpl>& pPalette)
+void GifDebugPalette(SoyPixelsImpl& Palette)
 {
 	Array<Rgb8> NewColours;
 	
 	for ( int i=0;	i<256;	i++ )
 	{
-		Rgb8 ThisRgb( i, i, i );
-		NewColours.PushBack( ThisRgb );
-	}
-	for ( int i=0;	i<256;	i++ )
-	{
 		Rgb8 ThisRgb( 255, i, 0 );
 		NewColours.PushBack( ThisRgb );
 	}
+	/*
 	for ( int i=0;	i<256;	i++ )
 	{
 		Rgb8 ThisRgb( 0, 255, i );
 		NewColours.PushBack( ThisRgb );
 	}
+	 */
 	
 	//	make a palette image
-	pPalette.reset( new SoyPixels );
-	pPalette->Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
+	Palette.Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
 	auto NewColoursPixels = GetRemoteArray( reinterpret_cast<uint8*>( NewColours.GetArray() ), NewColours.GetDataSize() );
-	pPalette->GetPixelsArray().Copy( NewColoursPixels );
+	Palette.GetPixelsArray().Copy( NewColoursPixels );
 }
 
 
@@ -877,20 +887,24 @@ struct GifLzwNode
     uint16_t m_next[256];
 };
 
-// write a 256-color (8-bit) image palette to the file
-void GifWritePalette( const SoyPixelsImpl& Palette,GifWriter& Writer)
+void GifWritePalette( const SoyPixelsImpl& Palette,size_t PaddedPaletteSize,GifWriter& Writer)
 {
-    Writer.fputc(0);  // first color: transparency
-    Writer.fputc(0);
-    Writer.fputc(0);
-    
-    for(int ii=1; ii<Palette.GetWidth(); ++ii)
-    {
-		auto rgb = Palette.GetPixel3(ii,0);
-        Writer.fputc(rgb.x);
-        Writer.fputc(rgb.y);
-        Writer.fputc(rgb.z);
-    }
+	for( size_t ii=0; ii<Palette.GetWidth(); ++ii)
+	{
+		auto rgb = Palette.GetPixel3( ii, 0 );
+		Writer.fputc(rgb.x);
+		Writer.fputc(rgb.y);
+		Writer.fputc(rgb.z);
+	}
+	
+	//	padding colour
+	for( size_t ii=Palette.GetWidth(); ii<PaddedPaletteSize; ++ii)
+	{
+		Rgb8 rgb( 1, 255, 255 );
+		Writer.fputc(rgb.x);
+		Writer.fputc(rgb.y);
+		Writer.fputc(rgb.z);
+	}
 }
 
 // write the image header, LZW-compress and write out the image
@@ -925,12 +939,16 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
     
     //fputc(0); // no local color table, no transparency
     //fputc(0x80); // no local color table, but transparency
+	
+	//	pallette size needs to be power2 aligned
+	uint32 PaddedPaletteSize = size_cast<uint32>( Palette.GetWidth() );
+	PaddedPaletteSize = isPowerOfTwo( PaddedPaletteSize ) ? PaddedPaletteSize : GetNextPowerOfTwo( PaddedPaletteSize );
+	
+    Writer.fputc(0x80 + GetBitIndex(PaddedPaletteSize) - 1); // local color table present, 2 ^ bitDepth entries
+    GifWritePalette( Palette, PaddedPaletteSize, Writer );
     
-    Writer.fputc(0x80 + GetBitIndex(Palette.GetWidth())-1); // local color table present, 2 ^ bitDepth entries
-    GifWritePalette(Palette,Writer);
-    
-    const int minCodeSize = GetBitIndex(Palette.GetWidth());
-	const uint32_t clearCode = size_cast<const uint32_t>( Palette.GetWidth() );
+    const int minCodeSize = GetBitIndex(PaddedPaletteSize);
+	const uint32_t clearCode = size_cast<const uint32_t>( PaddedPaletteSize );
 	
     Writer.fputc(minCodeSize); // min code size 8 bits
     
