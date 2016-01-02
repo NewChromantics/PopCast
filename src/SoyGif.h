@@ -66,11 +66,13 @@ public:
 	TEncodeParams() :
 		mAllowIntraFrames		( true ),
 		mForcePrevPalette		( false ),
-		mMakeDebugPalette		( false ),
-		mShaderPalettisiation	( true )
+		mMakeDebugPalette		( true ),
+		mShaderPalettisiation	( true ),
+		mFindPalettePixelSkip	( 0 )
 	{
 	}
 	
+	size_t		mFindPalettePixelSkip;
 	bool		mShaderPalettisiation;
 	bool		mAllowIntraFrames;	//	use transparency between frames
 	bool		mForcePrevPalette;	//	don't generate new palettes
@@ -96,7 +98,7 @@ protected:
 
 	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader);
 	static void				GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const SoyPixelsImpl* PrevPalette,const SoyPixelsImpl* PrevIndexedImage,TEncodeParams Params,bool& IsKeyframe);
-	static void				ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,size_t MaxPaletteSize);
+	static void				ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,size_t MaxPaletteSize,const TEncodeParams& Params);
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
 	
 public:
