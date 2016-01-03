@@ -17,6 +17,7 @@ namespace Gif
 
 	class TMuxer;
 	class TEncoder;
+	class TEncodeParams;
 }
 
 class Gif::TMuxer : public TMediaMuxer
@@ -59,7 +60,27 @@ public:
 	std::shared_ptr<Opengl::TTexture>	mImage;	//	copy of the image
 };
 
-
+class Gif::TEncodeParams
+{
+public:
+	TEncodeParams() :
+		mAllowIntraFrames		( true ),
+		mMakeDebugPalette		( false ),
+		mFindPalettePixelSkip	( 5 ),
+		mDebugTransparency		( false ),
+		mTransparentColour		( 255, 0, 255 ),
+		mMaxColours				( 255 )
+	{
+	}
+	
+	std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	mMaskPixelFunc;
+	size_t			mFindPalettePixelSkip;
+	bool			mAllowIntraFrames;	//	use transparency between frames
+	bool			mMakeDebugPalette;
+	bool			mDebugTransparency;
+	vec3x<uint8>	mTransparentColour;
+	size_t			mMaxColours;
+};
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
@@ -78,7 +99,8 @@ protected:
 
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
 
-	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe);
+	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params);
+	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
 	
 public:
 	size_t					mStreamIndex;
@@ -91,6 +113,10 @@ public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;
 	std::shared_ptr<Opengl::TBlitter>	mOpenglBlitter;
 	
-	std::shared_ptr<SoyPixelsImpl>		mPrevPalette;
-	std::shared_ptr<SoyPixelsImpl>		mPrevImageIndexes;
+	//	for shader blit
+	std::shared_ptr<Opengl::TTexture>	mIndexImage;
+	std::shared_ptr<Opengl::TTexture>	mPaletteImage;
+	std::shared_ptr<Opengl::TTexture>	mSourceImage;
+	
+	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
 };

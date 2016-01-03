@@ -12,7 +12,23 @@
 namespace Gif
 {
 	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba);
+	void	MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params);
+	void	GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const TEncodeParams& Params,bool& IsKeyframe);
+	void	ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Params);
 }
+
+
+
+const char* GifFragShaderSimpleNearest =
+#include "GifNearest.frag"
+;
+
+
+const char* GifFragShaderDebugPalette =
+#include "GifDebug.frag"
+;
+
+
 
 std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext)
 {
@@ -214,12 +230,15 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		BufferArray<std::shared_ptr<SoyPixelsImpl>,2> PaletteAndIndexed;
 		PalettisedImage.SplitPlanes( GetArrayBridge(PaletteAndIndexed) );
 		
+		size_t PaletteSize,TransparentIndex;
+		SoyPixelsFormat::GetHeaderPalettised( GetArrayBridge( PalettisedImage.GetPixelsArray() ), PaletteSize, TransparentIndex );
+		
 		auto& IndexedImage = *PaletteAndIndexed[1];
 		auto& Palette = *PaletteAndIndexed[0];
 		
 		//	fastish ~7ms
 		Soy::TScopeTimerPrint Timer("GifWriteLzwImage",1);
-		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette );
+		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette, TransparentIndex );
 		
 		Output.Push( LzwWrite );
 	}
@@ -259,6 +278,9 @@ Gif::TEncoder::~TEncoder()
 		mPendingFrames.Clear();
 		mPendingFramesLock.unlock();
 		
+		Opengl::DeferDelete( mOpenglContext, mIndexImage );
+		Opengl::DeferDelete( mOpenglContext, mPaletteImage );
+		Opengl::DeferDelete( mOpenglContext, mSourceImage );
 		Opengl::DeferDelete( mOpenglContext, mOpenglBlitter );
 		
 		mOpenglContext.reset();
@@ -317,6 +339,8 @@ bool Gif::TEncoder::Iteration()
 		auto& Texture = dynamic_cast<TTextureBuffer&>( *Packet.mPixelBuffer );
 		
 		mOpenglSemaphore.reset( new Soy::TSemaphore );
+		if ( !IsWorking() )
+			return true;
 
 		//	copy for other thread in case the opengl job gets defferred for a long time and the buffer gets deleted in the meantime;
 		//	run -> stop(in editor) -> opengl queue paused, frames deleted -> enable -> job runs -> frame is deleted
@@ -348,29 +372,54 @@ bool Gif::TEncoder::Iteration()
 		Packet.mPixelBuffer.reset();
 	}
 	
-	//	break out if the thread is stopped (gr: added here as we may break from the opengl job above)
+	//	break out if the thread is stopped (gr: added here as we may break from the opengl job above for an early[ier] exit)
 	if ( !IsWorking() )
 		return true;
 	
-	//	make/find/copy palette
-	//	reduce to 256
-	//	mask
-	//	push Palettised
+	//	gr: pool this copy and write palettised right back to packet data
 	SoyPixels RgbaCopy;
 	RgbaCopy.Copy( Rgba );
 	SoyPixelsDef<Array<uint8>> PalettisedImage( Packet.mData, Packet.mMeta.mPixelMeta );
-	MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame );
-
-	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	
-	
-	//	drop packets
-	auto Block = []
+	try
 	{
-		return false;
-	};
-
-	TMediaEncoder::PushFrame( pPacket, Block );
+		static bool DebugPaletteShader = false;
+		static bool DebugTransparency = false;
+		static float MaxDiff = 0.01f;
+		static TEncodeParams Params;
+		
+		const char* Shader = GifFragShaderSimpleNearest;
+		if ( DebugPaletteShader )
+			Shader = GifFragShaderDebugPalette;
+		
+		auto MaskPixel = [](const vec3x<uint8>& Old,const vec3x<uint8>& New)
+		{
+			int Diff = abs( Old.x - New.x ) + abs( Old.y - New.y ) + abs( Old.z - New.z );
+			float Difff = Diff / (256.f*3.f);
+			if ( Difff >= MaxDiff )
+				return false;
+			return true;
+		};
+		
+		Params.mMaskPixelFunc = MaskPixel;
+		Params.mDebugTransparency = DebugTransparency;
+		
+		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, Params );
+		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
+	
+		//	drop packets
+		auto Block = []
+		{
+			return false;
+		};
+		
+		TMediaEncoder::PushFrame( pPacket, Block );
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << __func__ << " exception; " << e.what();
+	}
+	
 	return true;
 }
 
@@ -409,98 +458,224 @@ std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const Opengl::
 }
 
 
-void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe)
+void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t PixelSkip)
 {
-	auto width = size_cast<uint32>(Rgba.GetWidth());
-	auto height = size_cast<uint32>(Rgba.GetHeight());
-	static bool Dither = false;
-	auto Channels = SoyPixelsFormat::GetChannelCount( PalettisedImage.GetFormat() );
+	Soy::TScopeTimerPrint Timer( __func__, 1 );
+	auto PixelStep = 1 + PixelSkip;
+	auto PaletteSize = Frame.GetWidth() * Frame.GetHeight();
+	Palette.Init( PaletteSize/PixelStep, 1, SoyPixelsFormat::RGB );
 	
-	auto& RgbaArray = PalettisedImage.GetPixelsArray();
-	auto* RgbaData = RgbaArray.GetArray();
-	auto* image = RgbaData;
+	//	gr: pre-determine if we have alphas
+	bool HasAlphas = true;
 	
-	
-	static bool TransparentMerge = false;
-	
-	auto pPrevIndexedImage = mPrevImageIndexes;
-	auto pPrevPalette = mPrevPalette;
-
-	if ( !TransparentMerge )
-		pPrevIndexedImage.reset();
-
-	static bool MakeDebugPalette = false;
-		
-	std::shared_ptr<GifPalette> pNewPalette;
-	std::shared_ptr<SoyPixelsImpl> pNewPaletteImage;
-
-	if ( MakeDebugPalette )
+	if ( Frame.GetMeta() == Palette.GetMeta() && !HasAlphas )
 	{
-		Keyframe = true;
-		Soy::TScopeTimerPrint Timer("GifDebugPalette",1);
-		GifDebugPalette( pNewPaletteImage );
-	}
-	else if ( !Dither && pPrevIndexedImage && pPrevPalette )
-	{
-		Keyframe = false;
-		Soy::TScopeTimerPrint Timer("GifMakeDiffPalette",1);
-		GifMakeDiffPalette( *pPrevIndexedImage, *pPrevPalette, image, width, height, pNewPaletteImage );
+		Palette.GetPixelsArray().Copy( Frame.GetPixelsArray() );
 	}
 	else
 	{
-		Keyframe = true;
-		Soy::TScopeTimerPrint Timer("GifExtractPalette",1);
-		GifExtractPalette( image, width, height, Channels, pNewPaletteImage );
-	}
-	
-	//	make palette lookup table & shrink to 256 max
-	{
-		Soy::TScopeTimerPrint Timer("GifMakePalette",1);
-		GifMakePalette( *pNewPaletteImage, Dither, pNewPalette );
-	}
-	
-	Soy::Assert( pNewPalette != nullptr, "Failed to create palette");
-	auto& NewPalette = *pNewPalette;
-	
-	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
-	auto& IndexedImage = *pIndexedImage;
-	static bool DebugDrawPalette = false;
-	
-	
-	if ( DebugDrawPalette )
-	{
-		Keyframe = true;
-		IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
-		auto* PaletteRgb = &NewPalette.mPalette->GetPixelPtr(0,0,0);
-		uint8 PaletteLocal[256*3];
-		memcpy( PaletteLocal, PaletteRgb, 256*3 );
-		for ( int y=0;	y<height;	y++ )
+		int PaletteIndex = 0;
+		for ( int i=0;	i<Palette.GetWidth();	i++ )
 		{
-			for ( int x=0;	x<width;	x++ )
+			auto xy = Frame.GetXy( i*PixelStep );
+			auto rgba = Frame.GetPixel4( xy.x, xy.y );
+			
+			//	skip alphas
+			if ( rgba.w == 0 )
+				continue;
+			
+			Palette.SetPixel( PaletteIndex, 0, rgba.xyz() );
+			PaletteIndex++;
+		}
+		
+		//	clip unset
+		if ( Palette.GetWidth() != PaletteIndex+1 )
+			Palette.ResizeClip( PaletteIndex+1, Palette.GetHeight() );
+	}
+}
+
+
+void Gif::GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const TEncodeParams& Params,bool& IsKeyframe)
+{
+	if ( Params.mMakeDebugPalette )
+	{
+		IsKeyframe = true;
+		GifDebugPalette( Palette );
+		return;
+	}
+
+	GifExtractPalette( Rgba, Palette, Params.mFindPalettePixelSkip );
+}
+
+void Gif::ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Params)
+{
+	Soy::TScopeTimerPrint Timer( __func__, 1 );
+
+	//	already shrunk
+	if ( Palette.GetWidth() <= Params.mMaxColours && !Sort )
+		return;
+	
+	std::shared_ptr<GifPalette> SmallPalette;
+	GifMakePalette( Palette, false, SmallPalette, 256 );
+	Palette.Copy( SmallPalette->GetPalette() );
+
+	//	shrink to required size
+	if ( Palette.GetWidth() > Params.mMaxColours )
+		Palette.ResizeClip( Params.mMaxColours, 1 );
+}
+
+void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader)
+{
+	Soy::TScopeTimerPrint Timer( __func__, 1 );
+	
+	Soy::Assert( mOpenglContext!=nullptr, "Cannot use shader if no context");
+	
+	mOpenglSemaphore.reset( new Soy::TSemaphore );
+	if ( !IsWorking() )
+		return;
+	std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = mOpenglSemaphore;
+
+	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
+	SoyPixelsMeta PaletteMeta( Palette.GetWidth(), Palette.GetHeight(), SoyPixelsFormat::RGB );
+	
+	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,PaletteMeta,FragShader]
+	{
+		if ( SemaphoreCopy->IsCompleted() )
+			return;
+
+		if ( !mIndexImage )
+			mIndexImage.reset( new Opengl::TTexture( IndexMeta, GL_TEXTURE_2D ) );
+		if ( !mPaletteImage )
+			mPaletteImage.reset( new Opengl::TTexture( PaletteMeta, GL_TEXTURE_2D ) );
+		if ( !mSourceImage )
+			mSourceImage.reset( new Opengl::TTexture( Source.GetMeta(), GL_TEXTURE_2D ) );
+
+		{
+			Soy::TScopeTimerPrint Timer( "opengl: upload source images", 2 );
+			mSourceImage->Write( Source );
+			mPaletteImage->Write( Palette );
+		}
+		
+		if ( !mOpenglBlitter )
+			mOpenglBlitter.reset( new Opengl::TBlitter );
+		
+		Array<Opengl::TTexture> Sources;
+		Sources.PushBack( *mSourceImage );
+		Sources.PushBack( *mPaletteImage );
+		
+		Opengl::TTextureUploadParams UploadParams;
+		{
+			Soy::TScopeTimerPrint Timer( "Palettising blit", 2 );
+			mOpenglBlitter->BlitTexture( *mIndexImage, GetArrayBridge(Sources), *mOpenglContext, UploadParams, FragShader );
+		}
+		{
+			Soy::TScopeTimerPrint Timer( "opengl: read back indexed image", 2 );
+			mIndexImage->Read( IndexedImage );
+		}
+	};
+	
+	mOpenglContext->PushJob( Work, *mOpenglSemaphore );
+	try
+	{
+		mOpenglSemaphore->Wait();
+	}
+	catch(std::exception& e)
+	{
+		SemaphoreCopy.reset();
+		mOpenglSemaphore.reset();
+		
+		throw;
+	}
+	mOpenglSemaphore.reset();
+}
+
+void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params)
+{
+	if ( TestAlpha )
+	{
+		//	mask image
+		int HoleSize = 40;
+		int Centerx = size_cast<int>(RgbaMutable.GetWidth()) / 2 - HoleSize;
+		int Centery = size_cast<int>(RgbaMutable.GetHeight()) / 2 - HoleSize;
+		for ( int y=-HoleSize;	y<HoleSize;	y++ )
+		{
+			for ( int x=-HoleSize;	x<HoleSize;	x++ )
 			{
-				IndexedImage.SetPixel( x, y, 0, y % NewPalette.GetSize() );
+				RgbaMutable.SetPixel( Centerx+x, Centery+y, 3, 0 );
+			}
+		}
+		Keyframe = false;
+	}
+	
+	//	mask image
+	if ( Params.mMaskPixelFunc )
+	{
+		for ( int y=0;	y<RgbaMutable.GetHeight();	y++ )
+		{
+			for ( int x=0;	x<RgbaMutable.GetWidth();	x++ )
+			{
+				auto* pOldRgba = &PrevRgb.GetPixelPtr( x, y, 0 );
+				auto* pNewRgba = &RgbaMutable.GetPixelPtr( x, y, 0 );
+				auto& OldRgba = *reinterpret_cast<const vec3x<uint8>*>(pOldRgba);
+				auto& NewRgba = *reinterpret_cast<vec3x<uint8>*>(pNewRgba);
+				if ( !Params.mMaskPixelFunc( OldRgba, NewRgba ) )
+					continue;
+				
+				//	match, so alpha away
+				pNewRgba[3] = 0;
+				Keyframe = false;
 			}
 		}
 	}
-	else if ( Dither )
+}
+
+void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params)
+{
+	std::shared_ptr<SoyPixelsImpl> pNewPalette;
+
+	int TransparentIndex = 0;
+	int DebugTransparentIndex = 1;
+	static bool TestAlpha = false;
+	Keyframe = true;
+
+	std::shared_ptr<SoyPixelsImpl> RgbaCopy;
+	if ( (TestAlpha||Params.mAllowIntraFrames) && mPrevRgb )
 	{
-		Soy::TScopeTimerPrint Timer("GifDitherImage",1);
-		SoyPixels ReducedImage;
-		ReducedImage.Init( width, height, SoyPixelsFormat::RGBA );
-		GifDitherImage( pPrevIndexedImage.get(), pPrevPalette.get(), image, ReducedImage, width, height, NewPalette);
-		MakeIndexedImage( IndexedImage, ReducedImage );
+		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
+		RgbaCopy.reset( new SoyPixels( Rgba ) );
+		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
+		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlpha, Params );
 	}
+	
+
+	//	gr: this currently generates a full palette (can be > 256)
+	pNewPalette.reset( new SoyPixels );
+	GetPalette( *pNewPalette, Rgba, Params, Keyframe );
+
+	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
+	auto& IndexedImage = *pIndexedImage;
+	
+	{
+		//	gr: sort & shrink palette here, don't use lookup table
+		ShrinkPalette( *pNewPalette, false, Params );
+		
+		//	insert/override transparent
+		pNewPalette->SetPixel( TransparentIndex, 0, Params.mTransparentColour );
+		
+		IndexImageWithShader( IndexedImage, *pNewPalette, Rgba, IndexingShader );
+	}
+	
+	//	save unmodifed frame
+	//	gr: should this store(accumulate) a flattened image, so comparison with prev is palettised, rather than original
+	if ( RgbaCopy )
+		mPrevRgb = RgbaCopy;
 	else
-	{
-		//	slower ~200ms
-		Soy::TScopeTimerPrint Timer("GifThresholdImage",1);
-		IndexedImage.Init( width, height, SoyPixelsFormat::Greyscale );
-		GifThresholdImage( pPrevIndexedImage.get(), pPrevPalette.get(), image, IndexedImage, width, height, NewPalette);
-	}
+		mPrevRgb.reset( new SoyPixels( Rgba ) );
 	
 	//	join together
 	Soy::TScopeTimerPrint Timer("MakePaletteised",1);
-	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, NewPalette.GetPalette(), NewPalette.GetTransparentIndex() );
+	auto WriteTransparentIndex = Params.mDebugTransparency ? DebugTransparentIndex : TransparentIndex;
+	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, WriteTransparentIndex );
 }
 	
 
