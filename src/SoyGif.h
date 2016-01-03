@@ -65,21 +65,21 @@ class Gif::TEncodeParams
 public:
 	TEncodeParams() :
 		mAllowIntraFrames		( true ),
-		mForcePrevPalette		( false ),
 		mMakeDebugPalette		( false ),
-		mShaderPalettisiation	( true ),
 		mFindPalettePixelSkip	( 5 ),
-		mDebugTransparency		( false )
+		mDebugTransparency		( false ),
+		mTransparentColour		( 255, 0, 255 ),
+		mMaxColours				( 255 )
 	{
 	}
 	
 	std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	mMaskPixelFunc;
-	size_t		mFindPalettePixelSkip;
-	bool		mShaderPalettisiation;
-	bool		mAllowIntraFrames;	//	use transparency between frames
-	bool		mForcePrevPalette;	//	don't generate new palettes
-	bool		mMakeDebugPalette;
-	bool		mDebugTransparency;
+	size_t			mFindPalettePixelSkip;
+	bool			mAllowIntraFrames;	//	use transparency between frames
+	bool			mMakeDebugPalette;
+	bool			mDebugTransparency;
+	vec3x<uint8>	mTransparentColour;
+	size_t			mMaxColours;
 };
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
@@ -100,8 +100,6 @@ protected:
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
 
 	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params);
-	static void				GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const SoyPixelsImpl* PrevPalette,const SoyPixelsImpl* PrevIndexedImage,TEncodeParams Params,bool& IsKeyframe);
-	static void				ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,size_t MaxPaletteSize,const TEncodeParams& Params);
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
 	
 public:
@@ -121,6 +119,4 @@ public:
 	std::shared_ptr<Opengl::TTexture>	mSourceImage;
 	
 	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
-	std::shared_ptr<SoyPixelsImpl>		mPrevPalette;
-	std::shared_ptr<SoyPixelsImpl>		mPrevImageIndexes;
 };
