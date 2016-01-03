@@ -92,11 +92,11 @@ public:
 
 
 	
-class TFileCaster : public TCaster
+class TStreamCaster : public TCaster
 {
 public:
-	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext);
-	~TFileCaster();
+	TStreamCaster(const TCasterParams& Params);
+	~TStreamCaster();
 	
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
 	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
@@ -113,6 +113,16 @@ protected:
 	
 	std::function<std::shared_ptr<TMediaEncoder>(size_t)>	mAllocEncoder;
 };
+
+
+
+
+class TFileCaster : public TStreamCaster
+{
+public:
+	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext);
+};
+
 
 
 

@@ -10,13 +10,10 @@
 
 
 TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
-	TCaster			( Params )
+	TStreamCaster			( Params )
 {
 	auto& Filename = Params.mName;
 	
-	//	alloc & listen for new packets
-	mFrameBuffer.reset( new TMediaPacketBuffer() );
-
 #if defined(TARGET_OSX)
 	static bool UseAvfMuxer = true;
 #endif
@@ -63,7 +60,16 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 		mFileStream->Start();
 }
 
-TFileCaster::~TFileCaster()
+
+
+TStreamCaster::TStreamCaster(const TCasterParams& Params) :
+	TCaster			( Params )
+{
+	//	alloc & listen for new packets
+	mFrameBuffer.reset( new TMediaPacketBuffer() );
+}
+
+TStreamCaster::~TStreamCaster()
 {
 	//	wait for encoder
 	for ( auto& Encoder : mEncoders )
@@ -87,20 +93,20 @@ TFileCaster::~TFileCaster()
 	mFrameBuffer.reset();
 }
 
-void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
+void TStreamCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
 	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
 	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
-void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
+void TStreamCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
 	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
 	Encoder.Write( Image, FrameMeta.mTimecode );
 }
 
 
-TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
+TMediaEncoder& TStreamCaster::AllocEncoder(size_t StreamIndex)
 {
 	auto& pEncoder = mEncoders[StreamIndex];
 	if ( pEncoder )
