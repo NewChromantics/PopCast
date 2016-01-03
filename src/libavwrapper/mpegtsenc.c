@@ -104,7 +104,7 @@ static void mpegts_write_section(MpegTSSection *s, uint8_t *buf, int len)
     unsigned char packet[TS_PACKET_SIZE];
     const unsigned char *buf_ptr;
     unsigned char *q;
-    int first, b, len1, left;
+    long first, b, len1, left;
 
     crc = av_bswap32(av_crc(av_crc_get_table(AV_CRC_32_IEEE),
                             -1, buf, len - 4));
@@ -371,6 +371,10 @@ static void mpegts_write_pmt(AVFormatContext *s, MpegTSService *service)
                 *q++ = 'c';
             }
             break;
+				
+			default:
+				//throw Soy::AssertException("Unhandled case");
+				break;
         }
 
         val = 0xf000 | (q - desc_length_ptr - 2);

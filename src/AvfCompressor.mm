@@ -91,7 +91,7 @@ Avf::TSession::TSession(TEncoder& Parent,SoyPixelsMeta OutputMeta,TParams& Param
 	CFDictionaryRef SourceImageAttribs = nil;
 	void* CallbackContext = this;
 	
-	auto Result = VTCompressionSessionCreate( Allocator, OutputMeta.GetWidth(), OutputMeta.GetHeight(), Codec, (__bridge CFDictionaryRef) encoderSpec, SourceImageAttribs, Allocator, OnCompressionOutput, CallbackContext, &mSession );
+	auto Result = VTCompressionSessionCreate( Allocator, size_cast<int32_t>(OutputMeta.GetWidth()), size_cast<int32_t>(OutputMeta.GetHeight()), Codec, (__bridge CFDictionaryRef) encoderSpec, SourceImageAttribs, Allocator, OnCompressionOutput, CallbackContext, &mSession );
 	Avf::IsOkay( Result, "VTCompressionSessionCreate" );
 
 	//	set bitrate
@@ -227,7 +227,7 @@ void GetNalPackets(const ArrayBridge<uint8>&& H264Data,ArrayBridge<TNalPacket>&&
 				  sizeof(NalSizeType) == 4,
 				  "NAL size type has unsupported size");
 	
-	static const char startcode_3[3] = {0, 0, 1};
+///	static const char startcode_3[3] = {0, 0, 1};
 /*
 
 	TArrayReader Reader( H264Data );

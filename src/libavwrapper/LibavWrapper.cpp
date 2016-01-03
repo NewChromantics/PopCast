@@ -887,7 +887,7 @@ void Libav::TContext::WriteHeader(const ArrayBridge<TStreamMeta>& Streams)
 		auto* StreamAv = avformat_new_stream( mFormat->GetObject(), nullptr );
 		
 		//	setup stream
-		StreamAv->id = StreamSoy.mStreamIndex;
+		StreamAv->id = size_cast<int>(StreamSoy.mStreamIndex);
 		StreamAv->codec = Libav::GetPoolPointer<struct AVCodec>( nullptr, true )->GetObject();
 		StreamAv->codec->codec_id = GetCodecId( StreamSoy.mCodec );
 		StreamAv->codec->codec_type = GetCodecType( StreamSoy.mCodec );
@@ -951,8 +951,8 @@ Libav::TPacket::TPacket(std::shared_ptr<TMediaPacket> Packet) :
 	//	alloc an avpacket
 	mAvPacket = Libav::GetPoolPointer<AVPacket>( nullptr, true );
 	auto& AvPacket = *mAvPacket->GetObject();
-	AvPacket.stream_index = Packet->mMeta.mStreamIndex;
-	AvPacket.size = Packet->mData.GetDataSize();
+	AvPacket.stream_index = size_cast<int>(Packet->mMeta.mStreamIndex);
+	AvPacket.size = size_cast<int>(Packet->mData.GetDataSize());
 	AvPacket.data = Packet->mData.GetArray();
 	
 	static bool AutoTimestamp = false;
@@ -960,10 +960,10 @@ Libav::TPacket::TPacket(std::shared_ptr<TMediaPacket> Packet) :
 	
 	//	todo: convert these properly to the... codec? stream? format? time scalar
 	if ( !AutoTimestamp && Packet->mTimecode.IsValid() )
-		AvPacket.pts = Packet->mTimecode.GetTime();
+		AvPacket.pts = size_cast<int>(Packet->mTimecode.GetTime());
 	
 	if ( !AutoTimestamp && Packet->mDecodeTimecode.IsValid() )
-		AvPacket.dts = Packet->mDecodeTimecode.GetTime();
+		AvPacket.dts = size_cast<int>(Packet->mDecodeTimecode.GetTime());
 
 	AvPacket.flags = 0;
 	if ( AllKeyframes || Packet->mIsKeyFrame )

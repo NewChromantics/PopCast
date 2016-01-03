@@ -11,21 +11,21 @@ namespace Mpeg2Ts
 //	gr: can;t find official documentation on whether this is enforced...
 //	https://en.wikipedia.org/wiki/Packetized_elementary_stream#cite_note-7
 const uint16 AP4_MPEG2_TS_DEFAULT_PID_PMT            = 0x100;
-const uint16 AP4_MPEG2_TS_DEFAULT_PID_AUDIO          = 0x101;
+//const uint16 AP4_MPEG2_TS_DEFAULT_PID_AUDIO          = 0x101;
 const uint16 AP4_MPEG2_TS_DEFAULT_PID_VIDEO          = 0x102;
-const uint16 AP4_MPEG2_TS_DEFAULT_STREAM_ID_AUDIO    = 0xc0;
+//const uint16 AP4_MPEG2_TS_DEFAULT_STREAM_ID_AUDIO    = 0xc0;
 const uint16 AP4_MPEG2_TS_DEFAULT_STREAM_ID_VIDEO    = 0xe0;
-const uint16 AP4_MPEG2_TS_STREAM_ID_PRIVATE_STREAM_1 = 0xbd;
+//const uint16 AP4_MPEG2_TS_STREAM_ID_PRIVATE_STREAM_1 = 0xbd;
 
-const unsigned int AP4_MPEG2TS_PACKET_SIZE         = 188;
+//const unsigned int AP4_MPEG2TS_PACKET_SIZE         = 188;
 const unsigned int AP4_MPEG2TS_PACKET_PAYLOAD_SIZE = 184;
 const unsigned int AP4_MPEG2TS_SYNC_BYTE           = 0x47;
 const unsigned int AP4_MPEG2TS_PCR_ADAPTATION_SIZE = 6;
-const uint8 AP4_MPEG2_STREAM_TYPE_ISO_IEC_13818_1_PES = 0x06;
+//const uint8 AP4_MPEG2_STREAM_TYPE_ISO_IEC_13818_1_PES = 0x06;
 const uint8 AP4_MPEG2_STREAM_TYPE_ISO_IEC_13818_7     = 0x0F;
 const uint8 AP4_MPEG2_STREAM_TYPE_AVC                 = 0x1B;
-const uint8 AP4_MPEG2_STREAM_TYPE_HEVC                = 0x24;
-const uint8 AP4_MPEG2_STREAM_TYPE_ATSC_AC3            = 0x81;
+//const uint8 AP4_MPEG2_STREAM_TYPE_HEVC                = 0x24;
+//const uint8 AP4_MPEG2_STREAM_TYPE_ATSC_AC3            = 0x81;
 
 
 static const uint32 CRC_Table[256] = {
@@ -195,10 +195,10 @@ void Mpeg2Ts::TPacket::WriteHeader(bool PayloadStart,size_t PayloadSize,bool Wit
 			unsigned int pcr_size = 0;
 			if (WithPcr)
 			{
-				uint64 Pcr = 0;	//	provide in params
+				//uint64 Pcr = 0;	//	provide in params
 				pcr_size = AP4_MPEG2TS_PCR_ADAPTATION_SIZE;
-				uint64 pcr_base = Pcr/300;
-				uint32 pcr_ext  = size_cast<uint32>( Pcr%300 );
+			//	uint64 pcr_base = Pcr/300;
+			//	uint32 pcr_ext  = size_cast<uint32>( Pcr%300 );
 				Soy_AssertTodo();
 				/*
 				AP4_BitWriter writer(pcr_size);
@@ -661,7 +661,7 @@ void Mpeg2Ts::TPatPacket::Encode(TStreamBuffer& Buffer)
 		auto CrcLength = Payload.GetSize() - 1;
 		Array<uint8> CrcArray;
 		TArrayBitWriter CrcWriter( GetArrayBridge(CrcArray) );
-		auto Crc = ComputeCRC( &Payload[1], CrcLength );
+		auto Crc = ComputeCRC( &Payload[1], size_cast<unsigned int>(CrcLength) );
 		CrcWriter.Write( Crc, 32 );
 		Buffer.Push( GetArrayBridge(CrcArray) );
 	}
@@ -797,7 +797,7 @@ Mpeg2Ts::TPmtPacket::TPmtPacket(const std::map<size_t,Mpeg2Ts::TStreamMeta>& Str
 		auto CrcLength = mPayload.GetSize() - 1;
 		Array<uint8> CrcArray;
 		TArrayBitWriter CrcWriter( GetArrayBridge(CrcArray) );
-		auto Crc = ComputeCRC( &Payload[1], CrcLength );
+		auto Crc = ComputeCRC( &Payload[1], size_cast<unsigned int>(CrcLength) );
 		CrcWriter.Write( Crc, 32 );
 		mPayload.PushBackArray( GetArrayBridge(CrcArray) );
 	}

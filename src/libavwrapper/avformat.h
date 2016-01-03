@@ -115,7 +115,7 @@ typedef struct AVPacket {
 
 
 typedef struct AVDictionary {
-	
+	int Pad;
 } AVDictionary;
 
 typedef struct AVDictionaryEntry {
@@ -206,7 +206,7 @@ typedef struct AVOption {
 	const char *unit;
 } AVOption;
 
-
+struct AVFormatContext;
 
 typedef struct AVClass {
 	const char*		class_name;
@@ -220,20 +220,24 @@ typedef struct AVIOContext {
 } AVIOContext;
 
 typedef struct AVProgram {
-	
+	int Pad;
+
 } AVProgram;
 
 typedef struct AVChapter {
-	
+	int Pad;
+
 } AVChapter;
 
 
 typedef struct AVIOInterruptCB {
-	
+	int Pad;
+
 } AVIOInterruptCB;
 
 typedef struct AVFormatInternal {
-	
+	int Pad;
+
 } AVFormatInternal;
 
 typedef struct AVOutputFormat {

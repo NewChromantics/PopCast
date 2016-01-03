@@ -63,7 +63,7 @@ Avf::TAssetWriter::TAssetWriter(const std::string& Filename)
 Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter& Parent) :
 	mFinished	( false )
 {
-	auto* Type = Avf::GetFormatType( Stream.mCodec );
+	//auto* Type = Avf::GetFormatType( Stream.mCodec );
 	auto* Writer = Parent.mAsset.mObject;
 	
 	//	http://stackoverflow.com/questions/13138385/how-to-use-avassetwriter-to-write-h264-strem-into-video
@@ -91,8 +91,8 @@ Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter
 		//	 If you want the media data to be written in the format in which it was stored, pass nil in the outputSettings parameter.
 		//	Pass nil only if the asset writer was initialized with a fileType of AVFileTypeQuickTimeMovie.
 		
-		auto Width = Stream.mPixelMeta.GetWidth();
-		auto Height = Stream.mPixelMeta.GetHeight();
+		auto Width = size_cast<int>(Stream.mPixelMeta.GetWidth());
+		auto Height = size_cast<int>(Stream.mPixelMeta.GetHeight());
 		NSDictionary* videoSettings = [NSDictionary dictionaryWithObjectsAndKeys:
 									   AVVideoCodecH264, AVVideoCodecKey,
 									   [NSNumber numberWithInt:Width], AVVideoWidthKey,

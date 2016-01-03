@@ -360,7 +360,7 @@ launchedApplication:(BOOL)launchedApplication {
 	
 	auto TitleNs = Soy::StringToNSString( Media.mTitle );
 	auto SubtitleNs = Soy::StringToNSString( Media.mSubtitle );
-	auto ImageUrlNs = Soy::StringToNSString( Media.mImageUrl );
+	//auto ImageUrlNs = Soy::StringToNSString( Media.mImageUrl );
 	auto MediaUrlNs = Soy::StringToNSString( Media.mMediaUrl );
 	auto ContentTypeNs = Soy::StringToNSString( Media.mContentType );
 	
