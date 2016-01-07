@@ -36,7 +36,8 @@ namespace Libav
 	
 	namespace Private
 	{
-		Array<std::shared_ptr<Array<uint8>>>	ArrayPool;
+		Array<std::shared_ptr<Array<uint8>>>&	GetPoolArrayPool();
+		std::shared_ptr<Array<std::shared_ptr<Array<uint8>>>>	ArrayPool;
 	}
 	
 	AVCodecID				GetCodecId(SoyMediaFormat::Type Format);
@@ -433,10 +434,19 @@ void Libav::FreePoolPointer(TYPE* Object)
 	pObject.reset();
 }
 
+Array<std::shared_ptr<Array<uint8>>>& Libav::Private::GetPoolArrayPool()
+{
+	if ( !Private::ArrayPool )
+	{
+		Private::ArrayPool.reset( new Array<std::shared_ptr<Array<uint8>>>() );
+	}
+	return *Private::ArrayPool;
+}
+
 
 std::shared_ptr<Array<uint8>> Libav::AllocPoolArray(size_t Size)
 {
-	auto& Pool = Private::ArrayPool;
+	auto& Pool = Private::GetPoolArrayPool();
 
 	std::shared_ptr<Array<uint8>> pArray( new Array<uint8> );
 	pArray->SetSize( Size );
@@ -448,7 +458,7 @@ std::shared_ptr<Array<uint8>> Libav::AllocPoolArray(size_t Size)
 
 std::shared_ptr<Array<uint8>> Libav::GetPoolArray(void* Data)
 {
-	auto& Pool = Private::ArrayPool;
+	auto& Pool = Private::GetPoolArrayPool();
 	
 	for ( int i=0;	i<Pool.GetSize();	i++ )
 	{
@@ -470,7 +480,7 @@ void Libav::FreePoolArray(void* Data)
 	if ( !Data )
 		return;
 	
-	auto& Pool = Private::ArrayPool;
+	auto& Pool = Private::GetPoolArrayPool();
 	
 	for ( int i=0;	i<Pool.GetSize();	i++ )
 	{
