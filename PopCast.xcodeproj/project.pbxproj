@@ -126,6 +126,7 @@
 		BF5B07191B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF5B071A1B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF61FBE81B4EC46C00CCF9C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF61FBE71B4EC46C00CCF9C7 /* OpenGLES.framework */; };
+		BF691EF91C3F04C30092FC34 /* TCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AC1B4D640D00DA2575 /* TCaster.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF7225A41BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
 		BF7225A51BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
 		BF7225A61BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
@@ -137,7 +138,7 @@
 		BF7225B71BAF38D300550AD8 /* SoyRef.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225B41BAF38D300550AD8 /* SoyRef.cpp */; };
 		BF7225B81BAF38D300550AD8 /* SoyRef.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225B41BAF38D300550AD8 /* SoyRef.cpp */; };
 		BF7225B91BAF38D300550AD8 /* SoyRef.h in Headers */ = {isa = PBXBuildFile; fileRef = BF7225B51BAF38D300550AD8 /* SoyRef.h */; };
-		BF80C3261C3EC03500EBE03E /* PopCastFramework.h in Headers */ = {isa = PBXBuildFile; fileRef = BF80C3251C3EC03500EBE03E /* PopCastFramework.h */; };
+		BF80C3261C3EC03500EBE03E /* PopCastFramework.h in Headers */ = {isa = PBXBuildFile; fileRef = BF80C3251C3EC03500EBE03E /* PopCastFramework.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF80C3271C3EC55100EBE03E /* libOpenCast.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BFB255EE1BA1BCD200F30239 /* libOpenCast.a */; };
 		BF80C3281C3EC7AC00EBE03E /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFBC3D971BC7F87B00CEE3D5 /* VideoToolbox.framework */; };
 		BF80C3291C3EC7B600EBE03E /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFBC3DA41BC80ADC00CEE3D5 /* CFNetwork.framework */; };
@@ -160,8 +161,6 @@
 		BF8990BA1BE654CB00FF81FB /* SoyMpeg2Ts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF8990B61BE654CB00FF81FB /* SoyMpeg2Ts.cpp */; };
 		BF8990C51BE7F2E700FF81FB /* array.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C41BE7F2E700FF81FB /* array.hpp */; };
 		BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */ = {isa = PBXBuildFile; fileRef = BF8990C61BE7F31400FF81FB /* heaparray.hpp */; };
-		BFAD33C81B61730300D3E7A6 /* TCaster.cpp in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AB1B4D640D00DA2575 /* TCaster.cpp */; settings = {ATTRIBUTES = (Public, ); }; };
-		BFAD33C91B61730300D3E7A6 /* PopCast.cpp in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AD1B4D640D00DA2575 /* PopCast.cpp */; settings = {ATTRIBUTES = (Public, ); }; };
 		BFAEE89B1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
 		BFAEE89C1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
 		BFAEE89D1C2774A500E25C47 /* SoyGif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFAEE8991C2774A500E25C47 /* SoyGif.cpp */; };
@@ -630,13 +629,12 @@
 				BF7225B31BAF0E2700550AD8 /* SoyMemFile.h in Headers */,
 				BF406D3D1BB9C8B200CECF4E /* SoyMulticast.h in Headers */,
 				BF80C3261C3EC03500EBE03E /* PopCastFramework.h in Headers */,
-				BFAD33C91B61730300D3E7A6 /* PopCast.cpp in Headers */,
 				BF192B041BF10A9400324911 /* SoyH264.h in Headers */,
 				BF406D301BB9B1C500CECF4E /* SoyHttp.h in Headers */,
-				BFAD33C81B61730300D3E7A6 /* TCaster.cpp in Headers */,
 				BF3EB6B61C15ACE4002686F6 /* SoyUnity.h in Headers */,
 				BFBC3DBD1BC823F300CEE3D5 /* AvfPixelBuffer.h in Headers */,
 				BF40911D1B5EDC0400643329 /* PopUnity.h in Headers */,
+				BF691EF91C3F04C30092FC34 /* TCaster.h in Headers */,
 				BF8990C71BE7F31400FF81FB /* heaparray.hpp in Headers */,
 				BF7225B91BAF38D300550AD8 /* SoyRef.h in Headers */,
 				BF8990C51BE7F2E700FF81FB /* array.hpp in Headers */,
