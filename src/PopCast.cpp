@@ -106,13 +106,11 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 
 	try
 	{
-		auto& Context = Unity::GetOpenglContext();
-		
 		//	assuming type atm... maybe we can extract it via opengl?
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		GLenum Type = GL_TEXTURE_2D;
 		Opengl::TTexture Texture( TextureId, Meta, Type );
-		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex), Context );
+		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
 		return true;
 	}
 	catch(std::exception& e)
@@ -129,13 +127,11 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	
 	try
 	{
-		auto& Context = Unity::GetOpenglContext();
-
 		//	assuming type atm... maybe we can extract it via opengl?
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		GLenum Type = GL_TEXTURE_2D;
 		Opengl::TTexture Texture( TextureId, Meta, Type );
-		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex), Context );
+		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
 		return true;
 	}
 	catch(std::exception& e)
@@ -170,14 +166,17 @@ Airplay::TContext& PopCast::GetAirplayContext()
 
 
 
-std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params)
+std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext)
 {
 	gInstancesLock.lock();
 	static TInstanceRef gInstanceRefCounter(1000);
 	auto InstanceRef = gInstanceRefCounter++;
 	gInstancesLock.unlock();
 
-	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params) );
+	if ( !OpenglContext )
+		OpenglContext = Unity::GetOpenglContextPtr();
+	
+	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params,OpenglContext) );
 	
 	gInstancesLock.lock();
 	gInstances.push_back( pInstance );
@@ -220,11 +219,11 @@ bool PopCast::Free(TInstanceRef Instance)
 
 
 
-PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
+PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
 	mRef			( Ref ),
+	mOpenglContext	( OpenglContext ),
 	mBaseTimestamp	( true )	//	timestamps based on now
 {
-	
 	if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
 	{
 		auto& Context = GetAirplayContext();
@@ -237,7 +236,7 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	}
 	else if ( Soy::StringTrimLeft( Params.mName, "file:", false ) )
 	{
-		mCaster.reset( new TFileCaster( Params, Unity::GetOpenglContextPtr() ) );
+		mCaster.reset( new TFileCaster( Params, mOpenglContext ) );
 	}
 	else
 	{
@@ -247,9 +246,11 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params) :
 	}
 }
 
-void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,size_t StreamIndex,Opengl::TContext& Context)
+void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,size_t StreamIndex)
 {
+	Soy::Assert( mOpenglContext!=nullptr, "Instance requires an opengl context" );
 	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	auto& Context = *mOpenglContext;
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
