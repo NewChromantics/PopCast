@@ -6,7 +6,7 @@
  
 */
 
-//	all the relevent headers for osx framework
-#include "PopMovieDecoder.h"
-#include "AvfMovieDecoder.h"
+
+//	C interface
+#include "PopCast.h"
 
