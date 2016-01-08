@@ -127,6 +127,7 @@
 		BF5B071A1B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF61FBE81B4EC46C00CCF9C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF61FBE71B4EC46C00CCF9C7 /* OpenGLES.framework */; };
 		BF691EF91C3F04C30092FC34 /* TCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AC1B4D640D00DA2575 /* TCaster.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		BF691F031C4016C00092FC34 /* SoyGif.h in Headers */ = {isa = PBXBuildFile; fileRef = BFAEE89A1C2774A500E25C47 /* SoyGif.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF7225A41BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
 		BF7225A51BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
 		BF7225A61BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
@@ -620,6 +621,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BFB255FE1BA1EA5A00F30239 /* SoyRuntimeLibrary.h in Headers */,
+				BF691F031C4016C00092FC34 /* SoyGif.h in Headers */,
 				BF40911C1B5EDC0400643329 /* PopCast.h in Headers */,
 				BF192B0B1BF10A9D00324911 /* SoyHttpConnection.h in Headers */,
 				BF406D341BB9B1C500CECF4E /* SoyProtocol.h in Headers */,

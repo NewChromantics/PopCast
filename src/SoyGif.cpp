@@ -1,5 +1,6 @@
 #include "SoyGif.h"
 #include "TFileCaster.h"
+#include "TBlitterOpengl.h"
 
 #include "gif.h"
 
@@ -12,7 +13,7 @@
 namespace Gif
 {
 	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba);
-	void	MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params);
+	void	MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);
 	void	GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const TEncodeParams& Params,bool& IsKeyframe);
 	void	ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Params);
 }
@@ -29,10 +30,9 @@ const char* GifFragShaderDebugPalette =
 ;
 
 
-
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params)
 {
-	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext ) );
+	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext, Params ) );
 	return Encoder;
 }
 
@@ -248,11 +248,12 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 
 
 
-Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext) :
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,TEncodeParams Params) :
 	SoyWorkerThread	( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder	( OutputBuffer ),
 	mStreamIndex	( StreamIndex ),
-	mOpenglContext	( OpenglContext )
+	mOpenglContext	( OpenglContext ),
+	mParams			( Params )
 {
 	Start();
 }
@@ -383,28 +384,23 @@ bool Gif::TEncoder::Iteration()
 	
 	try
 	{
-		static bool DebugPaletteShader = false;
-		static bool DebugTransparency = false;
-		static float MaxDiff = 0.01f;
-		static TEncodeParams Params;
-		
 		const char* Shader = GifFragShaderSimpleNearest;
-		if ( DebugPaletteShader )
+		if ( mParams.mDebugIndexes )
 			Shader = GifFragShaderDebugPalette;
 		
-		auto MaskPixel = [](const vec3x<uint8>& Old,const vec3x<uint8>& New)
+		auto MaskPixel = [this](const vec3x<uint8>& Old,const vec3x<uint8>& New)
 		{
+			if ( mParams.mMaskMaxDiff == 0 )
+				return true;
+			
 			int Diff = abs( Old.x - New.x ) + abs( Old.y - New.y ) + abs( Old.z - New.z );
 			float Difff = Diff / (256.f*3.f);
-			if ( Difff >= MaxDiff )
+			if ( Difff >= mParams.mMaskMaxDiff )
 				return false;
 			return true;
 		};
 		
-		Params.mMaskPixelFunc = MaskPixel;
-		Params.mDebugTransparency = DebugTransparency;
-		
-		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, Params );
+		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, mParams, MaskPixel );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	
 		//	drop packets
@@ -489,15 +485,16 @@ void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t 
 		}
 		
 		//	clip unset
-		if ( Palette.GetWidth() != PaletteIndex+1 )
-			Palette.ResizeClip( PaletteIndex+1, Palette.GetHeight() );
+		//	gr: warning; growing here might insert odd colours
+		if ( Palette.GetWidth() != PaletteIndex )
+			Palette.ResizeClip( PaletteIndex, Palette.GetHeight() );
 	}
 }
 
 
 void Gif::GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const TEncodeParams& Params,bool& IsKeyframe)
 {
-	if ( Params.mMakeDebugPalette )
+	if ( Params.mDebugPalette )
 	{
 		IsKeyframe = true;
 		GifDebugPalette( Palette );
@@ -589,7 +586,7 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 	mOpenglSemaphore.reset();
 }
 
-void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params)
+void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
 {
 	if ( TestAlpha )
 	{
@@ -608,7 +605,7 @@ void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool
 	}
 	
 	//	mask image
-	if ( Params.mMaskPixelFunc )
+	if ( MaskPixelFunc )
 	{
 		for ( int y=0;	y<RgbaMutable.GetHeight();	y++ )
 		{
@@ -618,7 +615,7 @@ void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool
 				auto* pNewRgba = &RgbaMutable.GetPixelPtr( x, y, 0 );
 				auto& OldRgba = *reinterpret_cast<const vec3x<uint8>*>(pOldRgba);
 				auto& NewRgba = *reinterpret_cast<vec3x<uint8>*>(pNewRgba);
-				if ( !Params.mMaskPixelFunc( OldRgba, NewRgba ) )
+				if ( !MaskPixelFunc( OldRgba, NewRgba ) )
 					continue;
 				
 				//	match, so alpha away
@@ -629,7 +626,7 @@ void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool
 	}
 }
 
-void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params)
+void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
 {
 	std::shared_ptr<SoyPixelsImpl> pNewPalette;
 
@@ -644,7 +641,7 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
 		RgbaCopy.reset( new SoyPixels( Rgba ) );
 		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
-		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlpha, Params );
+		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlpha, Params, MaskPixelFunc );
 	}
 	
 

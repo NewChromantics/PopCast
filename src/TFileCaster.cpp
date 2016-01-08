@@ -25,7 +25,7 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 	{
 		auto AllocGifEncoder = [this,OpenglContext](size_t StreamIndex)
 		{
-			return Gif::AllocEncoder( mFrameBuffer, StreamIndex, OpenglContext );
+			return Gif::AllocEncoder( mFrameBuffer, StreamIndex, OpenglContext, mParams.mGifParams );
 		};
 		mAllocEncoder = AllocGifEncoder;
 		mFileStream.reset( new TFileStreamWriter( Filename ) );
