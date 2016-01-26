@@ -12,6 +12,8 @@
 
 namespace Gif
 {
+	static uint64		TimerMinMs = 1000;
+	
 	void	MakeIndexedImage(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Rgba);
 	void	MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool& Keyframe,bool TestAlpha,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);
 	void	GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const TEncodeParams& Params,bool& IsKeyframe);
@@ -237,15 +239,16 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		auto& Palette = *PaletteAndIndexed[0];
 		
 		//	fastish ~7ms
-		Soy::TScopeTimerPrint Timer("GifWriteLzwImage",1);
+		Soy::TScopeTimerPrint Timer("GifWriteLzwImage", Gif::TimerMinMs );
 		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette, TransparentIndex );
 		
 		Output.Push( LzwWrite );
 	}
 	
-	std::Debug << "GifWriteFrameFinished" << std::endl;
+	static bool DebugFin = false;
+	if ( DebugFin )
+		std::Debug << "GifWriteFrameFinished" << std::endl;
 }
-
 
 
 Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,TEncodeParams Params) :
@@ -456,7 +459,7 @@ std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const Opengl::
 
 void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t PixelSkip)
 {
-	Soy::TScopeTimerPrint Timer( __func__, 1 );
+	Soy::TScopeTimerPrint Timer( __func__, Gif::TimerMinMs  );
 	auto PixelStep = 1 + PixelSkip;
 	auto PaletteSize = Frame.GetWidth() * Frame.GetHeight();
 	Palette.Init( PaletteSize/PixelStep, 1, SoyPixelsFormat::RGB );
@@ -506,7 +509,7 @@ void Gif::GetPalette(SoyPixelsImpl& Palette,const SoyPixelsImpl& Rgba,const TEnc
 
 void Gif::ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Params)
 {
-	Soy::TScopeTimerPrint Timer( __func__, 1 );
+	Soy::TScopeTimerPrint Timer( __func__, Gif::TimerMinMs );
 
 	//	already shrunk
 	if ( Palette.GetWidth() <= Params.mMaxColours && !Sort )
@@ -523,7 +526,7 @@ void Gif::ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Pa
 
 void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader)
 {
-	Soy::TScopeTimerPrint Timer( __func__, 1 );
+	Soy::TScopeTimerPrint Timer( __func__, Gif::TimerMinMs );
 	
 	Soy::Assert( mOpenglContext!=nullptr, "Cannot use shader if no context");
 	
@@ -548,7 +551,7 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 			mSourceImage.reset( new Opengl::TTexture( Source.GetMeta(), GL_TEXTURE_2D ) );
 
 		{
-			Soy::TScopeTimerPrint Timer( "opengl: upload source images", 2 );
+			Soy::TScopeTimerPrint Timer( "opengl: upload source images", Gif::TimerMinMs );
 			mSourceImage->Write( Source );
 			mPaletteImage->Write( Palette );
 		}
@@ -562,11 +565,11 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 		
 		Opengl::TTextureUploadParams UploadParams;
 		{
-			Soy::TScopeTimerPrint Timer( "Palettising blit", 2 );
+			Soy::TScopeTimerPrint Timer( "Palettising blit", Gif::TimerMinMs );
 			mOpenglBlitter->BlitTexture( *mIndexImage, GetArrayBridge(Sources), *mOpenglContext, UploadParams, FragShader );
 		}
 		{
-			Soy::TScopeTimerPrint Timer( "opengl: read back indexed image", 2 );
+			Soy::TScopeTimerPrint Timer( "opengl: read back indexed image", Gif::TimerMinMs );
 			mIndexImage->Read( IndexedImage );
 		}
 	};
@@ -670,7 +673,7 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 		mPrevRgb.reset( new SoyPixels( Rgba ) );
 	
 	//	join together
-	Soy::TScopeTimerPrint Timer("MakePaletteised",1);
+	Soy::TScopeTimerPrint Timer("MakePaletteised",Gif::TimerMinMs);
 	auto WriteTransparentIndex = Params.mDebugTransparency ? DebugTransparentIndex : TransparentIndex;
 	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, WriteTransparentIndex );
 }
