@@ -132,6 +132,8 @@
 		BF627D991C622EF900BB840B /* SoyFilesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF627D941C622EF900BB840B /* SoyFilesystem.mm */; };
 		BF627D9A1C622EF900BB840B /* SoyFilesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF627D941C622EF900BB840B /* SoyFilesystem.mm */; };
 		BF627D9B1C622EF900BB840B /* SoyFilesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF627D941C622EF900BB840B /* SoyFilesystem.mm */; };
+		BF627DA21C6231EC00BB840B /* CoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF627DA11C6231EC00BB840B /* CoreServices.framework */; };
+		BF627DA31C62325200BB840B /* CoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF627DA11C6231EC00BB840B /* CoreServices.framework */; };
 		BF691EF91C3F04C30092FC34 /* TCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AC1B4D640D00DA2575 /* TCaster.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF691F031C4016C00092FC34 /* SoyGif.h in Headers */ = {isa = PBXBuildFile; fileRef = BFAEE89A1C2774A500E25C47 /* SoyGif.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF7225A41BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
@@ -306,6 +308,7 @@
 		BF627D921C622EF900BB840B /* SoyFilesystem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyFilesystem.cpp; path = src/SoyFilesystem.cpp; sourceTree = "<group>"; };
 		BF627D931C622EF900BB840B /* SoyFilesystem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyFilesystem.h; path = src/SoyFilesystem.h; sourceTree = "<group>"; };
 		BF627D941C622EF900BB840B /* SoyFilesystem.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SoyFilesystem.mm; path = src/SoyFilesystem.mm; sourceTree = "<group>"; };
+		BF627DA11C6231EC00BB840B /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
 		BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TMemFileCaster.cpp; sourceTree = "<group>"; };
 		BF7225A31BADB01A00550AD8 /* TMemFileCaster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TMemFileCaster.h; sourceTree = "<group>"; };
 		BF7225AE1BAF0E2700550AD8 /* SoyMemFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyMemFile.cpp; path = src/SoyMemFile.cpp; sourceTree = "<group>"; };
@@ -366,6 +369,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF627DA31C62325200BB840B /* CoreServices.framework in Frameworks */,
 				BF80C3271C3EC55100EBE03E /* libOpenCast.a in Frameworks */,
 				BF80C3291C3EC7B600EBE03E /* CFNetwork.framework in Frameworks */,
 				BF80C32C1C3EC7D400EBE03E /* AVFoundation.framework in Frameworks */,
@@ -380,6 +384,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF627DA21C6231EC00BB840B /* CoreServices.framework in Frameworks */,
 				BFBC3DA51BC80ADC00CEE3D5 /* CFNetwork.framework in Frameworks */,
 				BFBC3D981BC7F87C00CEE3D5 /* VideoToolbox.framework in Frameworks */,
 				BFB255EF1BA1BCD200F30239 /* libOpenCast.a in Frameworks */,
@@ -405,6 +410,7 @@
 		BF06DEF81B2ACD3B006F241F = {
 			isa = PBXGroup;
 			children = (
+				BF627DA11C6231EC00BB840B /* CoreServices.framework */,
 				BFBC3DA41BC80ADC00CEE3D5 /* CFNetwork.framework */,
 				BFBC3D971BC7F87B00CEE3D5 /* VideoToolbox.framework */,
 				BFB255EE1BA1BCD200F30239 /* libOpenCast.a */,
