@@ -3,12 +3,15 @@
 #include <SoyTypes.h>
 #include <SoyThread.h>
 #include "PopUnity.h"
+#include "SoyGif.h"
 
 
 class TCasterParams
 {
 public:
-	std::string		mName;		//	filename, device name etc
+	std::string			mName;		//	filename, device name etc
+	
+	Gif::TEncodeParams	mGifParams;
 };
 
 class TCastDeviceMeta

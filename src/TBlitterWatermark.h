@@ -76,6 +76,7 @@
 
 #else
 
+#define WATERMARK_PREAMBLE_GLSL			""
 #define APPLY_WATERMARK_GLSL(rgba,uv)	"{}"
 
 #endif

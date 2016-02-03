@@ -2,22 +2,27 @@
 
 #include <SoyTypes.h>
 #include <SoyMedia.h>
-#include "TBlitterOpengl.h"
 
 
 class GifWriter;
 class GifPalette;
 class TRawWriteDataProtocol;
 
+namespace Opengl
+{
+	class TBlitter;
+}
 
 //	https://github.com/ginsweater/gif-h/blob/master/gif.h
 namespace Gif
 {
-	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext);
-
 	class TMuxer;
 	class TEncoder;
 	class TEncodeParams;
+	
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params);
+
+	typedef std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	TMaskPixelFunc;
 }
 
 class Gif::TMuxer : public TMediaMuxer
@@ -65,27 +70,30 @@ class Gif::TEncodeParams
 public:
 	TEncodeParams() :
 		mAllowIntraFrames		( true ),
-		mMakeDebugPalette		( false ),
-		mFindPalettePixelSkip	( 5 ),
+		mDebugIndexes			( false ),
+		mDebugPalette			( false ),
 		mDebugTransparency		( false ),
+		mFindPalettePixelSkip	( 5 ),
 		mTransparentColour		( 255, 0, 255 ),
-		mMaxColours				( 255 )
+		mMaxColours				( 255 ),
+		mMaskMaxDiff			( 0.01f )
 	{
 	}
 	
-	std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	mMaskPixelFunc;
-	size_t			mFindPalettePixelSkip;
-	bool			mAllowIntraFrames;	//	use transparency between frames
-	bool			mMakeDebugPalette;
-	bool			mDebugTransparency;
+	size_t			mFindPalettePixelSkip;	//	when generating pallete, reduce number of colours we accumualte
+	bool			mAllowIntraFrames;		//	use transparency between frames
+	bool			mDebugPalette;			//	make a debug palette
+	bool			mDebugIndexes;			//	render the pallete top to bottom
+	bool			mDebugTransparency;		//	highlight transparent regions
 	vec3x<uint8>	mTransparentColour;
 	size_t			mMaxColours;
+	float			mMaskMaxDiff;			//	if zero, no masking
 };
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
 public:
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext>	OpenglContext);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext>	OpenglContext,Gif::TEncodeParams Params);
 	~TEncoder();
 	
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
@@ -99,10 +107,11 @@ protected:
 
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
 
-	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params);
+	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
 	
 public:
+	Gif::TEncodeParams		mParams;
 	size_t					mStreamIndex;
 	
 	std::mutex				mPendingFramesLock;

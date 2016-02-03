@@ -1,6 +1,5 @@
 #pragma once
 
-#include "SoyDebug.h"
 #include "PopUnity.h"
 
 
@@ -20,7 +19,7 @@ namespace PopCast
 	class TInstance;
 	typedef Unity::ulong	TInstanceRef;
 
-	std::shared_ptr<TInstance>	Alloc(TCasterParams Params);
+	std::shared_ptr<TInstance>	Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext=nullptr);
 	std::shared_ptr<TInstance>	GetInstance(TInstanceRef Instance);
 	bool						Free(TInstanceRef Instance);
 };
@@ -33,15 +32,16 @@ public:
 	TInstance()=delete;
 	TInstance(const TInstance& Copy)=delete;
 public:
-	explicit TInstance(const TInstanceRef& Ref,TCasterParams Params);
+	explicit TInstance(const TInstanceRef& Ref,TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext);
 	
 	TInstanceRef	GetRef() const		{	return mRef;	}
 	
-	void			WriteFrame(Opengl::TTexture Texture,size_t StreamIndex,Opengl::TContext& Context);
+	void			WriteFrame(Opengl::TTexture Texture,size_t StreamIndex);
 	
 public:
-	std::shared_ptr<TCaster>	mCaster;
-	SoyTime						mBaseTimestamp;
+	std::shared_ptr<Opengl::TContext>	mOpenglContext;
+	std::shared_ptr<TCaster>			mCaster;
+	SoyTime								mBaseTimestamp;
 
 private:
 	TInstanceRef	mRef;

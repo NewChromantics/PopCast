@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BF4090E51B5EDA7100643329"
-               BuildableName = "PopCastOsxFramework.framework"
-               BlueprintName = "PopCastOsxFramework"
+               BuildableName = "PopCastFramework.framework"
+               BlueprintName = "PopCastFramework"
                ReferencedContainer = "container:PopCast.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -33,8 +33,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BF4090E51B5EDA7100643329"
-            BuildableName = "PopCastOsxFramework.framework"
-            BlueprintName = "PopCastOsxFramework"
+            BuildableName = "PopCastFramework.framework"
+            BlueprintName = "PopCastFramework"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -55,8 +55,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BF4090E51B5EDA7100643329"
-            BuildableName = "PopCastOsxFramework.framework"
-            BlueprintName = "PopCastOsxFramework"
+            BuildableName = "PopCastFramework.framework"
+            BlueprintName = "PopCastFramework"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -73,8 +73,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BF4090E51B5EDA7100643329"
-            BuildableName = "PopCastOsxFramework.framework"
-            BlueprintName = "PopCastOsxFramework"
+            BuildableName = "PopCastFramework.framework"
+            BlueprintName = "PopCastFramework"
             ReferencedContainer = "container:PopCast.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
