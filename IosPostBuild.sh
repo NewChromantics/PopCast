@@ -2,17 +2,11 @@
 # required as xcode 7 has a bug where it tries to modify the lib using the normal CopyFiles phase, so we have to do it as a script
 # see posts on xcode beta forums (cant find url atm)
 
-echo "Copying .a to Unity dir"
+echo "Copying $CODESIGNING_FOLDER_PATH to Unity dir"
 TARGET_PATH="$SRCROOT/Unity/Assets/Plugins/Ios"
 mkdir -p $TARGET_PATH
-cp "$CODESIGNING_FOLDER_PATH" $TARGET_PATH
-
-
-echo "Copying .a to IosBuild dir"
-TARGET_PATH="$SRCROOT/Unity/Assets/Plugins/Ios"
-mkdir -p $TARGET_PATH
-cp "$CODESIGNING_FOLDER_PATH" $TARGET_PATH
-
+cp -a "$CODESIGNING_FOLDER_PATH" $TARGET_PATH
+if [ $? -ne 0 ]; then { echo "Copy binary failed." ; exit 1; } fi
 
 # copy c#
 chmod +x ./CopyCSharpFiles.sh
