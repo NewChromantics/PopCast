@@ -126,6 +126,12 @@
 		BF5B07191B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF5B071A1B5D06AF00C489C6 /* SoyShader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */; };
 		BF61FBE81B4EC46C00CCF9C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF61FBE71B4EC46C00CCF9C7 /* OpenGLES.framework */; };
+		BF627D951C622EF900BB840B /* SoyFilesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF627D921C622EF900BB840B /* SoyFilesystem.cpp */; };
+		BF627D961C622EF900BB840B /* SoyFilesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF627D921C622EF900BB840B /* SoyFilesystem.cpp */; };
+		BF627D971C622EF900BB840B /* SoyFilesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF627D921C622EF900BB840B /* SoyFilesystem.cpp */; };
+		BF627D991C622EF900BB840B /* SoyFilesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF627D941C622EF900BB840B /* SoyFilesystem.mm */; };
+		BF627D9A1C622EF900BB840B /* SoyFilesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF627D941C622EF900BB840B /* SoyFilesystem.mm */; };
+		BF627D9B1C622EF900BB840B /* SoyFilesystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF627D941C622EF900BB840B /* SoyFilesystem.mm */; };
 		BF691EF91C3F04C30092FC34 /* TCaster.h in Headers */ = {isa = PBXBuildFile; fileRef = BF1499AC1B4D640D00DA2575 /* TCaster.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF691F031C4016C00092FC34 /* SoyGif.h in Headers */ = {isa = PBXBuildFile; fileRef = BFAEE89A1C2774A500E25C47 /* SoyGif.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BF7225A41BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */; };
@@ -193,21 +199,7 @@
 		BFEF570A1B613B0800340796 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0F1B5526D300CBD1AC /* CoreVideo.framework */; };
 		BFEF570B1B613B1200340796 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0B1B5526B800CBD1AC /* CoreMedia.framework */; };
 		BFEF570C1B613B2300340796 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B051B55268F00CBD1AC /* AVFoundation.framework */; };
-		BFEF570D1B614A8B00340796 /* PopCastOsx.bundle in CopyFiles */ = {isa = PBXBuildFile; fileRef = BF41F9741B4BD0700015614A /* PopCastOsx.bundle */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		BF41F9E81B4BE98B0015614A /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(SRCROOT)/Unity/Assets/Plugins/Osx";
-			dstSubfolderSpec = 0;
-			files = (
-				BFEF570D1B614A8B00340796 /* PopCastOsx.bundle in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		BF06DF031B2ACD5A006F241F /* Android.mk */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Android.mk; path = jni/Android.mk; sourceTree = "<group>"; };
@@ -310,6 +302,10 @@
 		BF5B07171B5D06AF00C489C6 /* SoyShader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyShader.cpp; path = src/SoyShader.cpp; sourceTree = "<group>"; };
 		BF5B07181B5D06AF00C489C6 /* SoyShader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyShader.h; path = src/SoyShader.h; sourceTree = "<group>"; };
 		BF61FBE71B4EC46C00CCF9C7 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.4.sdk/System/Library/Frameworks/OpenGLES.framework; sourceTree = DEVELOPER_DIR; };
+		BF627D911C622DAE00BB840B /* WindowsPostBuild.bat */ = {isa = PBXFileReference; lastKnownFileType = text; path = WindowsPostBuild.bat; sourceTree = "<group>"; };
+		BF627D921C622EF900BB840B /* SoyFilesystem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyFilesystem.cpp; path = src/SoyFilesystem.cpp; sourceTree = "<group>"; };
+		BF627D931C622EF900BB840B /* SoyFilesystem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyFilesystem.h; path = src/SoyFilesystem.h; sourceTree = "<group>"; };
+		BF627D941C622EF900BB840B /* SoyFilesystem.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SoyFilesystem.mm; path = src/SoyFilesystem.mm; sourceTree = "<group>"; };
 		BF7225A21BADB01A00550AD8 /* TMemFileCaster.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TMemFileCaster.cpp; sourceTree = "<group>"; };
 		BF7225A31BADB01A00550AD8 /* TMemFileCaster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TMemFileCaster.h; sourceTree = "<group>"; };
 		BF7225AE1BAF0E2700550AD8 /* SoyMemFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyMemFile.cpp; path = src/SoyMemFile.cpp; sourceTree = "<group>"; };
@@ -476,6 +472,9 @@
 				BFA664711B5581A400C33A2A /* SoyEnum.h */,
 				BF41F9DA1B4BDBD80015614A /* SoyEvent.cpp */,
 				BF41F9DB1B4BDBD80015614A /* SoyEvent.h */,
+				BF627D921C622EF900BB840B /* SoyFilesystem.cpp */,
+				BF627D931C622EF900BB840B /* SoyFilesystem.h */,
+				BF627D941C622EF900BB840B /* SoyFilesystem.mm */,
 				BF192AFE1BF10A9400324911 /* SoyH264.cpp */,
 				BF192AFF1BF10A9400324911 /* SoyH264.h */,
 				BF406D291BB9B1C500CECF4E /* SoyHttp.cpp */,
@@ -542,6 +541,7 @@
 				BFAEE8911C276F5600E25C47 /* AndroidBuild.sh */,
 				BFAEE8921C276F5600E25C47 /* CopyCSharpFiles.sh */,
 				BFAEE8931C276F5600E25C47 /* IosPostBuild.sh */,
+				BF627D911C622DAE00BB840B /* WindowsPostBuild.bat */,
 				BFAEE8941C276F5600E25C47 /* MakePackage.sh */,
 				BFAEE8951C276F5600E25C47 /* OsxPostBuild.sh */,
 			);
@@ -689,7 +689,6 @@
 				BF41F9701B4BD0700015614A /* Sources */,
 				BF41F9711B4BD0700015614A /* Frameworks */,
 				BF41F9721B4BD0700015614A /* Resources */,
-				BF41F9E81B4BE98B0015614A /* CopyFiles */,
 				BFAEE8971C276F9200E25C47 /* ShellScript */,
 			);
 			buildRules = (
@@ -838,6 +837,7 @@
 				BFBC3DC01BC823F300CEE3D5 /* AvfPixelBuffer.mm in Sources */,
 				BF11911B1BDAF98000DD627C /* SoyMedia.cpp in Sources */,
 				BFBC3DA21BC8081D00CEE3D5 /* SoyTime.mm in Sources */,
+				BF627D971C622EF900BB840B /* SoyFilesystem.cpp in Sources */,
 				BF40910D1B5EDB6800643329 /* SoyDebug.mm in Sources */,
 				BF4091191B5EDB6800643329 /* SoyVector.cpp in Sources */,
 				BFC4E1C71C3097BC008D13EC /* TBlitterOpengl.cpp in Sources */,
@@ -861,6 +861,7 @@
 				BF4474561C0260BB00122F91 /* AvfMuxer.mm in Sources */,
 				BF4091151B5EDB6800643329 /* SoyString.cpp in Sources */,
 				BF80C3341C3EC86E00EBE03E /* crc.c in Sources */,
+				BF627D9B1C622EF900BB840B /* SoyFilesystem.mm in Sources */,
 				BF4091171B5EDB6800643329 /* SoyTime.cpp in Sources */,
 				BF4091091B5EDB6800643329 /* memheap.cpp in Sources */,
 			);
@@ -896,6 +897,7 @@
 				BF1499C31B4D640D00DA2575 /* PopUnity.cpp in Sources */,
 				BFBC3DBF1BC823F300CEE3D5 /* AvfPixelBuffer.mm in Sources */,
 				BF11911A1BDAF98000DD627C /* SoyMedia.cpp in Sources */,
+				BF627D961C622EF900BB840B /* SoyFilesystem.cpp in Sources */,
 				BFBC3DA11BC8081D00CEE3D5 /* SoyTime.mm in Sources */,
 				BF1499DF1B4D67CB00DA2575 /* SoyPng.cpp in Sources */,
 				BF4474551C0260BA00122F91 /* AvfMuxer.mm in Sources */,
@@ -919,6 +921,7 @@
 				BF1499D71B4D663800DA2575 /* SoyOpenglContext.cpp in Sources */,
 				BF41F9D21B4BDBA80015614A /* SoyArray.cpp in Sources */,
 				BFC4E1C31C308B71008D13EC /* TBlitter.cpp in Sources */,
+				BF627D9A1C622EF900BB840B /* SoyFilesystem.mm in Sources */,
 				BF1499BF1B4D640D00DA2575 /* TCaster.cpp in Sources */,
 				BF41F9D71B4BDBC60015614A /* SoyDebug.cpp in Sources */,
 			);
@@ -938,6 +941,7 @@
 				BF41F9CD1B4BDBA30015614A /* SoyString.cpp in Sources */,
 				BF406D211BB9B1A900CECF4E /* SoySocket.cpp in Sources */,
 				BF5B07191B5D06AF00C489C6 /* SoyShader.cpp in Sources */,
+				BF627D991C622EF900BB840B /* SoyFilesystem.mm in Sources */,
 				BF406D3E1BB9C8B200CECF4E /* SoyMulticast.mm in Sources */,
 				BF41F9E01B4BDC1E0015614A /* memheap.cpp in Sources */,
 				BFC4E1C61C3097BB008D13EC /* TBlitterOpengl.cpp in Sources */,
@@ -946,6 +950,7 @@
 				BF41F9C71B4BDB270015614A /* SoyAssert.cpp in Sources */,
 				BF2E8B121B55270D00CBD1AC /* SoyString.mm in Sources */,
 				BF7225A41BADB01A00550AD8 /* TMemFileCaster.cpp in Sources */,
+				BF627D951C622EF900BB840B /* SoyFilesystem.cpp in Sources */,
 				BF1499D21B4D660F00DA2575 /* SoyOpengl.cpp in Sources */,
 				BF41F9C91B4BDB270015614A /* SoyTime.cpp in Sources */,
 				BFBC3DBE1BC823F300CEE3D5 /* AvfPixelBuffer.mm in Sources */,
