@@ -986,7 +986,116 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		BF06DEFE1B2ACD3B006F241F /* Debug */ = {
+		BF06DEFE1B2ACD3B006F241F /* Master */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "POPMOVIE_WATERMARK=$(POPMOVIE_WATERMARK)";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/src/libavwrapper/**";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				POPMOVIE_WATERMARK = 0;
+			};
+			name = Master;
+		};
+		BF06DF011B2ACD3B006F241F /* Master */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = PopCastAndroid;
+			};
+			name = Master;
+		};
+		BF4090F91B5EDA7100643329 /* Master */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BF41F9B51B4BD4AD0015614A /* SoyLib_Osx.xcconfig */;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/src/GoogleCastSDK-2.7.1-Release",
+				);
+				FRAMEWORK_VERSION = A;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(OPENCAST_PATH)/**",
+				);
+				INFOPLIST_FILE = src/FrameworkInfo.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(CUDA_PATH)/lib",
+					"$(OPENCAST_PATH)/build/Debug/",
+				);
+				New_Setting = "";
+				POPMOVIE_WATERMARK = 0;
+				PRODUCT_BUNDLE_IDENTIFIER = "NewChromantics.$(PRODUCT_NAME:rfc1034identifier)";
+				SKIP_INSTALL = YES;
+				VALID_ARCHS = x86_64;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Master;
+		};
+		BF41F9781B4BD0700015614A /* Master */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BF41F9B51B4BD4AD0015614A /* SoyLib_Osx.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/src/GoogleCastSDK-2.7.1-Release",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(OPENCAST_PATH)/**",
+				);
+				INFOPLIST_FILE = src/BundleInfo.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @rpath/Frameworks @rpath/Resources Frameworks/";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(CUDA_PATH)/lib",
+					"$(OPENCAST_PATH)/build/Debug/",
+				);
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Master;
+		};
+		BF627D9C1C622FB100BB840B /* Watermarked */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1021,9 +1130,9 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				POPMOVIE_WATERMARK = 1;
 			};
-			name = Debug;
+			name = Watermarked;
 		};
-		BF06DF011B2ACD3B006F241F /* Debug */ = {
+		BF627D9D1C622FB100BB840B /* Watermarked */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUGGING_SYMBOLS = YES;
@@ -1033,9 +1142,54 @@
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = PopCastAndroid;
 			};
-			name = Debug;
+			name = Watermarked;
 		};
-		BF4090F91B5EDA7100643329 /* Debug */ = {
+		BF627D9E1C622FB100BB840B /* Watermarked */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BF1499E61B4D8FB900DA2575 /* SoyLib_Ios.xcconfig */;
+			buildSettings = {
+				DEAD_CODE_STRIPPING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/src/GoogleCastSDK-2.7.1-Release",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				OTHER_LDFLAGS = "-ObjC";
+				SDKROOT = iphoneos;
+				SEPARATE_STRIP = NO;
+				SKIP_INSTALL = YES;
+			};
+			name = Watermarked;
+		};
+		BF627D9F1C622FB100BB840B /* Watermarked */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BF41F9B51B4BD4AD0015614A /* SoyLib_Osx.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/src/GoogleCastSDK-2.7.1-Release",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(OPENCAST_PATH)/**",
+				);
+				INFOPLIST_FILE = src/BundleInfo.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @rpath/Frameworks @rpath/Resources Frameworks/";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(CUDA_PATH)/lib",
+					"$(OPENCAST_PATH)/build/Debug/",
+				);
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Watermarked;
+		};
+		BF627DA01C622FB100BB840B /* Watermarked */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = BF41F9B51B4BD4AD0015614A /* SoyLib_Osx.xcconfig */;
 			buildSettings = {
@@ -1069,33 +1223,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Debug;
+			name = Watermarked;
 		};
-		BF41F9781B4BD0700015614A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = BF41F9B51B4BD4AD0015614A /* SoyLib_Osx.xcconfig */;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/src/GoogleCastSDK-2.7.1-Release",
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(OPENCAST_PATH)/**",
-				);
-				INFOPLIST_FILE = src/BundleInfo.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @rpath/Frameworks @rpath/Resources Frameworks/";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(CUDA_PATH)/lib",
-					"$(OPENCAST_PATH)/build/Debug/",
-				);
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = Debug;
-		};
-		BFEEDD7F1B46A7E6002F9CFA /* Debug */ = {
+		BFEEDD7F1B46A7E6002F9CFA /* Master */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = BF1499E61B4D8FB900DA2575 /* SoyLib_Ios.xcconfig */;
 			buildSettings = {
@@ -1114,7 +1244,7 @@
 				SEPARATE_STRIP = NO;
 				SKIP_INSTALL = YES;
 			};
-			name = Debug;
+			name = Master;
 		};
 /* End XCBuildConfiguration section */
 
@@ -1122,42 +1252,47 @@
 		BF06DEFC1B2ACD3B006F241F /* Build configuration list for PBXProject "PopCast" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				BF06DEFE1B2ACD3B006F241F /* Debug */,
+				BF06DEFE1B2ACD3B006F241F /* Master */,
+				BF627D9C1C622FB100BB840B /* Watermarked */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Master;
 		};
 		BF06DF001B2ACD3B006F241F /* Build configuration list for PBXLegacyTarget "PopCastAndroid" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				BF06DF011B2ACD3B006F241F /* Debug */,
+				BF06DF011B2ACD3B006F241F /* Master */,
+				BF627D9D1C622FB100BB840B /* Watermarked */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Master;
 		};
 		BF4090FB1B5EDA7100643329 /* Build configuration list for PBXNativeTarget "PopCastFramework" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				BF4090F91B5EDA7100643329 /* Debug */,
+				BF4090F91B5EDA7100643329 /* Master */,
+				BF627DA01C622FB100BB840B /* Watermarked */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Master;
 		};
 		BF41F97A1B4BD0700015614A /* Build configuration list for PBXNativeTarget "PopCastOsx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				BF41F9781B4BD0700015614A /* Debug */,
+				BF41F9781B4BD0700015614A /* Master */,
+				BF627D9F1C622FB100BB840B /* Watermarked */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Master;
 		};
 		BFEEDD831B46A7E6002F9CFA /* Build configuration list for PBXNativeTarget "PopCastIos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				BFEEDD7F1B46A7E6002F9CFA /* Debug */,
+				BFEEDD7F1B46A7E6002F9CFA /* Master */,
+				BF627D9E1C622FB100BB840B /* Watermarked */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Master;
 		};
 /* End XCConfigurationList section */
 	};
