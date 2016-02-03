@@ -8,9 +8,23 @@ export SRCROOT=$SOURCE_ROOT
 
 # do makefile build
 # gr: note: XCode needs to be in the Android/ dir otherwise error paths won't be relative
-./build.sh release
+DEFAULT_ACTION="release"
+if [ "$ACTION" == "" ]; then
+	echo "Defaulting build ACTION to $DEFAULT_ACTION"
+	ACTION=$DEFAULT_ACTION
+fi
+
+
+./build.sh $ACTION
 if [ $? -ne 0 ]; then { echo "./build.sh Failed." ; exit 1; } fi
 
+#	do nothing after clean
+#	gr: maybe delete plugin?
+if [ "$ACTION" == "clean" ]; then
+	exit 0
+fi
+
+# move out of android dir
 cd ..
 
 # copy lib
