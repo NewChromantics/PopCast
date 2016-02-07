@@ -29,7 +29,7 @@
 #include <string.h>  // for memcpy and bzero
 #include <stdint.h>  // for integer typedefs
 
-typedef vec3x<uint8> Rgb8;
+typedef Soy::TRgb8 Rgb8;
 
 // Define these macros to hook into a custom memory allocator.
 // TEMP_MALLOC and TEMP_FREE will only be called in stack fashion - frees in the reverse order of mallocs
