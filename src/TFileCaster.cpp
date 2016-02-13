@@ -96,17 +96,36 @@ std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared
 	return nullptr;
 }
 
-std::shared_ptr<TStreamWriter> AllocStreamWriter(std::string Filename)
+
+std::function<std::shared_ptr<TStreamWriter>()> GetAllocStreamWriterFunc(std::string Filename)
 {
 	if ( Soy::StringTrimLeft( Filename, "http:", false ) )
 	{
-		return std::make_shared<THttpFileWriter>( Filename );
+		auto f = [=]() -> std::shared_ptr<TStreamWriter>
+		{
+			return std::make_shared<THttpFileWriter>( Filename );
+		};
+		return f;
 	}
 	
 	//	detect directory to put file in
-	if ( Soy::StringBeginsWith( Filename, "file:", false ) )
+	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
 	{
-		return std::make_shared<TFileStreamWriter>( Filename );
+		return [Filename]
+		{
+			return std::make_shared<TFileStreamWriter>( Filename );
+		};
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<TStreamWriter> AllocStreamWriter(const std::string& Filename)
+{
+	auto Func = GetAllocStreamWriterFunc(Filename);
+	if ( Func )
+	{
+		return Func();
 	}
 
 	std::stringstream Error;
@@ -235,6 +254,12 @@ TFileCaster::~TFileCaster()
 	mFileStream.reset();
 	
 	mFrameBuffer.reset();
+}
+
+bool TFileCaster::HandlesFilename(const std::string& Filename)
+{
+	auto Func = GetAllocStreamWriterFunc(Filename);
+	return Func != nullptr;
 }
 
 void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
