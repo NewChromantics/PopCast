@@ -32,7 +32,7 @@ const char* GifFragShaderDebugPalette =
 ;
 
 
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params)
 {
 	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext, Params ) );
 	return Encoder;
@@ -293,29 +293,31 @@ Gif::TEncoder::~TEncoder()
 
 void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
-	//	do here in opengl...
-	//		determine palette for frame (or predefined palette)
-	//		reduce image to 256 colours (with dither/closest shader)
-	//		read pixels
-	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
-	auto& Packet = *pPacket;
+	//	all this needs to be done in the opengl thread
+	auto MakePacketFromTexture = [this,Image,Timecode]
+	{
+		std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
+		auto& Packet = *pPacket;
 
-	static bool DupliateTexture = true;
-	if ( DupliateTexture )
-	{
-		Packet.mPixelBuffer = CopyFrameImmediate( Image );
-	}
-	else
-	{
-		//	construct pixels against data and read it
-		SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
-		Image.Read( Pixels );
-	}
-	Packet.mTimecode = Timecode;
-	Packet.mDuration = SoyTime( 16ull );
-	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
+		static bool DupliateTexture = true;
+		if ( DupliateTexture )
+		{
+			Packet.mPixelBuffer = CopyFrameImmediate( Image );
+		}
+		else
+		{
+			//	construct pixels against data and read it
+			SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
+			Image.Read( Pixels );
+		}
+		Packet.mTimecode = Timecode;
+		Packet.mDuration = SoyTime( 16ull );
+		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
+		
+		PushFrame( pPacket );
+	};
 	
-	PushFrame( pPacket );
+	Context.PushJob( MakePacketFromTexture );
 }
 
 void Gif::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)

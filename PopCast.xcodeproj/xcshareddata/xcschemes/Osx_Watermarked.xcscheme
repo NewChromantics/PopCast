@@ -65,6 +65,11 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
+      <PathRunnable
+         runnableDebuggingMode = "0"
+         BundleIdentifier = "com.unity3d.UnityEditor5.x"
+         FilePath = "/Applications/Unity 5.3.0f4/Unity.app">
+      </PathRunnable>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"

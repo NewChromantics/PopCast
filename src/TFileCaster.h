@@ -101,6 +101,8 @@ public:
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
 	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
 	
+	static bool			HandlesFilename(const std::string& Filename);
+	
 private:
 	TMediaEncoder&		AllocEncoder(size_t StreamIndex);
 

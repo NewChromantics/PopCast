@@ -9,6 +9,169 @@
 #endif
 
 
+class THttpPortServer;
+class THttpFileServer;
+class THttpFileWriter;
+
+
+
+
+
+namespace PopCast
+{
+	std::map<size_t,std::shared_ptr<THttpPortServer>>	HttpServers;
+	
+	std::shared_ptr<THttpPortServer>	GetPortServer(size_t Port);
+}
+
+
+//	bridge between server & file
+class THttpFileWriter : public TStreamWriter
+{
+public:
+	THttpFileWriter(const std::string& PortAndPath);
+	
+	virtual void		Write(TStreamBuffer& Buffer) override;
+
+public:
+	std::shared_ptr<THttpFileServer>	mFileServer;
+};
+
+
+//	specific file data
+class THttpFileServer
+{
+public:
+	THttpFileServer(const std::string& PortAndPath);
+	
+	void			Write(TStreamBuffer& Buffer);
+
+public:
+	Array<char>	mData;	//	file contents
+};
+
+
+//	port handler, redirects requests for particular files
+class THttpPortServer
+{
+public:
+	THttpPortServer(const std::string& Port);
+	
+	std::shared_ptr<THttpFileServer>	AllocFileServer(const std::string& Path);
+	
+public:
+	std::map<std::string,std::shared_ptr<THttpFileServer>>	mFileServers;
+};
+
+
+
+THttpFileWriter::THttpFileWriter(const std::string& PortAndPath) :
+	TStreamWriter	( std::string("THttpFileWriter " + PortAndPath ) )
+{
+	
+}
+
+void THttpFileWriter::Write(TStreamBuffer& Buffer)
+{
+	Soy::Assert( mFileServer != nullptr, "Missing Http file server");
+	mFileServer->Write( Buffer );
+}
+
+
+void THttpFileServer::Write(TStreamBuffer& Buffer)
+{
+	auto Length = Buffer.GetBufferedSize();
+	Buffer.Pop( Length, GetArrayBridge( mData ) );
+}
+
+
+std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input)
+{
+#if defined(TARGET_OSX)
+	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
+	{
+		return std::make_shared<Avf::TFileMuxer>( Filename, Input );
+	}
+#endif
+	return nullptr;
+}
+
+
+std::function<std::shared_ptr<TStreamWriter>()> GetAllocStreamWriterFunc(std::string Filename)
+{
+	if ( Soy::StringTrimLeft( Filename, "http:", false ) )
+	{
+		auto f = [=]() -> std::shared_ptr<TStreamWriter>
+		{
+			return std::make_shared<THttpFileWriter>( Filename );
+		};
+		return f;
+	}
+	
+	//	detect directory to put file in
+	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
+	{
+		return [Filename]
+		{
+			return std::make_shared<TFileStreamWriter>( Filename );
+		};
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<TStreamWriter> AllocStreamWriter(const std::string& Filename)
+{
+	auto Func = GetAllocStreamWriterFunc(Filename);
+	if ( Func )
+	{
+		return Func();
+	}
+
+	std::stringstream Error;
+	Error << "Don't know what stream writer to make for " << Filename;
+	throw Soy::AssertException( Error.str() );
+}
+
+
+std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc,std::shared_ptr<Opengl::TContext> OpenglContext)
+{
+	if ( Soy::StringEndsWith( Filename, ".gif", false ) )
+	{
+		auto AllocGifEncoder = [Input,OpenglContext,Params](size_t StreamIndex)
+		{
+			return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams );
+		};
+		EncoderFunc = AllocGifEncoder;
+		return std::make_shared<Gif::TMuxer>( Output, Input, Filename );
+	}
+	
+	if ( Soy::StringEndsWith( Filename, ".raw", false ) )
+	{
+		return std::make_shared<TRawMuxer>( Output, Input );
+	}
+	
+	/*
+	if ( Soy::StringEndsWith( Filename, ".ts", false ) )
+	{
+		return std::make_shared<TMpeg2TsMuxer>( Output, Input );
+	}
+	*/
+	
+	//	libav formats
+	/*
+	{
+		return std::make_shared<Libav::TMuxer>( Output, Input );
+	}
+	*/
+	
+	std::stringstream Error;
+	Error << "Don't know what muxer to make for " << Filename;
+	throw Soy::AssertException( Error.str() );
+}
+
+
+
 TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
 	TCaster			( Params )
 {
@@ -17,6 +180,19 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 
+	
+	//	see if there are OS specialisations
+	mMuxer = AllocPlatformMuxer( Params.mName, mFrameBuffer );
+	
+	//	alloc stream & muxer from name
+	if ( !mMuxer )
+	{
+		mFileStream = AllocStreamWriter( Params.mName );
+		mMuxer = AllocMuxer( Params, Filename, mFileStream, mFrameBuffer, mAllocEncoder, OpenglContext );
+	}
+
+	
+	/*
 #if defined(TARGET_OSX)
 	static bool UseAvfMuxer = true;
 #endif
@@ -44,20 +220,13 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 		mFileStream.reset( new TFileStreamWriter( Filename ) );
 		mMuxer.reset( new TRawMuxer( mFileStream, mFrameBuffer ) );
 	}
-	/*
-	 else if ( Soy::StringEndsWith( Params.mName, ".ts", false ) )
-	 {
-	 //	alloc muxer
-	 mFileStream.reset( new TFileStreamWriter( Filename ) );
-		mMuxer.reset( new TMpeg2TsMuxer( mFileStream, mFrameBuffer ) );
-	 }
-	 */
 	else
 	{
 		//	alloc muxer
 		mFileStream.reset( new TFileStreamWriter( Filename ) );
 		mMuxer.reset( new Libav::TMuxer( mFileStream, mFrameBuffer ) );
 	}
+	 */
 	
 	if ( mFileStream )
 		mFileStream->Start();
@@ -85,6 +254,12 @@ TFileCaster::~TFileCaster()
 	mFileStream.reset();
 	
 	mFrameBuffer.reset();
+}
+
+bool TFileCaster::HandlesFilename(const std::string& Filename)
+{
+	auto Func = GetAllocStreamWriterFunc(Filename);
+	return Func != nullptr;
 }
 
 void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)

@@ -234,7 +234,7 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params,std::
 		auto& Context = GetGoogleCastContext();
 		mCaster = Context.AllocDevice( Params );
 	}
-	else if ( Soy::StringTrimLeft( Params.mName, "file:", false ) )
+	else if ( TFileCaster::HandlesFilename( Params.mName ) )
 	{
 		mCaster.reset( new TFileCaster( Params, mOpenglContext ) );
 	}
