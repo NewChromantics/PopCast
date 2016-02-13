@@ -142,7 +142,7 @@ std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string 
 		{
 			return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams );
 		};
-		//EncoderFunc = AllocGifEncoder;
+		EncoderFunc = AllocGifEncoder;
 		return std::make_shared<Gif::TMuxer>( Output, Input, Filename );
 	}
 	
