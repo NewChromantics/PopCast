@@ -133,12 +133,41 @@ THttpFileServer::THttpFileServer()
 void THttpFileServer::Write(TStreamBuffer& Buffer)
 {
 	auto Length = Buffer.GetBufferedSize();
+	
+	std::lock_guard<std::mutex> Lock( mDataLock );
 	Buffer.Pop( Length, GetArrayBridge( mData ) );
 }
 
-
-void THttpFileClient::SendResponse()
+std::shared_ptr<THttpFileClient> THttpFileServer::StartResponse(THttpServer& Server,SoyRef ConnectionRef)
 {
+	std::lock_guard<std::mutex> Lock( mConnectionsLock );
+	auto Connection = mConnections[ConnectionRef];
+	
+	if ( Connection )
+	{
+		std::Debug << "Warning: FileServer client connection " << ConnectionRef << " already exists" << std::endl;
+	}
+
+	if ( !Connection )
+	{
+		std::lock_guard<std::mutex> Lock( mDataLock );
+		Connection.reset( new THttpFileClient( Server, ConnectionRef, GetArrayBridge(mData) ) );
+	}
+
+	return Connection;
+}
+
+
+THttpFileClient::THttpFileClient(THttpServer& Server,SoyRef Connection,ArrayBridge<char>&& Data)
+{
+	//	make a streaming/chunking http response
+	auto pResponse = std::make_shared<Http::TResponseProtocol>();
+	auto& Response = *pResponse;
+	
+	Response.mKeepAlive = false;
+	Response.SetContent( Data, SoyMediaFormat::Gif );
+	
+	Server.SendResponse( pResponse, Connection );
 }
 
 
@@ -146,21 +175,21 @@ THttpPortServer::THttpPortServer(size_t Port)
 {
 	auto OnRequest = [this](const Http::TRequestProtocol& Request,SoyRef Client)
 	{
-		auto FileServer = AllocFileClient( Request.mUrl, Client );
+		auto FileServer = GetFileServer( Request.mUrl );
 		if ( !FileServer )
 		{
 			SendFileNotFound( Client, Request );
 		}
 		else
 		{
-			FileServer->SendResponse();
+			FileServer->StartResponse( *mServer, Client );
 		}
 	};
 	
 	mServer.reset( new THttpServer( Port, OnRequest ) );
 }
 
-
+						 
 std::shared_ptr<THttpFileServer> THttpPortServer::AllocFileServer(const std::string& Path)
 {
 	std::lock_guard<std::mutex> Lock( mFileServersLock );
@@ -174,10 +203,31 @@ std::shared_ptr<THttpFileServer> THttpPortServer::AllocFileServer(const std::str
 }
 
 
+std::shared_ptr<THttpFileServer> THttpPortServer::GetFileServer(const std::string& Path)
+{
+	std::lock_guard<std::mutex> Lock( mFileServersLock );
+	auto it = mFileServers.find( Path );
+	if ( it == mFileServers.end() )
+		return nullptr;
+
+	return mFileServers[Path];
+}
+
+/*
 std::shared_ptr<THttpFileClient> THttpPortServer::AllocFileClient(const std::string& Path,SoyRef Client)
 {
-	return nullptr;
+	//	get file server
+	std::lock_guard<std::mutex> Lock( mFileServersLock );
+	auto it = mFileServers.find( Path );
+	if ( it == mFileServers.end() )
+		return nullptr;
+
+	auto FileServer = mFileServers[Path];
+	Soy::Assert( FileServer != nullptr, "Null file server");
+	
+	return FileServer->AddConnection( Client );
 }
+ */
 
 void THttpPortServer::SendFileNotFound(SoyRef Client,const Http::TRequestProtocol& Request)
 {
@@ -194,8 +244,7 @@ void THttpPortServer::SendFileNotFound(SoyRef Client,const Http::TRequestProtoco
 		auto Filename = f.first;
 		Content << "<p><a href=\"" << Filename << "\">" << Filename << "</a></p>";
 	}
-	Response.SetContent( Content.str() );
-	Response.mContentMimeType = "text/html";
+	Response.SetContent( Content.str(), SoyMediaFormat::Html );
 	
 	mServer->SendResponse( Response, Client );
 }
