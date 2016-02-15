@@ -134,14 +134,31 @@ void THttpFileServer::Write(TStreamBuffer& Buffer)
 {
 	auto Length = Buffer.GetBufferedSize();
 	
+	Array<uint8> NewData;
+	Buffer.Pop( Length, GetArrayBridge( NewData ) );
+	
+	{
+		std::lock_guard<std::mutex> Lock( mConnectionsLock );
+		for ( auto& it : this->mConnections )
+		{
+			auto pConnection = it.second;
+			
+			//	gr: null??? how has this happened
+			if ( pConnection == nullptr )
+				continue;
+			
+			pConnection->PushData( GetArrayBridge(NewData) );
+		}
+	}
+	
 	std::lock_guard<std::mutex> Lock( mDataLock );
-	Buffer.Pop( Length, GetArrayBridge( mData ) );
+	mDataHeader.PushBackArray( NewData );
 }
 
 std::shared_ptr<THttpFileClient> THttpFileServer::StartResponse(THttpServer& Server,SoyRef ConnectionRef)
 {
 	std::lock_guard<std::mutex> Lock( mConnectionsLock );
-	auto Connection = mConnections[ConnectionRef];
+	auto& Connection = mConnections[ConnectionRef];
 	
 	if ( Connection )
 	{
@@ -150,24 +167,31 @@ std::shared_ptr<THttpFileClient> THttpFileServer::StartResponse(THttpServer& Ser
 
 	if ( !Connection )
 	{
-		std::lock_guard<std::mutex> Lock( mDataLock );
-		Connection.reset( new THttpFileClient( Server, ConnectionRef, GetArrayBridge(mData) ) );
+		Connection.reset( new THttpFileClient( Server, ConnectionRef ) );
+		
+		//	send header data
+		std::lock_guard<std::mutex> DataLock( mDataLock );
+		Connection->PushData( GetArrayBridge(mDataHeader) );
 	}
 
 	return Connection;
 }
 
 
-THttpFileClient::THttpFileClient(THttpServer& Server,SoyRef Connection,ArrayBridge<char>&& Data)
+THttpFileClient::THttpFileClient(THttpServer& Server,SoyRef Connection)
 {
-	//	make a streaming/chunking http response
-	auto pResponse = std::make_shared<Http::TResponseProtocol>();
-	auto& Response = *pResponse;
+	mInfiniteResponse.reset( new Http::TResponseProtocol( mBuffer ) );
+	auto& Response = *mInfiniteResponse;
 	
-	Response.mKeepAlive = false;
-	Response.SetContent( Data, SoyMediaFormat::Gif );
+	Response.SetContentType( SoyMediaFormat::Gif );
 	
-	Server.SendResponse( pResponse, Connection );
+	Server.SendResponse( mInfiniteResponse, Connection );
+}
+
+
+void THttpFileClient::PushData(ArrayBridge<uint8>&& Data)
+{
+	mBuffer.Push( Data );
 }
 
 
@@ -213,22 +237,6 @@ std::shared_ptr<THttpFileServer> THttpPortServer::GetFileServer(const std::strin
 	return mFileServers[Path];
 }
 
-/*
-std::shared_ptr<THttpFileClient> THttpPortServer::AllocFileClient(const std::string& Path,SoyRef Client)
-{
-	//	get file server
-	std::lock_guard<std::mutex> Lock( mFileServersLock );
-	auto it = mFileServers.find( Path );
-	if ( it == mFileServers.end() )
-		return nullptr;
-
-	auto FileServer = mFileServers[Path];
-	Soy::Assert( FileServer != nullptr, "Null file server");
-	
-	return FileServer->AddConnection( Client );
-}
- */
-
 void THttpPortServer::SendFileNotFound(SoyRef Client,const Http::TRequestProtocol& Request)
 {
 	Http::TResponseProtocol Response;
@@ -238,12 +246,15 @@ void THttpPortServer::SendFileNotFound(SoyRef Client,const Http::TRequestProtoco
 	Response.mKeepAlive = false;
 
 	std::stringstream Content;
+	Content << "<h1>404</h1>";
 	Content << "<p>File not found: " << Request.mUrl << "</p>";
+	Content << "<ul>";
 	for ( auto& f : mFileServers )
 	{
 		auto Filename = f.first;
-		Content << "<p><a href=\"" << Filename << "\">" << Filename << "</a></p>";
+		Content << "<li><a href=\"" << Filename << "\">" << Filename << "</a></li>";
 	}
+	Content << "</ul>";
 	Response.SetContent( Content.str(), SoyMediaFormat::Html );
 	
 	mServer->SendResponse( Response, Client );

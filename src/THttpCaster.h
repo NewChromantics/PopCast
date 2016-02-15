@@ -34,10 +34,13 @@ public:
 class THttpFileClient
 {
 public:
-	THttpFileClient(THttpServer& Server,SoyRef Connection,ArrayBridge<char>&& Data);
+	THttpFileClient(THttpServer& Server,SoyRef Connection);
 	
-//	void		PushData(ArrayBridge<char>&& Data);
-//	std::shared_ptr<Http::TResponseProtocol>	mInfiniteResponse;
+	void					PushData(ArrayBridge<uint8>&& Data);
+
+public:
+	TStreamBuffer								mBuffer;
+	std::shared_ptr<Http::TResponseProtocol>	mInfiniteResponse;
 };
 
 
@@ -57,9 +60,9 @@ public:
 	std::mutex								mConnectionsLock;
 	std::map<SoyRef,std::shared_ptr<THttpFileClient>>	mConnections;
 	
-	//	gr: todo: from TStreamWriter, save data in chunks so we can deliver in streamable chunks
+	//	need to do this formally...
 	std::mutex		mDataLock;
-	Array<char>		mData;
+	Array<uint8>	mDataHeader;
 };
 
 
