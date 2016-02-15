@@ -195,6 +195,7 @@ void THttpPortServer::SendFileNotFound(SoyRef Client,const Http::TRequestProtoco
 		Content << "<p><a href=\"" << Filename << "\">" << Filename << "</a></p>";
 	}
 	Response.SetContent( Content.str() );
+	Response.mContentMimeType = "text/html";
 	
 	mServer->SendResponse( Response, Client );
 }
