@@ -146,12 +146,10 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	Writer.fwrite = fwrite;
 
 	auto PixelMeta = Streams[0].mPixelMeta;
-	//	1/100ths of a sec *10 for ms.
-	//	gr: add this to stream to estimates
-	static uint16 Delay = 1;	//	Packet->mDuration
+	static uint16 LoopCount = 1;
 	auto Width = size_cast<uint16>( PixelMeta.GetWidth() );
 	auto Height = size_cast<uint16>( PixelMeta.GetHeight() );
-	GifBegin( Writer, Width, Height, Delay );
+	GifBegin( Writer, Width, Height, LoopCount );
 
 	mOutput->Push( HeaderWrite );
 	

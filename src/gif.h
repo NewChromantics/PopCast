@@ -880,7 +880,7 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
 // Creates a gif file.
 // The input GIFWriter is assumed to be uninitialized.
 // The delay value is the time between frames in hundredths of a second - note that not all viewers pay much attention to this value.
-bool GifBegin( GifWriter& writer, uint16 width, uint16 height, uint16 delay, int32_t bitDepth = 8, bool dither = false )
+bool GifBegin( GifWriter& writer, uint16 width, uint16 height,uint16 LoopCount)
 {
 	writer.Open();
 	
@@ -905,19 +905,27 @@ bool GifBegin( GifWriter& writer, uint16 width, uint16 height, uint16 delay, int
     writer.fputc(0);
     writer.fputc(0);
     writer.fputc(0);
-    
-    if( delay != 0 )
+	
+	//	gr: currently always including animation header.
     {
 		// animation header
 		writer.fputc(0x21); // extension
 		writer.fputc(0xff); // application specific
-		writer.fputc(11); // length 11
-		writer.fputs("NETSCAPE2.0"); // yes, really
-		writer.fputc(3); // 3 bytes of NETSCAPE2.0 data
-
-		writer.fputc(1); // JUST BECAUSE
-		writer.fputc(0); // loop infinitely (byte 0)
-		writer.fputc(0); // loop infinitely (byte 1)
+		
+		//	length
+		writer.fputc(11);
+		//	marker
+		writer.fputs("NETSCAPE2.0");
+		
+		
+		//	write loop data (id=1)
+		const uint8 LoopingDataId = 1;
+		//	length
+		//	infinite loop=0
+		writer.fputc(3);
+		writer.fputc( LoopingDataId );
+		writer.fputc( LoopCount & 0xff );
+		writer.fputc( (LoopCount >> 8) & 0xff );
 
 		writer.fputc(0); // block terminator
 	}
