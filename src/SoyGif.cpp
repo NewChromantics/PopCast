@@ -146,7 +146,7 @@ void Gif::TMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 	Writer.fwrite = fwrite;
 
 	auto PixelMeta = Streams[0].mPixelMeta;
-	static uint16 LoopCount = 1;
+	static uint16 LoopCount = 0;
 	auto Width = size_cast<uint16>( PixelMeta.GetWidth() );
 	auto Height = size_cast<uint16>( PixelMeta.GetHeight() );
 	GifBegin( Writer, Width, Height, LoopCount );
@@ -193,10 +193,10 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	
 	//	ms to 100th's
 	//	https://bugzilla.mozilla.org/show_bug.cgi?id=232822
-	static uint16 MinDurationMs = 1;
+	//	in chrome, 1(10ms) turns into 100ms
+	static uint16 MinDurationMs = 2;
 	auto delay = std::max( MinDurationMs, size_cast<uint16>( Packet->mDuration.GetTime() / 10 ) );
 	
-
 	{
 		GifWriter LzwWriter;
 		
