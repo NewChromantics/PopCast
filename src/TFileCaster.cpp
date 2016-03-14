@@ -3,86 +3,13 @@
 #include "AvfCompressor.h"
 #include "LibavMuxer.h"
 #include "SoyGif.h"
+#include "THttpCaster.h"
 
 #if defined(TARGET_OSX)
 #include "AvfMuxer.h"
 #endif
 
 
-class THttpPortServer;
-class THttpFileServer;
-class THttpFileWriter;
-
-
-
-
-
-namespace PopCast
-{
-	std::map<size_t,std::shared_ptr<THttpPortServer>>	HttpServers;
-	
-	std::shared_ptr<THttpPortServer>	GetPortServer(size_t Port);
-}
-
-
-//	bridge between server & file
-class THttpFileWriter : public TStreamWriter
-{
-public:
-	THttpFileWriter(const std::string& PortAndPath);
-	
-	virtual void		Write(TStreamBuffer& Buffer) override;
-
-public:
-	std::shared_ptr<THttpFileServer>	mFileServer;
-};
-
-
-//	specific file data
-class THttpFileServer
-{
-public:
-	THttpFileServer(const std::string& PortAndPath);
-	
-	void			Write(TStreamBuffer& Buffer);
-
-public:
-	Array<char>	mData;	//	file contents
-};
-
-
-//	port handler, redirects requests for particular files
-class THttpPortServer
-{
-public:
-	THttpPortServer(const std::string& Port);
-	
-	std::shared_ptr<THttpFileServer>	AllocFileServer(const std::string& Path);
-	
-public:
-	std::map<std::string,std::shared_ptr<THttpFileServer>>	mFileServers;
-};
-
-
-
-THttpFileWriter::THttpFileWriter(const std::string& PortAndPath) :
-	TStreamWriter	( std::string("THttpFileWriter " + PortAndPath ) )
-{
-	
-}
-
-void THttpFileWriter::Write(TStreamBuffer& Buffer)
-{
-	Soy::Assert( mFileServer != nullptr, "Missing Http file server");
-	mFileServer->Write( Buffer );
-}
-
-
-void THttpFileServer::Write(TStreamBuffer& Buffer)
-{
-	auto Length = Buffer.GetBufferedSize();
-	Buffer.Pop( Length, GetArrayBridge( mData ) );
-}
 
 
 std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input)
