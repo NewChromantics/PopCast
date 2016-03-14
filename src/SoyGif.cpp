@@ -254,7 +254,8 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 	TMediaEncoder	( OutputBuffer ),
 	mStreamIndex	( StreamIndex ),
 	mOpenglContext	( OpenglContext ),
-	mParams			( Params )
+	mParams			( Params ),
+	mPushedFrameCount	( 0 )
 {
 	Start();
 }
@@ -414,6 +415,7 @@ bool Gif::TEncoder::Iteration()
 			};
 			
 			TMediaEncoder::PushFrame( pPacket, Block );
+			mPushedFrameCount++;
 		}
 		else
 		{
@@ -643,16 +645,21 @@ bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 
 	int TransparentIndex = 0;
 	int DebugTransparentIndex = 1;
-	static bool TestAlpha = false;
+	static bool TestAlphaSquare = false;
 	Keyframe = true;
 
+	//	if frame count is too low, and 3 identical frames, we won't push the first X frames
+	//	and from editor seems like it does nothing
+	bool AllowIntraFrames = (mPushedFrameCount>=3) && Params.mAllowIntraFrames;
+	bool DoMasking = TestAlphaSquare || AllowIntraFrames;
+	
 	std::shared_ptr<SoyPixelsImpl> RgbaCopy;
-	if ( (TestAlpha||Params.mAllowIntraFrames) && mPrevRgb )
+	if ( DoMasking && mPrevRgb )
 	{
 		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
 		RgbaCopy.reset( new SoyPixels( Rgba ) );
 		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
-		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlpha, Params, MaskPixelFunc );
+		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlphaSquare, Params, MaskPixelFunc );
 	}
 	
 
@@ -688,6 +695,8 @@ bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	Soy::TScopeTimerPrint Timer("MakePaletteised",Gif::TimerMinMs);
 	auto WriteTransparentIndex = Params.mDebugTransparency ? DebugTransparentIndex : TransparentIndex;
 	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, WriteTransparentIndex );
+	
+	return true;
 }
 	
 

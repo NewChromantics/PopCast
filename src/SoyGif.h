@@ -76,7 +76,7 @@ public:
 		mFindPalettePixelSkip	( 5 ),
 		mTransparentColour		( 255, 0, 255 ),
 		mMaxColours				( 255 ),
-		mMaskMaxDiff			( 0.01f )
+		mMaskMaxDiff			( 1.f / 256.f )
 	{
 	}
 	
@@ -112,6 +112,7 @@ protected:
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
 	
 public:
+	size_t					mPushedFrameCount;
 	Gif::TEncodeParams		mParams;
 	size_t					mStreamIndex;
 	
