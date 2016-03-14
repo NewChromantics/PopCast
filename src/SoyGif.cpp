@@ -403,16 +403,23 @@ bool Gif::TEncoder::Iteration()
 			return true;
 		};
 		
-		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, mParams, MaskPixel );
-		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
-	
-		//	drop packets
-		auto Block = []
+		if ( MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, mParams, MaskPixel ) )
 		{
-			return false;
-		};
+			Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 		
-		TMediaEncoder::PushFrame( pPacket, Block );
+			//	drop packets
+			auto Block = []
+			{
+				return false;
+			};
+			
+			TMediaEncoder::PushFrame( pPacket, Block );
+		}
+		else
+		{
+			//	all transparent, skipping packet. need to alter previous frame to extend time
+			//	gr: with a special packet?
+		}
 	}
 	catch(std::exception& e)
 	{
@@ -540,6 +547,7 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 	
 	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,PaletteMeta,FragShader]
 	{
+		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
 		if ( SemaphoreCopy->IsCompleted() )
 			return;
 
@@ -629,7 +637,7 @@ void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool
 	}
 }
 
-void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
+bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
 {
 	std::shared_ptr<SoyPixelsImpl> pNewPalette;
 
@@ -651,6 +659,10 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	//	gr: this currently generates a full palette (can be > 256)
 	pNewPalette.reset( new SoyPixels );
 	GetPalette( *pNewPalette, Rgba, Params, Keyframe );
+	
+	//	if the palette is empty... we're ALL transparent!
+	if ( pNewPalette->GetWidth() == 0 )
+		return false;
 
 	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
 	auto& IndexedImage = *pIndexedImage;
