@@ -76,7 +76,7 @@ public:
 		mFindPalettePixelSkip	( 5 ),
 		mTransparentColour		( 255, 0, 255 ),
 		mMaxColours				( 255 ),
-		mMaskMaxDiff			( 1.f / 256.f )
+		mMaskMaxDiff			( 0.f / 256.f )
 	{
 	}
 	
@@ -87,7 +87,7 @@ public:
 	bool			mDebugTransparency;		//	highlight transparent regions
 	vec3x<uint8>	mTransparentColour;
 	size_t			mMaxColours;
-	float			mMaskMaxDiff;			//	if zero, no masking
+	float			mMaskMaxDiff;			//	if zero, exact pixel colour matches required
 };
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread

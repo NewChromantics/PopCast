@@ -394,12 +394,9 @@ bool Gif::TEncoder::Iteration()
 		
 		auto MaskPixel = [this](const vec3x<uint8>& Old,const vec3x<uint8>& New)
 		{
-			if ( mParams.mMaskMaxDiff == 0 )
-				return true;
-			
 			int Diff = abs( Old.x - New.x ) + abs( Old.y - New.y ) + abs( Old.z - New.z );
 			float Difff = Diff / (256.f*3.f);
-			if ( Difff >= mParams.mMaskMaxDiff )
+			if ( Difff > mParams.mMaskMaxDiff )
 				return false;
 			return true;
 		};
