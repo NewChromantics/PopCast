@@ -197,7 +197,7 @@ void THttpFileClient::PushData(ArrayBridge<uint8>&& Data)
 
 THttpPortServer::THttpPortServer(size_t Port)
 {
-	auto OnRequest = [this](const Http::TRequestProtocol& Request,SoyRef Client)
+	auto OnRequest = [this](const Http::TRequestProtocol& Request,SoyRef Client,THttpServer& Server)
 	{
 		auto FileServer = GetFileServer( Request.mUrl );
 		if ( !FileServer )
