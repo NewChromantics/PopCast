@@ -46,10 +46,23 @@ return Cache.mPtr;
 
 
 
-[StructLayout(LayoutKind.Sequential),Serializable]
+[Serializable]
 public class  PopCastParams
 {
-	public bool				mTest = true;
+	[Header("if we record to a local file, pop up explorer/finder with the file when its ready")]
+	public bool				ShowFinishedFile = false;
+
+	[Header("Use transparency between frames to reduce file size")]
+	public bool				Gif_AllowIntraFrames = true;
+
+	[Header("Make a debug palette")]
+	public bool				Gif_DebugPalette = false;
+
+	[Header("Render the pallete top to bottom")]
+	public bool				Gif_DebugIndexes = false;
+
+	[Header("Highlight transparent regions")]
+	public bool				Gif_DebugTransparency = false;
 }
 
 public class PopCast
@@ -65,8 +78,20 @@ public class PopCast
 	private const string PluginName = "PopCast";
 #endif
 
+	//	gr: after a huge amount of headaches... we're passing a bitfield for params. NOT a struct
+	private enum PopCastFlags
+	{
+		None						= 0,
+		ShowFinishedFile			= 1<<0,
+		Gif_AllowIntraFrames		= 1<<1,
+		Gif_DebugPalette			= 1<<2,
+		Gif_DebugIndexes			= 1<<3,
+		Gif_DebugTransparency		= 1<<4,
+	};
+
 	private ulong	mInstance = 0;
 	private static int	mPluginEventId = PopCast_GetPluginEventId();
+	private int		mTexturePushCount = 0;
 
 	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
 	private TTexturePtrCache<Texture2D>		mTexture2DPtrCache = new TTexturePtrCache<Texture2D>();
@@ -105,9 +130,14 @@ public class PopCast
 	{
 		return mInstance != 0;
 	}
-	
+
+	public int	GetTexturePushCount()
+	{
+		return mTexturePushCount;
+	}
+
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ulong		PopCast_Alloc(String Filename);
+	private static extern ulong		PopCast_Alloc(String Filename,uint Params);
 	
 	[DllImport (PluginName)]
 	private static extern bool		PopCast_Free(ulong Instance);
@@ -135,9 +165,18 @@ public class PopCast
 
 	public PopCast(string Filename,PopCastParams Params)
 	{
+		PopCastFlags ParamFlags = 0;
+		ParamFlags |= Params.ShowFinishedFile			? PopCastFlags.ShowFinishedFile : PopCastFlags.None;
+		ParamFlags |= Params.Gif_AllowIntraFrames		? PopCastFlags.Gif_AllowIntraFrames : PopCastFlags.None;
+		ParamFlags |= Params.Gif_DebugPalette			? PopCastFlags.Gif_DebugPalette : PopCastFlags.None;
+		ParamFlags |= Params.Gif_DebugIndexes			? PopCastFlags.Gif_DebugIndexes : PopCastFlags.None;
+		ParamFlags |= Params.Gif_DebugTransparency		? PopCastFlags.Gif_DebugTransparency : PopCastFlags.None;
+
+		uint ParamFlags32 = Convert.ToUInt32 (ParamFlags);
+
 		Filename = ResolveFilename (Filename);
 		Debug.LogWarning ("resolved filename: " + Filename);
-		mInstance = PopCast_Alloc ( Filename );
+		mInstance = PopCast_Alloc ( Filename, ParamFlags32 );
 
 		//	if this fails, capture the flush and throw an exception
 		if (mInstance == 0) {
@@ -190,10 +229,12 @@ public class PopCast
 		if (Target is RenderTexture) {
 			RenderTexture Target_rt = Target as RenderTexture;
 			PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
+			mTexturePushCount++;
 		}
 		if (Target is Texture2D) {
 			Texture2D Target_2d = Target as Texture2D;
 			PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache (ref mTexture2DPtrCache, Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
+			mTexturePushCount++;
 		}
 		FlushDebug ();
 	}

@@ -3,18 +3,21 @@ using System.Collections;
 using UnityEditor;
 
 
-public class PopCastWindow : EditorWindow {
 
-	[Header("Pop open finder/explorer when gif is ready")]
-	public bool				ShowFileWhenFinished = true;
-	//[Header("Limit filesize. Twitter's limit is 4mb (4096kb)")]
-	//public uint				KilobyteLimit = 4 * 1024;
+public class PopCastWindow : EditorWindow
+{
+	[Header("Use full path, or StreamingAssets/ or DataPath/ Use a filename or *.gif to timestamp filename")]
+	public string			Filename = "file:StreamingAssets/*.gif";
 
-	[Header("If no camera specified, the editor camera will be recorded")]
+	public PopCastParams	Parameters;
+
+	[Header("If no camera specified, the main camera will be recorded")]
 	public Camera			RecordCamera = null;
-	[Header("If target set, one will be created")]
+
+	[Header("If no target texture set, one will be created")]
 	public RenderTexture	RecordToTexture = null;
-	public string			RecordPath = "StreamingAssets:*.gif";
+
+
 	private PopCast 		mPopCast;
 
 	[MenuItem ("PopCast/Editor recorder")]
@@ -24,15 +27,11 @@ public class PopCastWindow : EditorWindow {
 	}
 
 	void OnGUI ()
-	{		
-		/*
-		myString = EditorGUILayout.TextField ("Text Field", myString);
-
-		groupEnabled = EditorGUILayout.BeginToggleGroup ("Optional Settings", groupEnabled);
-		myBool = EditorGUILayout.Toggle ("Toggle", myBool);
-		myFloat = EditorGUILayout.Slider ("Slider", myFloat, -3, 3);
-		EditorGUILayout.EndToggleGroup ();
-		*/
+	{
+		string DebugString = "";
+		DebugString += "Version: " + PopCast.GetVersion() + "\n";
+		DebugString += "Frames pushed: " + (mPopCast==null ? -1 : mPopCast.GetTexturePushCount()) + "\n";
+		EditorGUILayout.HelpBox ( DebugString, MessageType.None );
 
 		if (mPopCast != null) {
 			if (GUILayout.Button ("Stop recording")) {
@@ -44,9 +43,9 @@ public class PopCastWindow : EditorWindow {
 			}
 		}
 
-
-		var editor = Editor.CreateEditor(this);
-		editor.OnInspectorGUI();        
+		//	reflect built in properties
+		var ThisEditor = Editor.CreateEditor(this);
+		ThisEditor.OnInspectorGUI();
 	}
 
 	void StopRecording()
@@ -60,13 +59,14 @@ public class PopCastWindow : EditorWindow {
 		if ( RecordCamera == null )
 		{
 			RecordCamera = Camera.allCameras [0];
+			Debug.Log( Camera.allCameras );
 		}
 
 		//	if no texture provided, make one
 		if (RecordToTexture == null)
 			RecordToTexture = new RenderTexture (RecordCamera.pixelWidth, RecordCamera.pixelHeight, 16);
-		
-		mPopCast = new PopCast (RecordPath, new PopCastParams ());
+
+		mPopCast = new PopCast (Filename, Parameters);
 		mPopCast.AddDebugCallback (Debug.Log);
 
 	}

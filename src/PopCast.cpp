@@ -23,9 +23,30 @@ namespace PopCast
 
 
 
+bool HasBit(Unity::uint ParamBits,TPluginParams::PopCastFlags Param)
+{
+	auto Masked = (ParamBits & Param);
+	return Masked != 0;
+}
+
+TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename)
+{
+	//	decoder params
+	TCasterParams Params;
+	
+	Params.mName = Filename;
+
+	Params.mShowFinishedFile = HasBit( ParamBits, TPluginParams::ShowFinishedFile );
+	Params.mGifParams.mAllowIntraFrames = HasBit( ParamBits, TPluginParams::Gif_AllowIntraFrames );
+	Params.mGifParams.mDebugPalette = HasBit( ParamBits, TPluginParams::Gif_DebugPalette );
+	Params.mGifParams.mDebugIndexes = HasBit( ParamBits, TPluginParams::Gif_DebugIndexes );
+	Params.mGifParams.mDebugTransparency = HasBit( ParamBits, TPluginParams::Gif_DebugTransparency );
+	
+	return Params;
+}
 
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename)
+__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	if ( Filename == nullptr )
@@ -34,9 +55,7 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename)
 		return 0;
 	}
 	
-	TCasterParams Params;
-	Params.mName = Filename;
-	
+	auto Params = MakeCasterParams( ParamBits, Filename );
 
 	try
 	{
