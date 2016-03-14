@@ -22,7 +22,7 @@ class THttpFileWriter : public TStreamWriter
 public:
 	THttpFileWriter(const std::string& PortAndPath);
 	
-	virtual void		Write(TStreamBuffer& Buffer) override;
+	virtual void		Write(TStreamBuffer& Buffer,const std::function<bool()>& Block) override;
 	
 public:
 	std::shared_ptr<THttpFileServer>	mFileServer;

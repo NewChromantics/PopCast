@@ -117,7 +117,7 @@ THttpFileWriter::THttpFileWriter(const std::string& PortAndPath) :
 	mFileServer = pServer->AllocFileServer( Path );
 }
 
-void THttpFileWriter::Write(TStreamBuffer& Buffer)
+void THttpFileWriter::Write(TStreamBuffer& Buffer,const std::function<bool()>& Block)
 {
 	Soy::Assert( mFileServer != nullptr, "Missing Http file server");
 	mFileServer->Write( Buffer );
