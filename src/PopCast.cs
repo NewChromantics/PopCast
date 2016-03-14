@@ -52,6 +52,9 @@ public class  PopCastParams
 	[Header("if we record to a local file, pop up explorer/finder with the file when its ready")]
 	public bool				ShowFinishedFile = false;
 
+	[Header("Record smooth video, or skip for live casting")]
+	public bool				SkipFrames = false;
+
 	[Header("Use transparency between frames to reduce file size")]
 	public bool				Gif_AllowIntraFrames = true;
 
@@ -87,6 +90,7 @@ public class PopCast
 		Gif_DebugPalette			= 1<<2,
 		Gif_DebugIndexes			= 1<<3,
 		Gif_DebugTransparency		= 1<<4,
+		SkipFrames					= 1<<5,
 	};
 
 	private ulong	mInstance = 0;
@@ -171,6 +175,7 @@ public class PopCast
 		ParamFlags |= Params.Gif_DebugPalette			? PopCastFlags.Gif_DebugPalette : PopCastFlags.None;
 		ParamFlags |= Params.Gif_DebugIndexes			? PopCastFlags.Gif_DebugIndexes : PopCastFlags.None;
 		ParamFlags |= Params.Gif_DebugTransparency		? PopCastFlags.Gif_DebugTransparency : PopCastFlags.None;
+		ParamFlags |= Params.SkipFrames					? PopCastFlags.SkipFrames : PopCastFlags.None;
 
 		uint ParamFlags32 = Convert.ToUInt32 (ParamFlags);
 

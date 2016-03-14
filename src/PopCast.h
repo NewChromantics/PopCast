@@ -29,6 +29,7 @@ namespace TPluginParams
 		Gif_DebugPalette			= 1<<2,
 		Gif_DebugIndexes			= 1<<3,
 		Gif_DebugTransparency		= 1<<4,
+		SkipFrames					= 1<<5,
 	};
 }
 

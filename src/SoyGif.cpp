@@ -32,9 +32,9 @@ const char* GifFragShaderDebugPalette =
 ;
 
 
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params,bool SkipFrames)
 {
-	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext, Params ) );
+	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext, Params, SkipFrames ) );
 	return Encoder;
 }
 
@@ -249,13 +249,14 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 }
 
 
-Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,TEncodeParams Params) :
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,TEncodeParams Params,bool SkipFrames) :
 	SoyWorkerThread	( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder	( OutputBuffer ),
 	mStreamIndex	( StreamIndex ),
 	mOpenglContext	( OpenglContext ),
 	mParams			( Params ),
-	mPushedFrameCount	( 0 )
+	mPushedFrameCount	( 0 ),
+	mSkipFrames		( SkipFrames )
 {
 	Start();
 }
@@ -432,7 +433,13 @@ bool Gif::TEncoder::Iteration()
 void Gif::TEncoder::PushFrame(std::shared_ptr<TMediaPacket> Frame)
 {
 	std::lock_guard<std::mutex> Lock( mPendingFramesLock );
+
+	//	make this the latest frame in the queue
+	if ( mSkipFrames )
+		mPendingFrames.Clear();
+
 	mPendingFrames.PushBack( Frame );
+	
 	Wake();
 }
 

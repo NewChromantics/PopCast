@@ -37,6 +37,7 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename)
 	Params.mName = Filename;
 
 	Params.mShowFinishedFile = HasBit( ParamBits, TPluginParams::ShowFinishedFile );
+	Params.mSkipFrames = HasBit( ParamBits, TPluginParams::SkipFrames );
 	Params.mGifParams.mAllowIntraFrames = HasBit( ParamBits, TPluginParams::Gif_AllowIntraFrames );
 	Params.mGifParams.mDebugPalette = HasBit( ParamBits, TPluginParams::Gif_DebugPalette );
 	Params.mGifParams.mDebugIndexes = HasBit( ParamBits, TPluginParams::Gif_DebugIndexes );
