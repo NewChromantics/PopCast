@@ -201,6 +201,8 @@
 		BFC400471C96FEFE00E90ACD /* SoyUnity.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFC400461C96FEFE00E90ACD /* SoyUnity.mm */; };
 		BFC400481C96FEFE00E90ACD /* SoyUnity.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFC400461C96FEFE00E90ACD /* SoyUnity.mm */; };
 		BFC400491C96FEFE00E90ACD /* SoyUnity.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFC400461C96FEFE00E90ACD /* SoyUnity.mm */; };
+		BFC4004D1C97480300E90ACD /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFC4004B1C97472800E90ACD /* AppKit.framework */; };
+		BFC4004E1C97480400E90ACD /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFC4004B1C97472800E90ACD /* AppKit.framework */; };
 		BFC4E1C31C308B71008D13EC /* TBlitter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1BD1C308B71008D13EC /* TBlitter.cpp */; };
 		BFC4E1C51C308B71008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
 		BFC4E1C61C3097BB008D13EC /* TBlitterOpengl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFC4E1C11C308B71008D13EC /* TBlitterOpengl.cpp */; };
@@ -370,6 +372,7 @@
 		BFC400411C96FEB500E90ACD /* SoyMediaFormat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyMediaFormat.h; path = src/SoyMediaFormat.h; sourceTree = "<group>"; };
 		BFC400461C96FEFE00E90ACD /* SoyUnity.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SoyUnity.mm; path = src/SoyUnity.mm; sourceTree = "<group>"; };
 		BFC4004A1C97085600E90ACD /* PopCastWindow.cs */ = {isa = PBXFileReference; lastKnownFileType = text; name = PopCastWindow.cs; path = Editor/PopCastWindow.cs; sourceTree = "<group>"; };
+		BFC4004B1C97472800E90ACD /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		BFC4E1BD1C308B71008D13EC /* TBlitter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitter.cpp; sourceTree = "<group>"; };
 		BFC4E1BE1C308B71008D13EC /* TBlitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TBlitter.h; sourceTree = "<group>"; };
 		BFC4E1BF1C308B71008D13EC /* TBlitterDirectx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TBlitterDirectx.cpp; sourceTree = "<group>"; };
@@ -398,6 +401,7 @@
 				BF80C32C1C3EC7D400EBE03E /* AVFoundation.framework in Frameworks */,
 				BF80C32D1C3EC7D700EBE03E /* OpenGL.framework in Frameworks */,
 				BF80C3281C3EC7AC00EBE03E /* VideoToolbox.framework in Frameworks */,
+				BFC4004E1C97480400E90ACD /* AppKit.framework in Frameworks */,
 				BF80C32A1C3EC7CA00EBE03E /* CoreVideo.framework in Frameworks */,
 				BF80C32B1C3EC7D000EBE03E /* CoreMedia.framework in Frameworks */,
 			);
@@ -413,6 +417,7 @@
 				BFB255EF1BA1BCD200F30239 /* libOpenCast.a in Frameworks */,
 				BFEF570C1B613B2300340796 /* AVFoundation.framework in Frameworks */,
 				BFEF570B1B613B1200340796 /* CoreMedia.framework in Frameworks */,
+				BFC4004D1C97480300E90ACD /* AppKit.framework in Frameworks */,
 				BFEF570A1B613B0800340796 /* CoreVideo.framework in Frameworks */,
 				BF1499E11B4D67E800DA2575 /* OpenGL.framework in Frameworks */,
 			);
@@ -433,6 +438,7 @@
 		BF06DEF81B2ACD3B006F241F = {
 			isa = PBXGroup;
 			children = (
+				BFC4004B1C97472800E90ACD /* AppKit.framework */,
 				BF627DA11C6231EC00BB840B /* CoreServices.framework */,
 				BFBC3DA41BC80ADC00CEE3D5 /* CFNetwork.framework */,
 				BFBC3D971BC7F87B00CEE3D5 /* VideoToolbox.framework */,
