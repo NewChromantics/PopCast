@@ -32,11 +32,11 @@ const char* GifFragShaderDebugPalette_Opengl =
 ;
 
 const char* GifFragShaderSimpleNearest_Directx =
-"GifFragShaderSimpleNearest_Directx"
+#include "GifNearest.hlsl.frag"
 ;
 
 const char* GifFragShaderDebugPalette_Directx =
-"GifFragShaderDebugPalette_Directx"
+#include "GifDebug.hlsl.frag"
 ;
 
 

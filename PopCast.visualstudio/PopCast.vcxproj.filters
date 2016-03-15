@@ -152,12 +152,6 @@
     <None Include="..\src\FrameworkInfo.plist">
       <Filter>src</Filter>
     </None>
-    <None Include="..\src\GifDebug.frag">
-      <Filter>src</Filter>
-    </None>
-    <None Include="..\src\GifNearest.frag">
-      <Filter>src</Filter>
-    </None>
     <None Include="..\src\PopCast.cs">
       <Filter>src</Filter>
     </None>
@@ -165,6 +159,99 @@
       <Filter>src</Filter>
     </None>
     <None Include="..\src\Editor\PopCastWindow.cs">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\GifDebug.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\GifNearest.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\GifNearest.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\GifDebug.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\Blit.hlsl.vert">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\Blit2D.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitAudioGraph.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitAudioGraph.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitBarGraph.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitBarGraph.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitError.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitError.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitFreenectDepth10mm.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitOesExternal.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitRectangle.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitRgba.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitTest.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitTest.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitWatermark.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitWatermark.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_8_8_Full.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_8_8_Full.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_8_8_Video.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_8_8_Video.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_88_Full.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_88_Full.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_88_Video.glsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\BlitYuv_8_88_Video.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\Blit.glsl.vert">
       <Filter>src</Filter>
     </None>
   </ItemGroup>
