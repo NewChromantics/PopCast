@@ -57,22 +57,3 @@ public:
 
 
 
-class Avf::TPassThroughEncoder : public TMediaEncoder
-{
-public:
-	TPassThroughEncoder(const TCasterParams& Params,std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex);
-	
-	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
-	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
-	
-	void				OnError(const std::string& Error);
-	
-public:
-	std::shared_ptr<TSession>	mSession;
-	SoyPixelsMeta				mOutputMeta;
-	TMediaPacketBuffer			mFrames;
-	size_t						mStreamIndex;	//	may want to be in base
-};
-
-
-

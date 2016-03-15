@@ -1,11 +1,18 @@
 #include "TFileCaster.h"
 #include <SoyMedia.h>
-#include "AvfCompressor.h"
-#include "LibavMuxer.h"
 #include "SoyGif.h"
 #include "THttpCaster.h"
 
 #if defined(TARGET_OSX)
+#define ENABLE_LIBAV
+#endif
+
+#if defined(ENABLE_LIBAV)
+#include "LibavMuxer.h"
+#endif
+
+#if defined(TARGET_OSX)
+#include "AvfCompressor.h"
 #include "AvfMuxer.h"
 #endif
 
@@ -215,7 +222,7 @@ TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
 			return *pEncoder;
 	}
 	
-	pEncoder.reset( new Avf::TPassThroughEncoder( mParams, mFrameBuffer, StreamIndex ) );
+	pEncoder.reset( new TMediaPassThroughEncoder( mFrameBuffer, StreamIndex ) );
 	return *pEncoder;
 }
 

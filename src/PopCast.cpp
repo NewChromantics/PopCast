@@ -1,9 +1,22 @@
 #include "PopCast.h"
 #include "TCaster.h"
-#include "TGoogleCaster.h"
+
 #include "TAirplayCaster.h"
 #include "PopUnity.h"
 #include "TFileCaster.h"
+
+#if defined(TARGET_OSX)
+#define ENABLE_GOOGLECAST
+#define ENABLE_AIRPLAY
+#endif
+
+#if defined(ENABLE_GOOGLECAST)
+#include "TGoogleCaster.h"
+#endif
+
+#if defined(ENABLE_AIRPLAY)
+#include "TAirplayCaster.h"
+#endif
 
 #if defined(TARGET_OSX)||defined(TARGET_IOS)
 #include "AvfCompressor.h"
@@ -15,10 +28,15 @@ namespace PopCast
 	std::mutex gInstancesLock;
 	std::vector<std::shared_ptr<PopCast::TInstance> >	gInstances;
 	
+#if defined(ENABLE_GOOGLECAST)
 	std::shared_ptr<GoogleCast::TContext>	GoogleCastContext;
 	GoogleCast::TContext&					GetGoogleCastContext();
+#endif
+
+#if defined(ENABLE_AIRPLAY)
 	std::shared_ptr<Airplay::TContext>		AirplayContext;
 	Airplay::TContext&						GetAirplayContext();
+#endif
 };
 
 
@@ -72,6 +90,7 @@ __export void	PopCast_EnumDevices()
 	Array<TCastDeviceMeta> Metas;
 
 	//	get chromecast devices
+#if defined(ENABLE_GOOGLECAST)
 	try
 	{
 		auto& GoogleCastContext = PopCast::GetGoogleCastContext();
@@ -81,7 +100,9 @@ __export void	PopCast_EnumDevices()
 	{
 		std::Debug << e.what() << std::endl;
 	}
-	
+#endif
+
+#if defined(ENABLE_AIRPLAY)
 	try
 	{
 		auto& AirplayContext = PopCast::GetAirplayContext();
@@ -91,6 +112,7 @@ __export void	PopCast_EnumDevices()
 	{
 		std::Debug << e.what() << std::endl;
 	}
+#endif
 	
 	for ( int i=0;	i<Metas.GetSize();	i++ )
 	{
@@ -141,7 +163,7 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	}
 }
 
-
+#if defined(ENABLE_GOOGLECAST)
 GoogleCast::TContext& PopCast::GetGoogleCastContext()
 {
 	if ( !PopCast::GoogleCastContext )
@@ -151,9 +173,10 @@ GoogleCast::TContext& PopCast::GetGoogleCastContext()
 	
 	return *PopCast::GoogleCastContext;
 }
+#endif
 
 
-
+#if defined(ENABLE_AIRPLAY)
 Airplay::TContext& PopCast::GetAirplayContext()
 {
 	if ( !PopCast::AirplayContext )
@@ -163,7 +186,7 @@ Airplay::TContext& PopCast::GetAirplayContext()
 	
 	return *PopCast::AirplayContext;
 }
-
+#endif
 
 
 std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext)
@@ -224,20 +247,24 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params,std::
 	mOpenglContext	( OpenglContext ),
 	mBaseTimestamp	( true )	//	timestamps based on now
 {
-	if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
+	if ( TFileCaster::HandlesFilename( Params.mName ) )
+	{
+		mCaster.reset( new TFileCaster( Params, mOpenglContext ) );
+	}
+#if defined(ENABLE_AIRPLAY)
+	else if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
 	{
 		auto& Context = GetAirplayContext();
 		mCaster = Context.AllocDevice( Params );
 	}
+#endif
+#if defined(ENABLE_GOOGLECAST)
 	else if ( Soy::StringTrimLeft( Params.mName, "chromecast:", false ) )
 	{
 		auto& Context = GetGoogleCastContext();
 		mCaster = Context.AllocDevice( Params );
 	}
-	else if ( TFileCaster::HandlesFilename( Params.mName ) )
-	{
-		mCaster.reset( new TFileCaster( Params, mOpenglContext ) );
-	}
+#endif
 	else
 	{
 		std::stringstream Error;

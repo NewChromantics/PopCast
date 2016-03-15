@@ -13,9 +13,9 @@ TMemFileHeader::TMemFileHeader(const SoyPixelsMeta& Meta,SoyTime Time) :
 	mPixelFormat	( static_cast<uint32>( Meta.GetFormat() ) ),
 	mWidth			( Meta.GetWidth() ),
 	mHeight			( Meta.GetHeight() ),
-	mTimecode		( Time.GetTime() ),
-	mError			{ 0 }
+	mTimecode		( Time.GetTime() )
 {
+	memset( mError, 0, sizeof(mError) );
 	memcpy( &mMagic, Magic, sizeof(mMagic) );
 }
 
