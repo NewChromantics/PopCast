@@ -23,13 +23,20 @@ namespace Gif
 
 
 
-const char* GifFragShaderSimpleNearest =
-#include "GifNearest.frag"
+const char* GifFragShaderSimpleNearest_Opengl =
+#include "GifNearest.glsl.frag"
 ;
 
+const char* GifFragShaderDebugPalette_Opengl =
+#include "GifDebug.glsl.frag"
+;
 
-const char* GifFragShaderDebugPalette =
-#include "GifDebug.frag"
+const char* GifFragShaderSimpleNearest_Directx =
+"GifFragShaderSimpleNearest_Directx"
+;
+
+const char* GifFragShaderDebugPalette_Directx =
+"GifFragShaderDebugPalette_Directx"
 ;
 
 
@@ -158,6 +165,9 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
 	SoyPixelsMeta PaletteMeta( Palette.GetWidth(), Palette.GetHeight(), SoyPixelsFormat::RGB );
 	
+
+	//	gr: CRASH ON EXIT HERE
+	//	source & palette deleted
 	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,PaletteMeta,FragShader]
 	{
 		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
@@ -670,10 +680,25 @@ bool Gif::TEncoder::Iteration()
 	SoyPixelsDef<Array<uint8>> PalettisedImage( Packet.mData, Packet.mMeta.mPixelMeta );
 	try
 	{
-		const char* Shader = GifFragShaderSimpleNearest;
-		if ( mParams.mDebugIndexes )
-			Shader = GifFragShaderDebugPalette;
-		
+		const char* Shader = nullptr;
+
+		if ( mOpenglGifBlitter && !mParams.mDebugIndexes )
+		{
+			Shader = GifFragShaderSimpleNearest_Opengl;
+		}
+		else if ( mOpenglGifBlitter && mParams.mDebugIndexes )
+		{
+			Shader = GifFragShaderDebugPalette_Opengl;
+		}
+		else if ( mDirectxGifBlitter && !mParams.mDebugIndexes )
+		{
+			Shader = GifFragShaderSimpleNearest_Directx;
+		}
+		else if ( mDirectxGifBlitter && mParams.mDebugIndexes )
+		{
+			Shader = GifFragShaderDebugPalette_Directx;
+		}
+
 		auto MaskPixel = [this](const vec3x<uint8>& Old,const vec3x<uint8>& New)
 		{
 			int Diff = abs( Old.x - New.x ) + abs( Old.y - New.y ) + abs( Old.z - New.z );
@@ -840,6 +865,11 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 	if ( mOpenglGifBlitter )
 	{
 		mOpenglGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
+		mDeviceJobSemaphore.reset();
+	}
+	else if ( mDirectxGifBlitter )
+	{
+		mDirectxGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
 		mDeviceJobSemaphore.reset();
 	}
 	else
