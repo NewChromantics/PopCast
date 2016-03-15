@@ -97,7 +97,7 @@ public:
 	~TEncoder();
 	
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
-	virtual void			Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
+	virtual void			Write(std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
 
 protected:
 	virtual bool					CanSleep() override;
@@ -106,6 +106,8 @@ protected:
 	std::shared_ptr<TMediaPacket>	PopFrame();
 
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
+	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const SoyPixelsImpl& Image);
+
 
 	//	if this returns false, we're ALL transparent
 	bool					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);

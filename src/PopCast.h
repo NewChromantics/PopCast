@@ -11,6 +11,7 @@ __export bool			PopCast_Free(Unity::ulong Instance);
 __export void			PopCast_EnumDevices();
 __export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 __export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
+__export bool			PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint StreamIndex);
 
 
 
@@ -55,7 +56,8 @@ public:
 	
 	TInstanceRef	GetRef() const		{	return mRef;	}
 	
-	void			WriteFrame(Opengl::TTexture Texture,size_t StreamIndex);
+	void			WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex);
+	void			WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex);
 	
 public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;

@@ -161,6 +161,9 @@ public class PopCast
 	[DllImport (PluginName)]
 	private static extern bool		PopCast_UpdateRenderTexture(ulong Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat,int StreamIndex);
 
+	[DllImport(PluginName)]
+	private static extern bool		PopCast_UpdateTextureDebug(ulong Instance,int StreamIndex);
+
 
 	public static void EnumDevices()
 	{
@@ -242,6 +245,14 @@ public class PopCast
 			mTexturePushCount++;
 		}
 		FlushDebug ();
+	}
+
+	public void UpdateFakeTexture(int StreamIndex)
+	{
+		Update();
+		PopCast_UpdateTextureDebug(mInstance, StreamIndex);
+		mTexturePushCount++;
+		FlushDebug();
 	}
 
 	private void Update()

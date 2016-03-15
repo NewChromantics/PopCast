@@ -527,7 +527,7 @@ void Avf::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 }
 
 
-void Avf::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
+void Avf::TEncoder::Write(std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
 {
 	auto& Image = *pImage;
 	Soy::Assert( mSession != nullptr, "Session expected" );

@@ -320,9 +320,29 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 	Context.PushJob( MakePacketFromTexture );
 }
 
-void Gif::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
+void Gif::TEncoder::Write(std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
 {
-	throw Soy::AssertException("Currently only supporting opengl");
+	Soy::Assert( mOpenglContext != nullptr, "Gif encoder for pixels still needs opengl context");
+	Soy::Assert( Image != nullptr, "Gif::TEncoder::Write null pixels" );
+
+	//	all this needs to be done in the opengl thread
+	auto MakePacketFromTexture = [this,Image,Timecode]
+	{
+		std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
+		auto& Packet = *pPacket;
+
+		{
+			Packet.mPixelBuffer = CopyFrameImmediate( *Image );
+		}
+
+		Packet.mTimecode = Timecode;
+		Packet.mDuration = SoyTime( 16ull );
+		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
+		
+		PushFrame( pPacket );
+	};
+	
+	mOpenglContext->PushJob( MakePacketFromTexture );
 }
 
 bool Gif::TEncoder::CanSleep()
@@ -465,6 +485,18 @@ std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const Opengl::
 	ImageAsArray.PushBack( Image );
 	Opengl::TTextureUploadParams Params;
 	mOpenglBlitter->BlitTexture( *Buffer->mImage, GetArrayBridge(ImageAsArray), *mOpenglContext, Params );
+
+	return Buffer;
+}
+
+
+std::shared_ptr<TTextureBuffer> Gif::TEncoder::CopyFrameImmediate(const SoyPixelsImpl& Image)
+{
+	std::shared_ptr<TTextureBuffer> Buffer( new TTextureBuffer(mOpenglContext) );
+	Buffer->mImage.reset( new Opengl::TTexture( Image.GetMeta(), GL_TEXTURE_2D ) );
+	
+	Opengl::TTextureUploadParams Params;
+	Buffer->mImage->Write( Image, Params );
 
 	return Buffer;
 }
@@ -654,7 +686,8 @@ bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 
 	//	if frame count is too low, and 3 identical frames, we won't push the first X frames
 	//	and from editor seems like it does nothing
-	bool AllowIntraFrames = (mPushedFrameCount>=3) && Params.mAllowIntraFrames;
+	static int MinFramePushForIntra = 3;
+	bool AllowIntraFrames = (mPushedFrameCount>MinFramePushForIntra) && Params.mAllowIntraFrames;
 	bool DoMasking = TestAlphaSquare || AllowIntraFrames;
 	
 	std::shared_ptr<SoyPixelsImpl> RgbaCopy;

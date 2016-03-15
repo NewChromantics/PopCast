@@ -183,6 +183,38 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	}
 }
 
+__export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint StreamIndex)
+{
+	auto pInstance = PopCast::GetInstance( Instance );
+	if ( !pInstance )
+		return false;
+	
+	try
+	{
+		//	make up a debug image
+		SoyPixelsMeta Meta( 32, 32, SoyPixelsFormat::RGB );
+		auto pPixels = std::make_shared<SoyPixels>();
+		auto& Pixels = *pPixels;
+		Pixels.Init( Meta );
+		BufferArray<uint8,4> Rgba;
+		Rgba.PushBack( 255 );
+		Rgba.PushBack( 0 );
+		Rgba.PushBack( 0 );
+		Rgba.PushBack( 255 );
+		Pixels.SetPixels( GetArrayBridge(Rgba) );
+
+		pInstance->WriteFrame( pPixels, size_cast<size_t>(StreamIndex) );
+		return true;
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << __func__ << " failed: " << e.what() << std::endl;
+		return false;
+	}
+}
+
+
+
 #if defined(ENABLE_GOOGLECAST)
 GoogleCast::TContext& PopCast::GetGoogleCastContext()
 {
@@ -293,7 +325,7 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params,std::
 	}
 }
 
-void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,size_t StreamIndex)
+void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex)
 {
 	Soy::Assert( mOpenglContext!=nullptr, "Instance requires an opengl context" );
 	Soy::Assert( mCaster != nullptr, "Expected Caster" );
@@ -326,6 +358,30 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture Texture,size_t StreamIndex)
 			Caster->Write( Pixels, Frame );
 		};
 		Context.PushJob( ReadPixels );
+		return;
+	}
+	catch(std::exception& e)
+	{
+		//	failed, maybe pixels will be okay
+		//std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+	}
+	
+}
+
+
+void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex)
+{
+	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	
+	//	make relative timestamp
+	TCastFrameMeta Frame;
+	Frame.mStreamIndex = StreamIndex;
+	Frame.mTimecode = SoyTime(true);
+	Frame.mTimecode -= mBaseTimestamp;
+	
+	try
+	{
+		mCaster->Write( Texture, Frame );
 		return;
 	}
 	catch(std::exception& e)

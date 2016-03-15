@@ -17,6 +17,8 @@ public class PopCastWindow : EditorWindow
 	[Header("If no target texture set, one will be created")]
 	public RenderTexture	RecordToTexture = null;
 
+	[Header("Push fake textures for debugging")]
+	public bool				PushFakeTextures = false;
 
 	private PopCast 		mPopCast;
 
@@ -81,7 +83,7 @@ public class PopCastWindow : EditorWindow
 		//Debug.Log ("Popcast window LateUpdate");
 		//	was in lateupdate
 		//	update recording
-		if ( mPopCast != null )
+		if ( mPopCast != null && !PushFakeTextures )
 		{
 			//	save settings to restore
 			RenderTexture PreTarget = RenderTexture.active;
@@ -107,7 +109,10 @@ public class PopCastWindow : EditorWindow
 		//	write latest stream data
 		if (mPopCast != null) 
 		{
-			mPopCast.UpdateTexture( RecordToTexture, 0 );
+			if (PushFakeTextures)
+				mPopCast.UpdateFakeTexture(0);
+			else
+				mPopCast.UpdateTexture( RecordToTexture, 0 );
 		}
 
 
