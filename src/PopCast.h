@@ -39,7 +39,7 @@ namespace PopCast
 	class TInstance;
 	typedef Unity::ulong	TInstanceRef;
 
-	std::shared_ptr<TInstance>	Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext=nullptr);
+	std::shared_ptr<TInstance>	Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext=nullptr,std::shared_ptr<Directx::TContext> DirectxContext=nullptr);
 	std::shared_ptr<TInstance>	GetInstance(TInstanceRef Instance);
 	bool						Free(TInstanceRef Instance);
 };
@@ -52,15 +52,26 @@ public:
 	TInstance()=delete;
 	TInstance(const TInstance& Copy)=delete;
 public:
-	explicit TInstance(const TInstanceRef& Ref,TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext);
+	explicit TInstance(const TInstanceRef& Ref,TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext);
+	explicit TInstance(const TInstanceRef& Ref,TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
+		TInstance	( Ref, Params, OpenglContext, nullptr )
+	{
+	}
+	explicit TInstance(const TInstanceRef& Ref,TCasterParams& Params,std::shared_ptr<Directx::TContext> DirectxContext) :
+		TInstance	( Ref, Params, nullptr, DirectxContext )
+	{
+	}
 	
 	TInstanceRef	GetRef() const		{	return mRef;	}
 	
 	void			WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex);
+	void			WriteFrame(Directx::TTexture& Texture,size_t StreamIndex);
 	void			WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex);
 	
+
 public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;
+	std::shared_ptr<Directx::TContext>	mDirectxContext;
 	std::shared_ptr<TCaster>			mCaster;
 	SoyTime								mBaseTimestamp;
 

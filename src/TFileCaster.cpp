@@ -68,13 +68,18 @@ std::shared_ptr<TStreamWriter> AllocStreamWriter(const std::string& Filename)
 }
 
 
-std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc,std::shared_ptr<Opengl::TContext> OpenglContext)
+std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext)
 {
 	if ( Soy::StringEndsWith( Filename, ".gif", false ) )
 	{
-		auto AllocGifEncoder = [Input,OpenglContext,Params](size_t StreamIndex)
+		auto AllocGifEncoder = [Input,OpenglContext,DirectxContext,Params](size_t StreamIndex)
 		{
-			return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams, Params.mSkipFrames );
+			if ( OpenglContext )
+				return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams, Params.mSkipFrames );
+			else if ( DirectxContext )
+				return Gif::AllocEncoder( Input, StreamIndex, DirectxContext, Params.mGifParams, Params.mSkipFrames );
+
+			throw Soy::AssertException("Missing graphics context");
 		};
 		EncoderFunc = AllocGifEncoder;
 		return std::make_shared<Gif::TMuxer>( Output, Input, Filename );
@@ -106,7 +111,7 @@ std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string 
 
 
 
-TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
+TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext) :
 	TCaster			( Params )
 {
 	auto& Filename = Params.mName;
@@ -135,7 +140,7 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 		mFileStream = AllocStreamWriter( Params.mName );
 		Soy::Assert( mFileStream != nullptr, "Failed to allocate filestream");
 		mFileStream->mOnShutdown.AddListener( OnStreamFinished );
-		mMuxer = AllocMuxer( Params, Filename, mFileStream, mFrameBuffer, mAllocEncoder, OpenglContext );
+		mMuxer = AllocMuxer( Params, Filename, mFileStream, mFrameBuffer, mAllocEncoder, OpenglContext, DirectxContext );
 	}
 
 	

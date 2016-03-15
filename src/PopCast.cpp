@@ -192,7 +192,7 @@ __export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint Strea
 	try
 	{
 		//	make up a debug image
-		SoyPixelsMeta Meta( 32, 32, SoyPixelsFormat::RGB );
+		SoyPixelsMeta Meta( 200, 200, SoyPixelsFormat::RGBA );
 		auto pPixels = std::make_shared<SoyPixels>();
 		auto& Pixels = *pPixels;
 		Pixels.Init( Meta );
@@ -241,7 +241,7 @@ Airplay::TContext& PopCast::GetAirplayContext()
 #endif
 
 
-std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext)
+std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext)
 {
 	gInstancesLock.lock();
 	static TInstanceRef gInstanceRefCounter(1000);
@@ -250,8 +250,11 @@ std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::sha
 
 	if ( !OpenglContext )
 		OpenglContext = Unity::GetOpenglContextPtr();
+
+	if ( !DirectxContext )
+		DirectxContext = Unity::GetDirectxContextPtr();
 	
-	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params,OpenglContext) );
+	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params,OpenglContext,DirectxContext) );
 	
 	gInstancesLock.lock();
 	gInstances.push_back( pInstance );
@@ -294,14 +297,16 @@ bool PopCast::Free(TInstanceRef Instance)
 
 
 
-PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
+PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams& _Params,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext) :
 	mRef			( Ref ),
 	mOpenglContext	( OpenglContext ),
+	mDirectxContext	( DirectxContext ),
 	mBaseTimestamp	( true )	//	timestamps based on now
 {
+	auto Params = _Params;
 	if ( TFileCaster::HandlesFilename( Params.mName ) )
 	{
-		mCaster.reset( new TFileCaster( Params, mOpenglContext ) );
+		mCaster.reset( new TFileCaster( Params, mOpenglContext, mDirectxContext ) );
 	}
 #if defined(ENABLE_AIRPLAY)
 	else if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
@@ -324,6 +329,7 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams Params,std::
 		throw Soy::AssertException( Error.str() );
 	}
 }
+
 
 void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex)
 {

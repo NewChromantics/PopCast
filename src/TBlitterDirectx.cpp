@@ -111,7 +111,7 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetErrorShader(TContext& Co
 }
 
 
-std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<SoyPixelsImpl*>& Sources,Directx::TContext& Context)
+std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<const SoyPixelsImpl*>& Sources,Directx::TContext& Context)
 {
 	if ( Sources.GetSize() == 0 )
 		return GetBackupShader(Context);
@@ -144,11 +144,24 @@ void Directx::TBlitter::BlitError(Directx::TTexture& Target,const std::string& E
 	//	gr: add non-
 	std::shared_ptr<Directx::TShader> ErrorShader = GetErrorShader( Context );
 
-	BufferArray<SoyPixelsImpl*,2> Textures;
+	BufferArray<const SoyPixelsImpl*,2> Textures;
 	BlitTexture( Target, GetArrayBridge(Textures), Context, ErrorShader );
 }
 
-void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<SoyPixelsImpl*>&& Sources,TContext& Context,std::shared_ptr<Directx::TShader> OverrideShader)
+
+void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const SoyPixelsImpl*>&& Sources,TContext& Context,const char* OverrideShader)
+{
+	//	grab provided shader if it's already compiled
+	std::shared_ptr<TShader> OverrideShaderPtr;
+	if ( OverrideShader )
+	{
+		OverrideShaderPtr = GetShader( "OverrideShader", OverrideShader, Context );
+	}
+	
+	BlitTexture( Target, GetArrayBridge(Sources), Context, OverrideShaderPtr );
+}
+
+void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const SoyPixelsImpl*>&& Sources,TContext& Context,std::shared_ptr<Directx::TShader> OverrideShader)
 {
 	if ( mUseTestBlit && !OverrideShader )
 		OverrideShader = GetBackupShader( Context );

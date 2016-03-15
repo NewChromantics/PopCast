@@ -11,6 +11,12 @@ class TRawWriteDataProtocol;
 namespace Opengl
 {
 	class TBlitter;
+	class GifBlitter;
+}
+namespace Directx
+{
+	class TBlitter;
+	class GifBlitter;
 }
 
 //	https://github.com/ginsweater/gif-h/blob/master/gif.h
@@ -20,7 +26,8 @@ namespace Gif
 	class TEncoder;
 	class TEncodeParams;
 	
-	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params,bool SkipFrames);
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,const TEncodeParams& Params,bool SkipFrames);
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,const TEncodeParams& Params,bool SkipFrames);
 
 	typedef std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	TMaskPixelFunc;
 }
@@ -99,14 +106,6 @@ public:
 };
 
 
-namespace Opengl
-{
-	class GifBlitter;
-}
-namespace Directx
-{
-	class GifBlitter;
-}
 
 class Opengl::GifBlitter
 {
@@ -114,18 +113,31 @@ public:
 	GifBlitter(std::shared_ptr<TContext> Context);
 	~GifBlitter();
 
-	std::shared_ptr<TTextureBuffer>	CopyImmediate(const Opengl::TTexture& Image);
+	std::shared_ptr<TTextureBuffer>	CopyImmediate(const TTexture& Image);
 	void							IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore);
 
 public:
 	std::shared_ptr<TContext>	mContext;
 	std::shared_ptr<TBlitter>	mBlitter;
 	
-	//	gr: move these to a pool (in the blitter?()
-	//	for shader blit
 	std::shared_ptr<TTexture>	mIndexImage;
-	std::shared_ptr<TTexture>	mPaletteImage;
-	std::shared_ptr<TTexture>	mSourceImage;
+};
+
+
+class Directx::GifBlitter
+{
+public:
+	GifBlitter(std::shared_ptr<TContext> Context);
+	~GifBlitter();
+
+	std::shared_ptr<TTextureBuffer>	CopyImmediate(const TTexture& Image);
+	void							IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore);
+
+public:
+	std::shared_ptr<TContext>	mContext;
+	std::shared_ptr<TBlitter>	mBlitter;
+	
+	std::shared_ptr<TTexture>	mIndexImage;
 };
 
 
@@ -134,7 +146,7 @@ class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
 public:
 	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,Gif::TEncodeParams Params,bool SkipFrames);
-	//TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,Gif::TEncodeParams Params,bool SkipFrames);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,Gif::TEncodeParams Params,bool SkipFrames);
 	~TEncoder();
 	
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
@@ -146,10 +158,6 @@ protected:
 	virtual bool					Iteration() override;
 	void							PushFrame(std::shared_ptr<TMediaPacket> Frame);
 	std::shared_ptr<TMediaPacket>	PopFrame();
-
-	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
-	//std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Directx::TTexture& Image);
-	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const SoyPixelsImpl& Image);
 
 	Opengl::TContext&		GetOpenglContext();
 	Directx::TContext&		GetDirectxContext();
@@ -169,9 +177,9 @@ public:
 	
 
 	//	when unity destructs us, the opengl thread is suspended, so we need to forcily break a semaphore
-	std::shared_ptr<Soy::TSemaphore>	mDeviceJobSemaphore;	
-	std::shared_ptr<Opengl::GifBlitter>	mOpenglGifBlitter;
-	//std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
+	std::shared_ptr<Soy::TSemaphore>		mDeviceJobSemaphore;	
+	std::shared_ptr<Opengl::GifBlitter>		mOpenglGifBlitter;
+	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
 
 	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
 };

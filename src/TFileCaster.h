@@ -95,7 +95,7 @@ public:
 class TFileCaster : public TCaster
 {
 public:
-	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext);
+	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext);
 	~TFileCaster();
 	
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
