@@ -32,9 +32,9 @@ const char* GifFragShaderDebugPalette =
 ;
 
 
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params,bool SkipFrames)
 {
-	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext, Params ) );
+	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, OpenglContext, Params, SkipFrames ) );
 	return Encoder;
 }
 
@@ -249,12 +249,14 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 }
 
 
-Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,TEncodeParams Params) :
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,TEncodeParams Params,bool SkipFrames) :
 	SoyWorkerThread	( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder	( OutputBuffer ),
 	mStreamIndex	( StreamIndex ),
 	mOpenglContext	( OpenglContext ),
-	mParams			( Params )
+	mParams			( Params ),
+	mPushedFrameCount	( 0 ),
+	mSkipFrames		( SkipFrames )
 {
 	Start();
 }
@@ -393,26 +395,31 @@ bool Gif::TEncoder::Iteration()
 		
 		auto MaskPixel = [this](const vec3x<uint8>& Old,const vec3x<uint8>& New)
 		{
-			if ( mParams.mMaskMaxDiff == 0 )
-				return true;
-			
 			int Diff = abs( Old.x - New.x ) + abs( Old.y - New.y ) + abs( Old.z - New.z );
 			float Difff = Diff / (256.f*3.f);
-			if ( Difff >= mParams.mMaskMaxDiff )
+			if ( Difff > mParams.mMaskMaxDiff )
 				return false;
 			return true;
 		};
 		
-		MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, mParams, MaskPixel );
-		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
-	
-		//	drop packets
-		auto Block = []
+		if ( MakePalettisedImage( PalettisedImage, RgbaCopy, Packet.mIsKeyFrame, Shader, mParams, MaskPixel ) )
 		{
-			return false;
-		};
+			Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 		
-		TMediaEncoder::PushFrame( pPacket, Block );
+			//	drop packets
+			auto Block = []
+			{
+				return false;
+			};
+			
+			TMediaEncoder::PushFrame( pPacket, Block );
+			mPushedFrameCount++;
+		}
+		else
+		{
+			//	all transparent, skipping packet. need to alter previous frame to extend time
+			//	gr: with a special packet?
+		}
 	}
 	catch(std::exception& e)
 	{
@@ -426,7 +433,13 @@ bool Gif::TEncoder::Iteration()
 void Gif::TEncoder::PushFrame(std::shared_ptr<TMediaPacket> Frame)
 {
 	std::lock_guard<std::mutex> Lock( mPendingFramesLock );
+
+	//	make this the latest frame in the queue
+	if ( mSkipFrames )
+		mPendingFrames.Clear();
+
 	mPendingFrames.PushBack( Frame );
+	
 	Wake();
 }
 
@@ -540,6 +553,7 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 	
 	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,PaletteMeta,FragShader]
 	{
+		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
 		if ( SemaphoreCopy->IsCompleted() )
 			return;
 
@@ -629,28 +643,37 @@ void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool
 	}
 }
 
-void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
+bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
 {
 	std::shared_ptr<SoyPixelsImpl> pNewPalette;
 
 	int TransparentIndex = 0;
 	int DebugTransparentIndex = 1;
-	static bool TestAlpha = false;
+	static bool TestAlphaSquare = false;
 	Keyframe = true;
 
+	//	if frame count is too low, and 3 identical frames, we won't push the first X frames
+	//	and from editor seems like it does nothing
+	bool AllowIntraFrames = (mPushedFrameCount>=3) && Params.mAllowIntraFrames;
+	bool DoMasking = TestAlphaSquare || AllowIntraFrames;
+	
 	std::shared_ptr<SoyPixelsImpl> RgbaCopy;
-	if ( (TestAlpha||Params.mAllowIntraFrames) && mPrevRgb )
+	if ( DoMasking && mPrevRgb )
 	{
 		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
 		RgbaCopy.reset( new SoyPixels( Rgba ) );
 		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
-		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlpha, Params, MaskPixelFunc );
+		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlphaSquare, Params, MaskPixelFunc );
 	}
 	
 
 	//	gr: this currently generates a full palette (can be > 256)
 	pNewPalette.reset( new SoyPixels );
 	GetPalette( *pNewPalette, Rgba, Params, Keyframe );
+	
+	//	if the palette is empty... we're ALL transparent!
+	if ( pNewPalette->GetWidth() == 0 )
+		return false;
 
 	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
 	auto& IndexedImage = *pIndexedImage;
@@ -676,6 +699,8 @@ void Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	Soy::TScopeTimerPrint Timer("MakePaletteised",Gif::TimerMinMs);
 	auto WriteTransparentIndex = Params.mDebugTransparency ? DebugTransparentIndex : TransparentIndex;
 	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, WriteTransparentIndex );
+	
+	return true;
 }
 	
 

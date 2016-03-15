@@ -9,7 +9,7 @@ REM set UNITY_EXE=$(UnityExe)
 REM set BUILD_DLL=$(TargetPath)
  
 REM Setup some other vars we don't need to put in VS
-set TARGET_PATH=%SRCROOT%\Unity\Assets\Plugins\Windows\
+set TARGET_PATH=%SRCROOT%\Unity\Assets\%PROJECT%\Windows\
 set TARGET_WINDOWS=true
 
 REM todo: check these vars are set

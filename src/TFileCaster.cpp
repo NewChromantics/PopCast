@@ -2,6 +2,7 @@
 #include <SoyMedia.h>
 #include "SoyGif.h"
 #include "THttpCaster.h"
+#include <SoyFileSystem.h>
 
 #if defined(TARGET_OSX)
 #define ENABLE_LIBAV
@@ -18,13 +19,12 @@
 
 
 
-
-std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input)
+std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished)
 {
 #if defined(TARGET_OSX)
 	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
 	{
-		return std::make_shared<Avf::TFileMuxer>( Filename, Input );
+		return std::make_shared<Avf::TFileMuxer>( Filename, Input, OnStreamFinished );
 	}
 #endif
 	return nullptr;
@@ -74,7 +74,7 @@ std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string 
 	{
 		auto AllocGifEncoder = [Input,OpenglContext,Params](size_t StreamIndex)
 		{
-			return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams );
+			return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams, Params.mSkipFrames );
 		};
 		EncoderFunc = AllocGifEncoder;
 		return std::make_shared<Gif::TMuxer>( Output, Input, Filename );
@@ -114,14 +114,27 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 
+
+	bool ShowFileOnFinished = Params.mShowFinishedFile;
+	auto OnStreamFinished = [Filename,ShowFileOnFinished](bool& Success)
+	{
+		if ( !Success )
+			return;
+		if ( !ShowFileOnFinished )
+			return;
+
+		Platform::ShowFileExplorer( Filename );
+	};
 	
 	//	see if there are OS specialisations
-	mMuxer = AllocPlatformMuxer( Params.mName, mFrameBuffer );
+	mMuxer = AllocPlatformMuxer( Params.mName, mFrameBuffer, OnStreamFinished );
 	
 	//	alloc stream & muxer from name
 	if ( !mMuxer )
 	{
 		mFileStream = AllocStreamWriter( Params.mName );
+		Soy::Assert( mFileStream != nullptr, "Failed to allocate filestream");
+		mFileStream->mOnShutdown.AddListener( OnStreamFinished );
 		mMuxer = AllocMuxer( Params, Filename, mFileStream, mFrameBuffer, mAllocEncoder, OpenglContext );
 	}
 

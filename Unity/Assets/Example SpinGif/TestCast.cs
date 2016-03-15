@@ -6,6 +6,7 @@ public class TestCast : MonoBehaviour {
 
 	public List<Texture>	OutputTextures;	//	one per stream
 
+	public PopCastParams	CastParams;
 
 	public PopCast		mCast = null;
 	public string		mOutputTarget = "PopCast.mp4";
@@ -16,7 +17,7 @@ public class TestCast : MonoBehaviour {
 	void OnEnable()
 	{
 		if (mCast == null) {
-			mCast = new PopCast (mOutputTarget, new PopCastParams ());
+			mCast = new PopCast (mOutputTarget, CastParams);
 			mCast.AddDebugCallback (Debug.Log);
 		}
 	}

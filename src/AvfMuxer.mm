@@ -136,8 +136,10 @@ void Avf::TAssetWriterInput::Finish()
 	[mInput.mObject markAsFinished];
 }
 
-Avf::TFileMuxer::TFileMuxer(const std::string& Filename,std::shared_ptr<TMediaPacketBuffer>& Input) :
-	TMediaMuxer		( nullptr, Input )
+
+Avf::TFileMuxer::TFileMuxer(const std::string& Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished) :
+	TMediaMuxer			( nullptr, Input ),
+	mOnStreamFinished	( OnStreamFinished )
 {
 	//	make asset writer
 	@try

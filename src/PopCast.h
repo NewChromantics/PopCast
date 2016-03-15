@@ -6,13 +6,32 @@
 class TCaster;
 class TCasterParams;
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename);
+__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits);
 __export bool			PopCast_Free(Unity::ulong Instance);
 __export void			PopCast_EnumDevices();
 __export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 __export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 
 
+
+//	way too many problems with using a struct, reverting to bit flags. (which may also have problems with endianness, container size etc)
+//		android ONLY struct is offset
+//		IL2CPP bools are 32 bit and NOT garunteed to have bit 1 set if true
+//		long is 32 bit on some platforms and 64 on others
+namespace TPluginParams
+{
+	//	copy & paste this to c#
+	enum PopCastFlags
+	{
+		None						= 0,
+		ShowFinishedFile			= 1<<0,
+		Gif_AllowIntraFrames		= 1<<1,
+		Gif_DebugPalette			= 1<<2,
+		Gif_DebugIndexes			= 1<<3,
+		Gif_DebugTransparency		= 1<<4,
+		SkipFrames					= 1<<5,
+	};
+}
 
 namespace PopCast
 {

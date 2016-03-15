@@ -9,8 +9,16 @@
 class TCasterParams
 {
 public:
-	std::string			mName;		//	filename, device name etc
+	TCasterParams() :
+		mShowFinishedFile	( false ),
+		mSkipFrames			( false )
+	{
+	}
 	
+public:
+	std::string			mName;				//	filename, device name etc
+	bool				mShowFinishedFile;
+	bool				mSkipFrames;
 	Gif::TEncodeParams	mGifParams;
 };
 

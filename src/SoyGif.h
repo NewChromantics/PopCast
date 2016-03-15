@@ -20,7 +20,7 @@ namespace Gif
 	class TEncoder;
 	class TEncodeParams;
 	
-	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params);
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> OpenglContext,const TEncodeParams& Params,bool SkipFrames);
 
 	typedef std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	TMaskPixelFunc;
 }
@@ -76,7 +76,7 @@ public:
 		mFindPalettePixelSkip	( 5 ),
 		mTransparentColour		( 255, 0, 255 ),
 		mMaxColours				( 255 ),
-		mMaskMaxDiff			( 0.01f )
+		mMaskMaxDiff			( 0.f / 256.f )
 	{
 	}
 	
@@ -87,13 +87,13 @@ public:
 	bool			mDebugTransparency;		//	highlight transparent regions
 	vec3x<uint8>	mTransparentColour;
 	size_t			mMaxColours;
-	float			mMaskMaxDiff;			//	if zero, no masking
+	float			mMaskMaxDiff;			//	if zero, exact pixel colour matches required
 };
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
 public:
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext>	OpenglContext,Gif::TEncodeParams Params);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext>	OpenglContext,Gif::TEncodeParams Params,bool SkipFrames);
 	~TEncoder();
 	
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
@@ -107,11 +107,14 @@ protected:
 
 	std::shared_ptr<TTextureBuffer>	CopyFrameImmediate(const Opengl::TTexture& Image);
 
-	void					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);
+	//	if this returns false, we're ALL transparent
+	bool					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);
 	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
 	
 public:
+	size_t					mPushedFrameCount;
 	Gif::TEncodeParams		mParams;
+	bool					mSkipFrames;
 	size_t					mStreamIndex;
 	
 	std::mutex				mPendingFramesLock;

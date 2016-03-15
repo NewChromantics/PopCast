@@ -1,6 +1,9 @@
 # Everything in plugins is generated at compile time
 Unity/Assets/Plugins
 Unity/Assets/Plugins.meta
+Unity/Assets/PopCast
+Unity/Assets/PopCast.meta
+
 MakePackage.log
 *.unitypackage
 
