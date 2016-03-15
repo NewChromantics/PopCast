@@ -48,8 +48,9 @@ void TMemFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& F
 	throw Soy::AssertException("todo");
 }
 
-void TMemFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
+void TMemFileCaster::Write(std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
 {
+	Soy::Assert( pImage != nullptr, "Pixels expected");
 	auto& Image = *pImage;
 	
 	//	make sure file is allocated

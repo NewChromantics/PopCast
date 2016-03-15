@@ -35,7 +35,7 @@ public:
 	TMemFileCaster(const TCasterParams& Params);
 	
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
-	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
+	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
 	
 protected:
 	void				AllocateFile(const std::string& Filename,const SoyPixelsMeta& Meta);

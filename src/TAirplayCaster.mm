@@ -223,7 +223,7 @@ void Airplay::TMirrorDevice::Write(const Opengl::TTexture& Image,const TCastFram
 	throw Soy::AssertException("Not supported");
 }
 
-void Airplay::TMirrorDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
+void Airplay::TMirrorDevice::Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
 	throw Soy::AssertException("Not supported");
 }

@@ -67,7 +67,7 @@ public:
 	
 	//	throw if your caster can't support these
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& Frame,Opengl::TContext& Context)=0;
-	virtual void		Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& Frame)=0;
+	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& Frame)=0;
 
 protected:
 	TCasterParams	mParams;
