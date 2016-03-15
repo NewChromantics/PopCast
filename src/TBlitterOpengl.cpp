@@ -252,9 +252,9 @@ std::shared_ptr<Opengl::TGeometry> Opengl::TBlitter::GetGeo(Opengl::TContext& Co
 void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Error,Opengl::TContext& Context)
 {
 	//	gr: add non-
-	std::shared_ptr<Opengl::TShader> ErrorShader = GetErrorShader( Context );
+	std::shared_ptr<TShader> ErrorShader = GetErrorShader( Context );
 
-	BufferArray<Opengl::TTexture,2> Textures;
+	BufferArray<TTexture,2> Textures;
 	TTextureUploadParams UploadParams;
 	BlitTexture( Target, GetArrayBridge(Textures), Context, UploadParams, ErrorShader );
 }
@@ -263,7 +263,7 @@ void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Err
 void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::TTexture>&& Sources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	//	grab provided shader if it's already compiled
-	std::shared_ptr<Opengl::TShader> OverrideShaderPtr;
+	std::shared_ptr<TShader> OverrideShaderPtr;
 	if ( OverrideShader )
 	{
 		OverrideShaderPtr = GetShader( "OverrideShader", OverrideShader, Context );
@@ -366,7 +366,7 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 	}
 }
 
-void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
+void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	ofScopeTimerWarning Timer("Blit SoyPixel Texture[s]",2);
 	
@@ -380,7 +380,8 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixel
 			std::Debug << "Unexpected null pixels " << i << "/" << OrigSources.GetSize() << " in blit" << std::endl;
 			continue;
 		}
-		auto& Source = *OrigSources[i];
+		//	gr: non const for SplitPlanes... not neccesarily unsafe, but then means we need a const std::shared<SoyPixelsImpl>...
+		auto& Source = const_cast<SoyPixelsImpl&>( *OrigSources[i] );
 
 		//	if the format has multiple planes we need to split the image
 		Array<std::shared_ptr<SoyPixelsImpl>> PixelPlanes;

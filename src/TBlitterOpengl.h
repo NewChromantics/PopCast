@@ -14,9 +14,9 @@ class Opengl::TBlitter : public Soy::TBlitter
 {
 public:
 	~TBlitter();
-	void			BlitTexture(TTexture& Target,ArrayBridge<Opengl::TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,std::shared_ptr<Opengl::TShader> OverrideShader=nullptr);
-	void			BlitTexture(TTexture& Target,ArrayBridge<Opengl::TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader);
-	void			BlitTexture(TTexture& Target,ArrayBridge<SoyPixelsImpl*>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader=nullptr);
+	void			BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,std::shared_ptr<TShader> OverrideShader=nullptr);
+	void			BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader);
+	void			BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader=nullptr);
 	void			BlitError(TTexture& Target,const std::string& Error,TContext& Context);
 	
 	std::shared_ptr<TRenderTarget>			GetRenderTarget(Opengl::TTexture& Target,TContext& Context);
