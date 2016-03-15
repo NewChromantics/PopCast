@@ -28,6 +28,7 @@ xcuserdata/
 # visual studio temp files
 *.visualstudio/[dD]ebug/
 *.visualstudio/[cC]uda/
+*.visualstudio/[wW]atermarked/
 bin/
 *.sdf
 *.opensdf
