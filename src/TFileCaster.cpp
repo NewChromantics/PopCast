@@ -220,6 +220,12 @@ void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& Fram
 	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
+void TFileCaster::Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context)
+{
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	Encoder.Write( Image, FrameMeta.mTimecode, Context );
+}
+
 void TFileCaster::Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
 	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );

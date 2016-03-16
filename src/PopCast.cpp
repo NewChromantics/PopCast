@@ -148,12 +148,27 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 
 	try
 	{
-		//	assuming type atm... maybe we can extract it via opengl?
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
-		GLenum Type = GL_TEXTURE_2D;
-		Opengl::TTexture Texture( TextureId, Meta, Type );
-		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
-		return true;
+		auto DirectxContext = Unity::GetDirectxContextPtr();
+		auto OpenglContext = Unity::GetOpenglContextPtr();
+		
+		if ( OpenglContext )
+		{
+			//	assuming type atm... maybe we can extract it via opengl?
+			GLenum Type = GL_TEXTURE_2D;
+			Opengl::TTexture Texture( TextureId, Meta, Type );
+			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
+			return true;
+		}
+
+		if ( DirectxContext )
+		{
+			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
+			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
+			return true;
+		}
+
+		throw Soy::AssertException("Missing graphics device");
 	}
 	catch(std::exception& e)
 	{
@@ -169,12 +184,27 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	
 	try
 	{
-		//	assuming type atm... maybe we can extract it via opengl?
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
-		GLenum Type = GL_TEXTURE_2D;
-		Opengl::TTexture Texture( TextureId, Meta, Type );
-		pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
-		return true;
+		auto DirectxContext = Unity::GetDirectxContextPtr();
+		auto OpenglContext = Unity::GetOpenglContextPtr();
+		
+		if ( OpenglContext )
+		{
+			//	assuming type atm... maybe we can extract it via opengl?
+			GLenum Type = GL_TEXTURE_2D;
+			Opengl::TTexture Texture( TextureId, Meta, Type );
+			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
+			return true;
+		}
+
+		if ( DirectxContext )
+		{
+			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
+			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
+			return true;
+		}
+
+		throw Soy::AssertException("Missing graphics device");
 	}
 	catch(std::exception& e)
 	{
@@ -374,6 +404,51 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex
 	
 }
 
+
+void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamIndex)
+{
+	Soy::Assert( mDirectxContext!=nullptr, "Instance requires an opengl context" );
+	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	auto& Context = *mDirectxContext;
+	
+	//	make relative timestamp
+	TCastFrameMeta Frame;
+	Frame.mStreamIndex = StreamIndex;
+	Frame.mTimecode = SoyTime(true);
+	Frame.mTimecode -= mBaseTimestamp;
+	
+	try
+	{
+		mCaster->Write( Texture, Frame, Context );
+		return;
+	}
+	catch(std::exception& e)
+	{
+		//	failed, maybe pixels will be okay
+		//std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+	}
+	
+	try
+	{
+		std::shared_ptr<TCaster> Caster = mCaster;
+		auto ContextCopy = mDirectxContext;
+		auto ReadPixels = [Texture,Caster,Frame,ContextCopy]
+		{
+			std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
+			auto& TextureMutable = const_cast<Directx::TTexture&>(Texture);
+			TextureMutable.Read( *Pixels, *ContextCopy );
+			Caster->Write( Pixels, Frame );
+		};
+		Context.PushJob( ReadPixels );
+		return;
+	}
+	catch(std::exception& e)
+	{
+		//	failed, maybe pixels will be okay
+		//std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
+	}
+	
+}
 
 void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex)
 {

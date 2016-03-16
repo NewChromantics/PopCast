@@ -174,7 +174,7 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 		auto& Context = *mContext;
 
 		if ( !mIndexImage )
-			mIndexImage.reset( new TTexture( IndexMeta, Context, TTextureMode::Writable ) );
+			mIndexImage.reset( new TTexture( IndexMeta, Context, TTextureMode::ReadWrite ) );
 
 		if ( !mBlitter )
 			mBlitter.reset( new TBlitter );
@@ -381,8 +381,8 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	}
 
 	SoyPixelsDef<Array<uint8>> PalettisedImage( Packet->mData, Packet->mMeta.mPixelMeta );
-	Soy::Assert( Packet->mMeta.mCodec == SoyMediaFormat::Palettised_8_8, "Expected palettised image as codec");
-	Soy::Assert( PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_8_8, "Expected palettised image in pixel meta");
+	Soy::Assert( Packet->mMeta.mCodec == SoyMediaFormat::Palettised_RGB_8 || Packet->mMeta.mCodec == SoyMediaFormat::Palettised_RGBA_8, "Expected palettised image as codec");
+	Soy::Assert( PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_RGB_8 || PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_RGBA_8, "Expected palettised image in pixel meta");
 	
 	//	ms to 100th's
 	//	https://bugzilla.mozilla.org/show_bug.cgi?id=232822
@@ -505,6 +505,7 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 		}
 		else
 		{
+			//	gr; this is the pixels fallback anyway
 			//	construct pixels against data and read it
 			SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
 			Image.Read( Pixels );
@@ -523,9 +524,11 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 
 void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context)
 {
-	/*
-	//	all this needs to be done in the opengl thread
-	auto MakePacketFromTexture = [this,Image,Timecode]
+	//	hacky! but the job doesn't have access to its own context...
+	Directx::TContext* ContextCopy = &Context;
+
+	//	all this needs to be done in the dx thread?
+	auto MakePacketFromTexture = [this,Image,Timecode,ContextCopy]
 	{
 		std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
 		auto& Packet = *pPacket;
@@ -533,13 +536,15 @@ void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Direct
 		static bool DupliateTexture = true;
 		if ( DupliateTexture )
 		{
-			Packet.mPixelBuffer = CopyFrameImmediate( Image );
+			Packet.mPixelBuffer = mDirectxGifBlitter->CopyImmediate( Image );
 		}
 		else
 		{
 			//	construct pixels against data and read it
+			//	gr: usually texture won't be readable... and 
 			SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
-			Image.Read( Pixels );
+			auto& ImageMutable = const_cast<Directx::TTexture&>( Image );
+			ImageMutable.Read( Pixels, *ContextCopy );
 		}
 		Packet.mTimecode = Timecode;
 		Packet.mDuration = SoyTime( 16ull );
@@ -548,9 +553,8 @@ void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Direct
 		PushFrame( pPacket );
 	};
 	
-	Context.PushJob( MakePacketFromTexture );
-	*/
-	throw Soy::AssertException("todo");
+	auto& InternalContext = GetDirectxContext();
+	InternalContext.PushJob( MakePacketFromTexture );
 }
 
 void Gif::TEncoder::Write(std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
