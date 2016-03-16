@@ -75,11 +75,9 @@ void Opengl::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const 
 	Soy::Assert( mContext!=nullptr, "Cannot use shader if no context");
 	
 	std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = JobSemaphore;
-
 	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
-	SoyPixelsMeta PaletteMeta( Palette.GetWidth(), Palette.GetHeight(), SoyPixelsFormat::RGB );
 	
-	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,PaletteMeta,FragShader]
+	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,FragShader]
 	{
 		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
 		if ( SemaphoreCopy->IsCompleted() )
@@ -163,12 +161,11 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 	std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = JobSemaphore;
 
 	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
-	SoyPixelsMeta PaletteMeta( Palette.GetWidth(), Palette.GetHeight(), SoyPixelsFormat::RGB );
 	
 
 	//	gr: CRASH ON EXIT HERE
 	//	source & palette deleted
-	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,PaletteMeta,FragShader]
+	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,FragShader]
 	{
 		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
 		if ( SemaphoreCopy->IsCompleted() )
@@ -788,7 +785,8 @@ void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t 
 	Soy::TScopeTimerPrint Timer( __func__, Gif::TimerMinMs  );
 	auto PixelStep = 1 + PixelSkip;
 	auto PaletteSize = Frame.GetWidth() * Frame.GetHeight();
-	Palette.Init( PaletteSize/PixelStep, 1, SoyPixelsFormat::RGB );
+	//	dx requires RGBA, not RGB
+	Palette.Init( PaletteSize/PixelStep, 1, SoyPixelsFormat::RGBA );
 	
 	//	gr: pre-determine if we have alphas
 	bool HasAlphas = true;
