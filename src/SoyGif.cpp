@@ -189,7 +189,7 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 			mBlitter->BlitTexture( *mIndexImage, GetArrayBridge(Sources), Context, FragShader );	
 		}
 		{
-			Soy::TScopeTimerPrint Timer( "opengl: read back indexed image", Gif::TimerMinMs );
+			Soy::TScopeTimerPrint Timer( "read back indexed image", Gif::TimerMinMs );
 			mIndexImage->Read( IndexedImage, Context );
 		}
 	};
