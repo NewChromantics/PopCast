@@ -174,7 +174,7 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 		auto& Context = *mContext;
 
 		if ( !mIndexImage )
-			mIndexImage.reset( new TTexture( IndexMeta, Context, TTextureMode::ReadWrite ) );
+			mIndexImage.reset( new TTexture( IndexMeta, Context, TTextureMode::ReadOnly ) );
 
 		if ( !mBlitter )
 			mBlitter.reset( new TBlitter );
@@ -214,7 +214,7 @@ std::shared_ptr<TTextureBuffer> Directx::GifBlitter::CopyImmediate(const Directx
 	auto& Context = *mContext;
 	std::shared_ptr<TTextureBuffer> Buffer( new TTextureBuffer(mContext) );
 	auto& pTexture = Buffer->mDirectxTexture;
-	pTexture.reset( new TTexture( Image.mMeta, *mContext, TTextureMode::Writable ) );
+	pTexture.reset( new TTexture( Image.mMeta, *mContext, TTextureMode::ReadOnly ) );
 	
 	pTexture->Write( Image, Context );
 	/*
@@ -634,7 +634,7 @@ bool Gif::TEncoder::Iteration()
 					Texture.mDirectxTexture->Read( *Rgba, *mDirectxGifBlitter->mContext );
 				};
 				auto& Context = GetDirectxContext();
-				GetOpenglContext().PushJob( Read, *mDeviceJobSemaphore );
+				Context.PushJob( Read, *mDeviceJobSemaphore );
 			}
 			else if ( Texture.mPixels )
 			{
@@ -773,9 +773,9 @@ Opengl::TContext& Gif::TEncoder::GetOpenglContext()
 Directx::TContext& Gif::TEncoder::GetDirectxContext()
 {
 	auto& Blitter = mDirectxGifBlitter;
-	Soy::Assert( Blitter != nullptr, std::string(__func__) + " missing opengl gif blitter");
+	Soy::Assert( Blitter != nullptr, std::string(__func__) + " missing directx gif blitter");
 	auto Context = Blitter->mContext;
-	Soy::Assert( Context!= nullptr, std::string(__func__) + " missing opengl gif blitter context");
+	Soy::Assert( Context!= nullptr, std::string(__func__) + " missing directx gif blitter context");
 	return *Context;
 }
 

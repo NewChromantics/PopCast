@@ -174,7 +174,7 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 		auto& Pixels = *Sources[s];
 		
 		//	allocate a dynamic texture to put pixels into
-		auto PixelTexture = GetTempTexturePtr( Pixels.GetMeta(), Context, TTextureMode::Writable );
+		auto PixelTexture = GetTempTexturePtr( Pixels.GetMeta(), Context, TTextureMode::WriteOnly );
 
 		std::stringstream Error;
 		Error << "Failed to allocate temp texture " << Pixels.GetMeta();
