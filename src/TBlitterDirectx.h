@@ -2,7 +2,7 @@
 
 #include <SoyDirectx.h>
 #include "TBlitter.h"
-
+#include <SoyPool.h>
 
 namespace Directx
 {
@@ -13,7 +13,7 @@ namespace Directx
 class Directx::TBlitter : public Soy::TBlitter
 {
 public:
-	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,std::shared_ptr<TShader> OverrideShader=nullptr);
+	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,std::shared_ptr<TShader> OverrideShader);
 	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,const char* OverrideShader=nullptr);
 	void						BlitError(TTexture& Target,const std::string& Error,TContext& Context);
 	
@@ -30,7 +30,7 @@ public:
 
 public:
 	//	pools
-	Array<std::shared_ptr<TTexture>>		mTempTextures;	
+	TPool<TTexture>		mTempTextures;	
 	Array<std::shared_ptr<TRenderTarget>>	mRenderTargets;	
 	std::shared_ptr<Directx::TGeometry>		mBlitQuad;
 	std::map<const char*,std::shared_ptr<TShader>>	mBlitShaders;	//	shader mapped to it's literal content address

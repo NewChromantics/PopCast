@@ -235,25 +235,12 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 
 std::shared_ptr<Directx::TTexture> Directx::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,TTextureMode::Type Mode)
 {
-	//	already have one?
-	for ( int t=0;	t<mTempTextures.GetSize();	t++ )
+	auto RealAlloc = [&Meta,&Mode,&Context]()
 	{
-		auto pTexture = mTempTextures[t];
-		if ( !pTexture )
-			continue;
-
-		if ( pTexture->mMeta != Meta )
-			continue;
-
-		if ( pTexture->GetMode() != Mode )
-			continue;
-
-		return pTexture;
-	}
-
-	//	no matching ones, allocate a new one
-	std::shared_ptr<TTexture> Texture( new TTexture( Meta, Context, Mode ) );
-	mTempTextures.PushBack( Texture );
+		return std::make_shared<TTexture>( Meta, Context, Mode );
+	};
+	
+	auto Texture = mTempTextures.AllocPtr( std::make_pair(Meta,Mode), RealAlloc );
 	return Texture;
 }
 

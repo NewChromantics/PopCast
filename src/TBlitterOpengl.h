@@ -2,6 +2,8 @@
 
 #include <SoyOpenglContext.h>
 #include "TBlitter.h"
+#include <SoyPool.h>
+
 
 namespace Opengl
 {
@@ -31,7 +33,7 @@ public:
 	Opengl::TTexture&						GetTempTexture(SoyPixelsMeta Meta,TContext& Context,GLenum Mode);
 
 public:
-	Array<std::shared_ptr<TTexture>>	mTempTextures;
+	TPool<TTexture>						mTempTextures;
 	std::shared_ptr<TRenderTargetFbo>	mRenderTarget;
 	std::shared_ptr<TGeometry>			mBlitQuad;
 	std::map<const char*,std::shared_ptr<TShader>>	mBlitShaders;	//	shader mapped to it's literal content address

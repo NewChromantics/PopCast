@@ -184,7 +184,6 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl:
 
 Opengl::TBlitter::~TBlitter()
 {
-	mTempTextures.Clear(true);
 	mBlitShaders.clear();
 	mBlitQuad.reset();
 	mRenderTarget.reset();
@@ -430,31 +429,20 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const So
 	
 	//	do normal blit
 	BlitTexture( Target, GetArrayBridge(SourceTextures), Context, UploadParams, OverrideShader );
+	
+	mTempTextures.ReleaseAll();
 }
 
 
 
-std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Mode)
+std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Type)
 {
-	//	already have one?
-	for ( int t=0;	t<mTempTextures.GetSize();	t++ )
+	auto RealAlloc = [&Meta,&Type,&Context]()
 	{
-		auto pTexture = mTempTextures[t];
-		if ( !pTexture )
-			continue;
-		
-		if ( pTexture->mMeta != Meta )
-			continue;
-		
-		if ( pTexture->mType != Mode )
-			continue;
-		
-		return pTexture;
-	}
+		return std::make_shared<TTexture>( Meta, Type );
+	};
 	
-	//	no matching ones, allocate a new one
-	std::shared_ptr<TTexture> Texture( new TTexture( Meta, Mode ) );
-	mTempTextures.PushBack( Texture );
+	auto Texture = mTempTextures.AllocPtr( std::make_pair(Meta,Type), RealAlloc );
 	return Texture;
 }
 
@@ -462,6 +450,7 @@ std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsM
 Opengl::TTexture& Opengl::TBlitter::GetTempTexture(SoyPixelsMeta Meta,TContext& Context,GLenum Mode)
 {
 	auto pTexture = GetTempTexturePtr( Meta, Context, Mode );
+	Soy::Assert( pTexture!=nullptr, "Failed to alloc temp texture");
 	return *pTexture;
 }
 
