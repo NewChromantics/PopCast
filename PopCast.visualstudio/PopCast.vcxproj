@@ -289,6 +289,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
       <Command>SET SRCROOT=$(ProjectDir)..
 SET PROJECT=$(ProjectName)
 SET BUILD_DLL=$(TargetPath)
+SET UNITY_EXE=$(UNITY_EXE)
 
 $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     </PostBuildEvent>
