@@ -53,6 +53,57 @@ std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuf
 }
 
 
+float GetColourScore(const vec3x<uint8>& a,const vec3x<uint8>& b)
+{
+	vec3x<int> Diff;
+	Diff.x = abs(b.x - a.x);
+	Diff.y = abs(b.y - a.y);
+	Diff.z = abs(b.z - a.z);
+	float Score = 1.0 - ( ( Diff.x + Diff.y + Diff.z) / 3.0f );
+	return Score;
+}
+
+
+size_t FindNearestColour(const vec3x<uint8>& rgb,const SoyPixelsImpl& Palette)
+{
+	size_t Index = 0;
+	float Score = 999.f;
+	for ( int i = 0; i < Palette.GetWidth(); i++ )
+	{
+		auto& Pal = Palette.GetPixel3(0, 0);
+		auto PalScore = GetColourScore(rgb, Pal);
+		if ( PalScore > Score )
+			continue;
+		Score = PalScore;
+		Index = i;
+	}
+	return Index;
+}
+
+void TGifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,std::shared_ptr<Soy::TSemaphore>& JobSemaphore)
+{
+	Soy::Assert( JobSemaphore!=nullptr, "Job semaphore should already be allocated");
+	
+	IndexedImage.Init(Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale);
+
+	//	brute force
+	for ( int y = 0; y < IndexedImage.GetHeight(); y++ )
+	{
+		for ( int x = 0; x < IndexedImage.GetWidth(); x++ )
+		{
+			float xf = x / (float)IndexedImage.GetWidth();
+			float yf = y / (float)IndexedImage.GetHeight();
+			int sx = xf * Source.GetWidth();
+			int sy = yf * Source.GetHeight();
+			auto rgb = Source.GetPixel3(sx, sy);
+			auto Index = FindNearestColour(rgb, Palette);
+			IndexedImage.SetPixel(x, y, 0, Index);
+		}
+	}
+	
+	JobSemaphore->OnCompleted();
+}
+
 
 Opengl::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context) :
 	mContext	 ( Context )
@@ -69,6 +120,7 @@ Opengl::GifBlitter::~GifBlitter()
 	
 	mContext.reset();
 }
+
 void Opengl::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore)
 {
 	Soy::Assert( JobSemaphore!=nullptr, "Job semaphore should already be allocated");
@@ -233,10 +285,11 @@ std::shared_ptr<TTextureBuffer> Directx::GifBlitter::CopyImmediate(const Directx
 
 
 
-Gif::TMuxer::TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input,const std::string& ThreadName) :
+Gif::TMuxer::TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input,const std::string& ThreadName,const TEncodeParams& Params) :
 	TMediaMuxer		( Output, Input, std::string("Gif::TMuxer ")+ThreadName ),
 	mFinished		( false ),
-	mStarted		( false )
+	mStarted		( false ),
+	mLzwCompression	( Params.mLzwCompression )
 {
 }
 
@@ -431,7 +484,7 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		
 		//	fastish ~7ms
 		Soy::TScopeTimerPrint Timer("GifWriteLzwImage", Gif::TimerMinMs );
-		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette, TransparentIndex );
+		GifWriteLzwImage( LzwWriter, IndexedImage, 0, 0, delay, Palette, TransparentIndex, mLzwCompression );
 		
 		Output.Push( LzwWrite );
 	}
@@ -468,6 +521,19 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 }
 
 
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,TEncodeParams Params,bool SkipFrames) :
+	SoyWorkerThread		( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
+	TMediaEncoder		( OutputBuffer ),
+	mStreamIndex		( StreamIndex ),
+	mCpuGifBlitter		( new TGifBlitter() ),
+	mParams				( Params ),
+	mPushedFrameCount	( 0 ),
+	mSkipFrames			( SkipFrames )
+{
+	Start();
+}
+
+
 Gif::TEncoder::~TEncoder()
 {
 	//	stop thread
@@ -492,24 +558,15 @@ Gif::TEncoder::~TEncoder()
 
 void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
+	if ( mParams.mCpuOnly )
+		throw Soy::AssertException("GPU mode disabled");
+
 	//	all this needs to be done in the opengl thread
 	auto MakePacketFromTexture = [this,Image,Timecode]
 	{
 		std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
 		auto& Packet = *pPacket;
-
-		static bool DupliateTexture = true;
-		if ( DupliateTexture )
-		{
-			Packet.mPixelBuffer = mOpenglGifBlitter->CopyImmediate( Image );
-		}
-		else
-		{
-			//	gr; this is the pixels fallback anyway
-			//	construct pixels against data and read it
-			SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
-			Image.Read( Pixels );
-		}
+		Packet.mPixelBuffer = mOpenglGifBlitter->CopyImmediate( Image );
 		Packet.mTimecode = Timecode;
 		Packet.mDuration = SoyTime( 16ull );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
@@ -524,6 +581,9 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 
 void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context)
 {
+	if ( mParams.mCpuOnly )
+		throw Soy::AssertException("GPU mode disabled");
+
 	//	hacky! but the job doesn't have access to its own context...
 	Directx::TContext* ContextCopy = &Context;
 
@@ -532,20 +592,7 @@ void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Direct
 	{
 		std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
 		auto& Packet = *pPacket;
-
-		static bool DupliateTexture = true;
-		if ( DupliateTexture )
-		{
-			Packet.mPixelBuffer = mDirectxGifBlitter->CopyImmediate( Image );
-		}
-		else
-		{
-			//	construct pixels against data and read it
-			//	gr: usually texture won't be readable... and 
-			SoyPixelsDef<Array<uint8>> Pixels( Packet.mData, Packet.mMeta.mPixelMeta );
-			auto& ImageMutable = const_cast<Directx::TTexture&>( Image );
-			ImageMutable.Read( Pixels, *ContextCopy );
-		}
+		Packet.mPixelBuffer = mDirectxGifBlitter->CopyImmediate( Image );
 		Packet.mTimecode = Timecode;
 		Packet.mDuration = SoyTime( 16ull );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
@@ -864,21 +911,20 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 	if ( !IsWorking() )
 		return;
 	
-	if ( mOpenglGifBlitter )
+	if ( mOpenglGifBlitter && !mParams.mCpuOnly )
 	{
 		mOpenglGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
 		mDeviceJobSemaphore.reset();
 	}
-	else if ( mDirectxGifBlitter )
+	else if ( mDirectxGifBlitter && !mParams.mCpuOnly )
 	{
 		mDirectxGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
 		mDeviceJobSemaphore.reset();
 	}
 	else
 	{
+		mCpuGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, mDeviceJobSemaphore );
 		mDeviceJobSemaphore.reset();
-		//	todo: software fallback?
-		throw Soy::AssertException("IndexImageWithShader no graphics context");
 	}
 }
 
@@ -946,7 +992,6 @@ bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlphaSquare, Params, MaskPixelFunc );
 	}
 	
-
 	//	gr: this currently generates a full palette (can be > 256)
 	pNewPalette.reset( new SoyPixels );
 	GetPalette( *pNewPalette, Rgba, Params, Keyframe );

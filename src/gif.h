@@ -753,7 +753,7 @@ void GifWritePalette( const SoyPixelsImpl& Palette,size_t PaddedPaletteSize,GifW
 }
 
 // write the image header, LZW-compress and write out the image
-void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette,uint8 TransparentIndex)
+void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette,uint8 TransparentIndex,bool Compress)
 {
 	Soy::Assert( Image.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting palette-index iamge format");
 	auto width = size_cast<uint16>( Image.GetWidth() );
@@ -818,9 +818,16 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
         {
             uint8_t nextValue = Indexes[yy*width+xx];
             
-            // "loser mode" - no compression, every single code is followed immediately by a clear
-            //WriteCode( f, stat, nextValue, codeSize );
-            //WriteCode( f, stat, 256, codeSize );
+			// "loser mode" - no compression, every single code is followed immediately by a clear
+			if ( !Compress )
+			{
+				GifWriteCode( Writer, stat, nextValue, codeSize );
+				GifWriteCode( Writer, stat, 256, codeSize );
+				//WriteCode(f, stat, nextValue, codeSize);
+				//WriteCode(f, stat, 256, codeSize);
+				continue;
+			}
+				
             
             if( curCode < 0 )
             {
@@ -868,8 +875,10 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
     GifWriteCode( Writer, stat, clearCode+1, minCodeSize+1 );
     
     // write out the last partial chunk
-    while( stat.bitIndex ) GifWriteBit(stat, 0);
-    if( stat.chunkIndex ) GifWriteChunk(Writer, stat);
+    while( stat.bitIndex ) 
+		GifWriteBit(stat, 0);
+    if( stat.chunkIndex ) 
+		GifWriteChunk(Writer, stat);
     
 	Writer.fputc(0); // image block terminator
     

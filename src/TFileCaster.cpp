@@ -82,7 +82,7 @@ std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string 
 			throw Soy::AssertException("Missing graphics context");
 		};
 		EncoderFunc = AllocGifEncoder;
-		return std::make_shared<Gif::TMuxer>( Output, Input, Filename );
+		return std::make_shared<Gif::TMuxer>( Output, Input, Filename, Params.mGifParams );
 	}
 	
 	if ( Soy::StringEndsWith( Filename, ".raw", false ) )

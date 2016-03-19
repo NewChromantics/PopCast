@@ -3,6 +3,11 @@
 #include "PopUnity.h"
 
 
+//	needed for the pool
+#include <SoyDirectx.h>	
+#include <SoyPool.h>
+
+
 class TCaster;
 class TCasterParams;
 
@@ -31,6 +36,8 @@ namespace TPluginParams
 		Gif_DebugIndexes			= 1<<3,
 		Gif_DebugTransparency		= 1<<4,
 		SkipFrames					= 1<<5,
+		Gif_CpuOnly					= 1<<6,
+		Gif_LzwCompression			= 1<<7,
 	};
 }
 
@@ -74,6 +81,7 @@ public:
 	std::shared_ptr<Directx::TContext>	mDirectxContext;
 	std::shared_ptr<TCaster>			mCaster;
 	SoyTime								mBaseTimestamp;
+	TPool<Directx::TTexture>			mDirectxTexturePool;
 
 private:
 	TInstanceRef	mRef;

@@ -32,10 +32,42 @@ namespace Gif
 	typedef std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	TMaskPixelFunc;
 }
 
+
+class Gif::TEncodeParams
+{
+public:
+	TEncodeParams() :
+		mAllowIntraFrames		( true ),
+		mDebugIndexes			( false ),
+		mDebugPalette			( false ),
+		mDebugTransparency		( false ),
+		mFindPalettePixelSkip	( 5 ),
+		mTransparentColour		( 255, 0, 255 ),
+		mMaxColours				( 255 ),
+		mMaskMaxDiff			( 0.f / 256.f ),
+		mCpuOnly				( false ),
+		mLzwCompression			( true )
+	{
+	}
+
+	size_t			mFindPalettePixelSkip;	//	when generating pallete, reduce number of colours we accumualte
+	bool			mAllowIntraFrames;		//	use transparency between frames
+	bool			mDebugPalette;			//	make a debug palette
+	bool			mDebugIndexes;			//	render the pallete top to bottom
+	bool			mDebugTransparency;		//	highlight transparent regions
+	vec3x<uint8>	mTransparentColour;
+	size_t			mMaxColours;
+	float			mMaskMaxDiff;			//	if zero, exact pixel colour matches required
+	bool			mCpuOnly;				//	no gpu stuff. good for debugging muxer etc
+	bool			mLzwCompression;
+};
+
+
+
 class Gif::TMuxer : public TMediaMuxer
 {
 public:
-	TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input,const std::string& ThreadName);
+	TMuxer(std::shared_ptr<TStreamWriter>& Output,std::shared_ptr<TMediaPacketBuffer>& Input,const std::string& ThreadName,const TEncodeParams& Params);
 	~TMuxer();
 	
 protected:
@@ -47,6 +79,7 @@ protected:
 	void					FlushBuffer();
 	
 public:
+	bool						mLzwCompression;
 	std::mutex					mBusy;
 	std::atomic<bool>			mStarted;
 	std::atomic<bool>			mFinished;
@@ -80,31 +113,15 @@ public:
 	std::shared_ptr<Directx::TTexture>	mDirectxTexture;
 };
 
-class Gif::TEncodeParams
+
+//	software version
+class TGifBlitter
 {
 public:
-	TEncodeParams() :
-		mAllowIntraFrames		( true ),
-		mDebugIndexes			( false ),
-		mDebugPalette			( false ),
-		mDebugTransparency		( false ),
-		mFindPalettePixelSkip	( 5 ),
-		mTransparentColour		( 255, 0, 255 ),
-		mMaxColours				( 255 ),
-		mMaskMaxDiff			( 0.f / 256.f )
-	{
-	}
-	
-	size_t			mFindPalettePixelSkip;	//	when generating pallete, reduce number of colours we accumualte
-	bool			mAllowIntraFrames;		//	use transparency between frames
-	bool			mDebugPalette;			//	make a debug palette
-	bool			mDebugIndexes;			//	render the pallete top to bottom
-	bool			mDebugTransparency;		//	highlight transparent regions
-	vec3x<uint8>	mTransparentColour;
-	size_t			mMaxColours;
-	float			mMaskMaxDiff;			//	if zero, exact pixel colour matches required
-};
+	void			IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,std::shared_ptr<Soy::TSemaphore>& JobSemaphore);
 
+public:
+};
 
 
 class Opengl::GifBlitter
@@ -145,8 +162,9 @@ public:
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
 public:
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,Gif::TEncodeParams Params,bool SkipFrames);
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,Gif::TEncodeParams Params,bool SkipFrames);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,TEncodeParams Params,bool SkipFrames);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,TEncodeParams Params,bool SkipFrames);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,TEncodeParams Params,bool SkipFrames);
 	~TEncoder();
 	
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
@@ -180,6 +198,7 @@ public:
 	std::shared_ptr<Soy::TSemaphore>		mDeviceJobSemaphore;	
 	std::shared_ptr<Opengl::GifBlitter>		mOpenglGifBlitter;
 	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
+	std::shared_ptr<TGifBlitter>			mCpuGifBlitter;
 
 	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
 };

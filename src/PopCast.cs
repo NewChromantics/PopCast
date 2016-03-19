@@ -49,23 +49,32 @@ return Cache.mPtr;
 [Serializable]
 public class  PopCastParams
 {
-	[Header("if we record to a local file, pop up explorer/finder with the file when its ready")]
-	public bool				ShowFinishedFile = false;
+    [Header("if we record to a local file, pop up explorer/finder with the file when its ready")]
+    public bool ShowFinishedFile = false;
 
-	[Header("Record smooth video, or skip for live casting")]
-	public bool				SkipFrames = false;
+    [Header("Record smooth video, or skip for live casting")]
+    public bool SkipFrames = false;
 
-	[Header("Use transparency between frames to reduce file size")]
-	public bool				Gif_AllowIntraFrames = true;
+    [Header("Use transparency between frames to reduce file size")]
+    public bool Gif_AllowIntraFrames = true;
 
-	[Header("Make a debug palette")]
-	public bool				Gif_DebugPalette = false;
+    [Header("Make a debug palette")]
+    public bool Gif_DebugPalette = false;
 
-	[Header("Render the pallete top to bottom")]
-	public bool				Gif_DebugIndexes = false;
+    [Header("Render the pallete top to bottom")]
+    public bool Gif_DebugIndexes = false;
 
-	[Header("Highlight transparent regions")]
-	public bool				Gif_DebugTransparency = false;
+    [Header("Highlight transparent regions")]
+    public bool Gif_DebugTransparency = false;
+
+    [Header("Don't use any GPU for conversion, encoding etc")]
+    public bool Gif_CPUOnly = false;
+
+	[Header("Debug writer by drawing plain blocks of colour")]
+	public bool PushDebugFrames = false;
+
+	[Header("Debug gif LZW compression by turning this off")]
+	public bool Gif_LzwCompression = true;
 }
 
 public class PopCast
@@ -90,12 +99,15 @@ public class PopCast
 		Gif_DebugPalette			= 1<<2,
 		Gif_DebugIndexes			= 1<<3,
 		Gif_DebugTransparency		= 1<<4,
-		SkipFrames					= 1<<5,
+        SkipFrames                  = 1<<5,
+		Gif_CpuOnly					= 1<<6,
+		Gif_LzwCompression			= 1<<7,
 	};
 
 	private ulong	mInstance = 0;
 	private static int	mPluginEventId = PopCast_GetPluginEventId();
 	private int		mTexturePushCount = 0;
+    private bool mPushDebugFrames = false;
 
 	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
 	private TTexturePtrCache<Texture2D>		mTexture2DPtrCache = new TTexturePtrCache<Texture2D>();
@@ -172,6 +184,8 @@ public class PopCast
 
 	public PopCast(string Filename,PopCastParams Params)
 	{
+		mPushDebugFrames = Params.PushDebugFrames;
+
 		PopCastFlags ParamFlags = 0;
 		ParamFlags |= Params.ShowFinishedFile			? PopCastFlags.ShowFinishedFile : PopCastFlags.None;
 		ParamFlags |= Params.Gif_AllowIntraFrames		? PopCastFlags.Gif_AllowIntraFrames : PopCastFlags.None;
@@ -179,6 +193,8 @@ public class PopCast
 		ParamFlags |= Params.Gif_DebugIndexes			? PopCastFlags.Gif_DebugIndexes : PopCastFlags.None;
 		ParamFlags |= Params.Gif_DebugTransparency		? PopCastFlags.Gif_DebugTransparency : PopCastFlags.None;
 		ParamFlags |= Params.SkipFrames					? PopCastFlags.SkipFrames : PopCastFlags.None;
+        ParamFlags |= Params.Gif_CPUOnly                ? PopCastFlags.Gif_CpuOnly : PopCastFlags.None;
+		ParamFlags |= Params.Gif_LzwCompression			? PopCastFlags.Gif_LzwCompression : PopCastFlags.None;
 
 		uint ParamFlags32 = Convert.ToUInt32 (ParamFlags);
 
@@ -233,6 +249,12 @@ public class PopCast
 	public void UpdateTexture(Texture Target,int StreamIndex)
 	{
 		Update ();
+
+		if (mPushDebugFrames )
+		{
+			UpdateFakeTexture(StreamIndex);
+			return;
+		}
 
 		if (Target is RenderTexture) {
 			RenderTexture Target_rt = Target as RenderTexture;

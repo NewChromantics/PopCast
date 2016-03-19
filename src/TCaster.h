@@ -11,7 +11,8 @@ class TCasterParams
 public:
 	TCasterParams() :
 		mShowFinishedFile	( false ),
-		mSkipFrames			( false )
+		mSkipFrames			( false ),
+		mLzwCompression		( true )
 	{
 	}
 	
@@ -20,6 +21,7 @@ public:
 	bool				mShowFinishedFile;
 	bool				mSkipFrames;
 	Gif::TEncodeParams	mGifParams;
+	bool				mLzwCompression;
 };
 
 class TCastDeviceMeta

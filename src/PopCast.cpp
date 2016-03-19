@@ -59,8 +59,10 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename)
 	Params.mGifParams.mAllowIntraFrames = HasBit( ParamBits, TPluginParams::Gif_AllowIntraFrames );
 	Params.mGifParams.mDebugPalette = HasBit( ParamBits, TPluginParams::Gif_DebugPalette );
 	Params.mGifParams.mDebugIndexes = HasBit( ParamBits, TPluginParams::Gif_DebugIndexes );
-	Params.mGifParams.mDebugTransparency = HasBit( ParamBits, TPluginParams::Gif_DebugTransparency );
-	
+	Params.mGifParams.mDebugTransparency = HasBit(ParamBits, TPluginParams::Gif_DebugTransparency);
+	Params.mGifParams.mCpuOnly = HasBit(ParamBits, TPluginParams::Gif_CpuOnly);
+	Params.mGifParams.mLzwCompression = HasBit(ParamBits, TPluginParams::Gif_LzwCompression);
+
 	return Params;
 }
 
@@ -432,11 +434,11 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 	{
 		std::shared_ptr<TCaster> Caster = mCaster;
 		auto ContextCopy = mDirectxContext;
-		auto ReadPixels = [Texture,Caster,Frame,ContextCopy]
+		auto ReadPixels = [Texture,Caster,Frame,ContextCopy,this]
 		{
 			std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
 			auto& TextureMutable = const_cast<Directx::TTexture&>(Texture);
-			TextureMutable.Read( *Pixels, *ContextCopy );
+			TextureMutable.Read( *Pixels, *ContextCopy, mDirectxTexturePool );
 			Caster->Write( Pixels, Frame );
 		};
 		Context.PushJob( ReadPixels );
