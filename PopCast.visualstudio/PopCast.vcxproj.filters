@@ -248,5 +248,11 @@
     <None Include="..\src\Blit.glsl.vert">
       <Filter>src</Filter>
     </None>
+    <None Include="..\src\PopCastCameraCapture.cs">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\Editor\PopCastInspector.cs">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
 </Project>

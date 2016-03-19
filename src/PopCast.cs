@@ -176,10 +176,17 @@ public class PopCast
 	[DllImport(PluginName)]
 	private static extern bool		PopCast_UpdateTextureDebug(ulong Instance,int StreamIndex);
 
+	[DllImport(PluginName)]
+	private static extern ulong		PopCast_GetBackgroundGpuJobCount();
 
 	public static void EnumDevices()
 	{
 		PopCast_EnumDevices();
+	}
+
+	public static ulong GetBackgroundGpuJobCount()
+	{
+		return PopCast_GetBackgroundGpuJobCount();
 	}
 
 	public PopCast(string Filename,PopCastParams Params)
@@ -249,6 +256,7 @@ public class PopCast
 	public void UpdateTexture(Texture Target,int StreamIndex)
 	{
 		Update ();
+		FlushDebug();
 
 		if (mPushDebugFrames )
 		{
@@ -272,15 +280,15 @@ public class PopCast
 	public void UpdateFakeTexture(int StreamIndex)
 	{
 		Update();
+		FlushDebug();
 		PopCast_UpdateTextureDebug(mInstance, StreamIndex);
 		mTexturePushCount++;
 		FlushDebug();
 	}
 
-	private void Update()
+	public static void Update()
 	{
 		GL.IssuePluginEvent (mPluginEventId);
-		FlushDebug();
 	}
 
 	static public string GetVersion()

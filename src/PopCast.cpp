@@ -107,6 +107,31 @@ __export bool	PopCast_Free(Unity::ulong Instance)
 	return PopCast::Free( Instance );
 }
 
+
+__export Unity::ulong	PopCast_GetBackgroundGpuJobCount()
+{
+	Unity::ulong JobCount = 0;
+
+	try
+	{
+		auto OpenglContext = Unity::GetOpenglContextPtr();
+		auto DirectxContext = Unity::GetDirectxContextPtr();
+
+		if ( OpenglContext )
+			JobCount += OpenglContext->GetJobCount();
+
+		if ( DirectxContext )
+			JobCount += DirectxContext->GetJobCount();
+	}
+	catch (std::exception& e)
+	{
+		std::Debug << __func__ << " exception: " << e.what() << std::endl;
+	}
+
+	return JobCount;
+}
+
+
 __export void	PopCast_EnumDevices()
 {
 	Array<TCastDeviceMeta> Metas;

@@ -75,6 +75,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="..\src\Editor\PopCastInspector.cs" />
     <None Include="..\src\Editor\PopCastWindow.cs" />
     <None Include="..\src\FrameworkInfo.plist">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -87,6 +88,7 @@
     <None Include="..\src\GifNearest.glsl.frag" />
     <None Include="..\src\GifNearest.hlsl.frag" />
     <None Include="..\src\PopCast.cs" />
+    <None Include="..\src\PopCastCameraCapture.cs" />
     <None Include="..\src\TAirplayCaster.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">true</ExcludedFromBuild>

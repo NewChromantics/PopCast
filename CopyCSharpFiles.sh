@@ -3,7 +3,7 @@
 echo "Copying c# to Unity dir"
 UNITY_PLUGINS_PATH="$SRCROOT/Unity/Assets/$PROJECT"
 mkdir -p $UNITY_PLUGINS_PATH
-cp "$SRCROOT/src/$PROJECT.cs" $UNITY_PLUGINS_PATH
+cp "$SRCROOT/src/*.cs" $UNITY_PLUGINS_PATH
 if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1; } fi
 cp -r "$SRCROOT/src/Editor" $UNITY_PLUGINS_PATH
 if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1; } fi

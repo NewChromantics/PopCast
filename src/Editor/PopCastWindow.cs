@@ -7,49 +7,55 @@ using UnityEditor;
 public class PopCastWindow : EditorWindow
 {
 	[Header("Use full path, or StreamingAssets/ or DataPath/ Use a filename or *.gif to timestamp filename")]
-	public string			Filename = "file:StreamingAssets/*.gif";
+	public string Filename = "file:StreamingAssets/*.gif";
 
-	public PopCastParams	Parameters;
+	public PopCastParams Parameters;
 
 	[Header("If no camera specified, the main camera will be recorded")]
-	public Camera			RecordCamera = null;
+	public Camera RecordCamera = null;
 
 	[Header("If no target texture set, one will be created")]
-	public RenderTexture	RecordToTexture = null;
+	public RenderTexture RecordToTexture = null;
 
 	[Header("Push fake textures for debugging")]
-	public bool				PushFakeTextures = false;
+	public bool PushFakeTextures = false;
 
-	private PopCast 		mPopCast;
+	private PopCast mPopCast;
 
-	[MenuItem ("PopCast/Editor recorder")]
+	[MenuItem("PopCast/Editor recorder")]
 
-	public static void  ShowWindow () {
+	public static void ShowWindow()
+	{
 		EditorWindow.GetWindow(typeof(PopCastWindow));
 	}
 
-	void OnGUI ()
+	void OnGUI()
 	{
 		string DebugString = "";
-		DebugString += "Version: " + PopCast.GetVersion() + "\n";
-		DebugString += "Frames pushed: " + (mPopCast==null ? -1 : mPopCast.GetTexturePushCount()) + "\n";
-		EditorGUILayout.HelpBox ( DebugString, MessageType.None );
+		DebugString += "Frames pushed: " + (mPopCast == null ? -1 : mPopCast.GetTexturePushCount()) + "\n";
+		EditorGUILayout.HelpBox(DebugString, MessageType.None);
 
-		if (mPopCast != null) {
-			if (GUILayout.Button ("Stop recording")) {
-				StopRecording ();
+		if (mPopCast != null)
+		{
+			if (GUILayout.Button("Stop recording"))
+			{
+				StopRecording();
 			}
-		} else {
-			if (GUILayout.Button ("Start recording")) {
-				StartRecording ();
+		}
+		else {
+			if (GUILayout.Button("Start recording"))
+			{
+				StartRecording();
 			}
 		}
 
 		//	reflect built in properties
 		var ThisEditor = Editor.CreateEditor(this);
+		PopCastInspector.ApplyInspector(ThisEditor, this);
+
 		ThisEditor.OnInspectorGUI();
 
-		if ( mPopCast != null )
+		if (mPopCast != null)
 		{
 			Repaint();
 		}
@@ -58,23 +64,23 @@ public class PopCastWindow : EditorWindow
 	void StopRecording()
 	{
 		mPopCast = null;
-		System.GC.Collect ();
+		System.GC.Collect();
 	}
 
 	void StartRecording()
 	{
-		if ( RecordCamera == null )
+		if (RecordCamera == null)
 		{
-			RecordCamera = Camera.allCameras [0];
-			Debug.Log( Camera.allCameras );
+			RecordCamera = Camera.allCameras[0];
+			Debug.Log(Camera.allCameras);
 		}
 
 		//	if no texture provided, make one
 		if (RecordToTexture == null)
-			RecordToTexture = new RenderTexture (RecordCamera.pixelWidth, RecordCamera.pixelHeight, 16);
+			RecordToTexture = new RenderTexture(RecordCamera.pixelWidth, RecordCamera.pixelHeight, 16);
 
-		mPopCast = new PopCast (Filename, Parameters);
-		mPopCast.AddDebugCallback (Debug.Log);
+		mPopCast = new PopCast(Filename, Parameters);
+		mPopCast.AddDebugCallback(Debug.Log);
 
 	}
 
@@ -83,7 +89,7 @@ public class PopCastWindow : EditorWindow
 		//Debug.Log ("Popcast window LateUpdate");
 		//	was in lateupdate
 		//	update recording
-		if ( mPopCast != null && !PushFakeTextures )
+		if (mPopCast != null && !PushFakeTextures)
 		{
 			//	save settings to restore
 			RenderTexture PreTarget = RenderTexture.active;
@@ -91,7 +97,7 @@ public class PopCastWindow : EditorWindow
 
 			RecordCamera.targetTexture = RecordToTexture;
 			RenderTexture.active = RecordToTexture;
-			RecordCamera.Render ();
+			RecordCamera.Render();
 
 			//	aaaand restore.
 			RenderTexture.active = PreTarget;
@@ -104,15 +110,15 @@ public class PopCastWindow : EditorWindow
 	{
 		//Debug.Log ("Popcast window update");
 		//	update texture
-		LateUpdate ();
+		LateUpdate();
 
 		//	write latest stream data
-		if (mPopCast != null) 
+		if (mPopCast != null)
 		{
 			if (PushFakeTextures)
 				mPopCast.UpdateFakeTexture(0);
 			else
-				mPopCast.UpdateTexture( RecordToTexture, 0 );
+				mPopCast.UpdateTexture(RecordToTexture, 0);
 		}
 
 

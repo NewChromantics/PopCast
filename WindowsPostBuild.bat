@@ -38,7 +38,7 @@ copy /Y "%BUILD_DLL%" "%TARGET_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1008	)
 
 REM for windows, in case the scripts below don't work, force an early C# copy
-set BUILD_CSHARP=%SRCROOT%\src\%PROJECT%.cs
+set BUILD_CSHARP=%SRCROOT%\src\*.cs
 set TARGET_CSHARP_PATH=%TARGET_PATH%"..\
 echo "Copying %BUILD_CSHARP% to Unity dir %TARGET_CSHARP_PATH%"
 copy /Y "%BUILD_CSHARP%" "%TARGET_CSHARP_PATH%"
