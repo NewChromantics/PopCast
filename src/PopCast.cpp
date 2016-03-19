@@ -235,12 +235,19 @@ __export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint Strea
 		auto pPixels = std::make_shared<SoyPixels>();
 		auto& Pixels = *pPixels;
 		Pixels.Init( Meta );
-		BufferArray<uint8,4> Rgba;
-		Rgba.PushBack( 255 );
-		Rgba.PushBack( 0 );
-		Rgba.PushBack( 0 );
-		Rgba.PushBack( 255 );
-		Pixels.SetPixels( GetArrayBridge(Rgba) );
+
+		static Soy::TRgba8 Colours[] =
+		{
+			Soy::TRgba8(255, 0, 0, 255),
+			Soy::TRgba8(255, 255, 0, 255),
+			Soy::TRgba8(0, 255, 0, 255),
+			Soy::TRgba8(0, 255, 255, 255),
+			Soy::TRgba8(0, 0, 255, 255),
+			Soy::TRgba8(255, 0, 255, 255),
+		};
+		static int ColourIndex = 0;
+		auto Colour = Colours[(ColourIndex++) % sizeofarray(Colours)];
+		Pixels.SetPixels( GetArrayBridge(Colour.GetArray()) );
 
 		pInstance->WriteFrame( pPixels, size_cast<size_t>(StreamIndex) );
 		return true;
