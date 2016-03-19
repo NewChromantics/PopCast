@@ -29,6 +29,7 @@ xcuserdata/
 *.visualstudio/[dD]ebug/
 *.visualstudio/[cC]uda/
 *.visualstudio/[wW]atermarked/
+*.opendb
 bin/
 *.sdf
 *.opensdf
