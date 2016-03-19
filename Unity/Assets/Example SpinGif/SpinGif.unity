@@ -268,6 +268,7 @@ Canvas:
   m_ReceivesEvents: 1
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
@@ -411,12 +412,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 843894331}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d01ae05e90fd44fd7a9ed97c7b6799ac, type: 3}
+  m_Script: {fileID: 11500000, guid: 56624fc75ba71f242934b1bc7efccb3b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  OutputTextures:
-  - {fileID: 0}
-  mOutputTarget: http:12345/cat.gif
+  CastParams:
+    ShowFinishedFile: 1
+    SkipFrames: 0
+    Gif_AllowIntraFrames: 0
+    Gif_DebugPalette: 1
+    Gif_DebugIndexes: 0
+    Gif_DebugTransparency: 1
+    Gif_CPUOnly: 0
+    PushDebugFrames: 0
+    Gif_LzwCompression: 1
+  mOutputTarget: file:StreamingAssets/*.gif
   mCaptureCamera: {fileID: 572881025}
   mCaptureCameraTexture: {fileID: 0}
 --- !u!4 &843894333
