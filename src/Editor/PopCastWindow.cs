@@ -55,8 +55,12 @@ public class PopCastWindow : EditorWindow
 
 	void StopRecording()
 	{
-		mPopCast = null;
-		System.GC.Collect ();
+		if ( mPopCast != null )
+		{
+			//	stop/dealloc immedaitely
+			mPopCast.Stop();
+			mPopCast = null;
+		}
 	}
 
 	void StartRecording()

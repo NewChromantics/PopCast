@@ -195,15 +195,27 @@ public class PopCast
 			throw new System.Exception("PopCast failed: " + AllocError);
 		}
 	}
-	
-	~PopCast()
+
+	//	may have a different deffered threaded cleanup later
+	public void	Stop()
 	{
-		//	gr: don't quite get the destruction order here, but need to remove the [external] delegates in destructor. 
-		//	Assuming external delegate has been deleted, and this garbage collection (despite being explicitly called) 
+		PopCast_Free (mInstance);
+		mInstance = 0;
+	}
+
+	public void	Free()
+	{
+		//	gr: don't quite get the destruction order here, but need to remove the [external] delegates in destructor.
+		//	Assuming external delegate has been deleted, and this garbage collection (despite being explicitly called)
 		//	is still deffered until after parent object[monobehaviour] has been destroyed (and external function no longer exists)
 		mDebugLogDelegate = null;
-		PopCast_Free (mInstance);
+		Stop();
 		FlushDebug ();
+	}
+
+	~PopCast()
+	{
+		Free();
 	}
 	
 	void FlushDebug()
