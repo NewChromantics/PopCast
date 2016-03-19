@@ -219,6 +219,8 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 	//	source & palette deleted
 	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,FragShader]
 	{
+		Soy::TScopeTimerPrint Timer( "Directx thread IndexImageWithShader blit", 100 );
+
 		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
 		if ( SemaphoreCopy->IsCompleted() )
 			return;
