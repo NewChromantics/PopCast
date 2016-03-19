@@ -141,6 +141,7 @@ public:
 };
 
 
+#if defined(TARGET_WINDOWS)
 class Directx::GifBlitter
 {
 public:
@@ -156,7 +157,7 @@ public:
 	
 	std::shared_ptr<TTexture>	mIndexImage;
 };
-
+#endif
 
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
@@ -197,8 +198,10 @@ public:
 	//	when unity destructs us, the opengl thread is suspended, so we need to forcily break a semaphore
 	std::shared_ptr<Soy::TSemaphore>		mDeviceJobSemaphore;	
 	std::shared_ptr<Opengl::GifBlitter>		mOpenglGifBlitter;
-	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
 	std::shared_ptr<TGifBlitter>			mCpuGifBlitter;
+#if defined(TARGET_WINDOWS)
+	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
+#endif
 
 	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
 };

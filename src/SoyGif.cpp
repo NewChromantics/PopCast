@@ -1,7 +1,10 @@
 #include "SoyGif.h"
 #include "TFileCaster.h"
 #include "TBlitterOpengl.h"
+
+#if defined(TARGET_WINDOWS)
 #include "TBlitterDirectx.h"
+#endif
 
 #include "gif.h"
 
@@ -70,7 +73,7 @@ size_t FindNearestColour(const vec3x<uint8>& rgb,const SoyPixelsImpl& Palette)
 	float Score = 999.f;
 	for ( int i = 0; i < Palette.GetWidth(); i++ )
 	{
-		auto& Pal = Palette.GetPixel3(0, 0);
+		auto Pal = Palette.GetPixel3(0, 0);
 		auto PalScore = GetColourScore(rgb, Pal);
 		if ( PalScore > Score )
 			continue;
@@ -189,13 +192,16 @@ std::shared_ptr<TTextureBuffer> Opengl::GifBlitter::CopyImmediate(const Opengl::
 
 
 
+#if defined(TARGET_WINDOWS)
 Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context) :
 	mContext	 ( Context )
 {
 	Soy::Assert( mContext!=nullptr, "GifBlitter Expected context");
 	mBlitter.reset( new TBlitter );
 }
+#endif
 
+#if defined(TARGET_WINDOWS)
 Directx::GifBlitter::~GifBlitter()
 {
 	//	deffered delete of stuff
@@ -204,7 +210,9 @@ Directx::GifBlitter::~GifBlitter()
 	
 	mContext.reset();
 }
+#endif
 
+#if defined(TARGET_WINDOWS)
 void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore)
 {
 	Soy::Assert( JobSemaphore!=nullptr, "Job semaphore should already be allocated");
@@ -260,7 +268,9 @@ void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const
 	}
 	JobSemaphore.reset();
 }
+#endif
 
+#if defined(TARGET_WINDOWS)
 std::shared_ptr<TTextureBuffer> Directx::GifBlitter::CopyImmediate(const Directx::TTexture& Image)
 {
 	auto& Context = *mContext;
@@ -280,7 +290,7 @@ std::shared_ptr<TTextureBuffer> Directx::GifBlitter::CopyImmediate(const Directx
 	*/
 	return Buffer;
 }
-
+#endif
 
 
 
@@ -512,7 +522,9 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 	SoyWorkerThread		( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder		( OutputBuffer ),
 	mStreamIndex		( StreamIndex ),
+#if defined(TARGET_WINDOWS)
 	mDirectxGifBlitter	( new Directx::GifBlitter(Context) ),
+#endif
 	mParams				( Params ),
 	mPushedFrameCount	( 0 ),
 	mSkipFrames			( SkipFrames )
@@ -581,6 +593,7 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 
 void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context)
 {
+#if defined(TARGET_WINDOWS)
 	if ( mParams.mCpuOnly )
 		throw Soy::AssertException("GPU mode disabled");
 
@@ -602,6 +615,9 @@ void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Direct
 	
 	auto& InternalContext = GetDirectxContext();
 	InternalContext.PushJob( MakePacketFromTexture );
+#else
+	throw Soy::AssertException("Directx not supported on this platform");
+#endif
 }
 
 void Gif::TEncoder::Write(std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
@@ -664,6 +680,7 @@ bool Gif::TEncoder::Iteration()
 				auto& Context = GetOpenglContext();
 				Context.PushJob( Read, *mDeviceJobSemaphore );
 			}
+#if defined(TARGET_WINDOWS)
 			else if ( mDirectxGifBlitter && Texture.mDirectxTexture )
 			{
 				//	copy for other thread in case the opengl job gets defferred for a long time and the buffer gets deleted in the meantime;
@@ -683,6 +700,7 @@ bool Gif::TEncoder::Iteration()
 				auto& Context = GetDirectxContext();
 				Context.PushJob( Read, *mDeviceJobSemaphore );
 			}
+#endif
 			else if ( Texture.mPixels )
 			{
 				Rgba = Texture.mPixels;
@@ -738,6 +756,7 @@ bool Gif::TEncoder::Iteration()
 		{
 			Shader = GifFragShaderDebugPalette_Opengl;
 		}
+#if defined(TARGET_WINDOWS)
 		else if ( mDirectxGifBlitter && !mParams.mDebugIndexes )
 		{
 			Shader = GifFragShaderSimpleNearest_Directx;
@@ -746,6 +765,7 @@ bool Gif::TEncoder::Iteration()
 		{
 			Shader = GifFragShaderDebugPalette_Directx;
 		}
+#endif
 
 		auto MaskPixel = [this](const vec3x<uint8>& Old,const vec3x<uint8>& New)
 		{
@@ -819,11 +839,15 @@ Opengl::TContext& Gif::TEncoder::GetOpenglContext()
 
 Directx::TContext& Gif::TEncoder::GetDirectxContext()
 {
+#if defined(TARGET_WINDOWS)
 	auto& Blitter = mDirectxGifBlitter;
 	Soy::Assert( Blitter != nullptr, std::string(__func__) + " missing directx gif blitter");
 	auto Context = Blitter->mContext;
 	Soy::Assert( Context!= nullptr, std::string(__func__) + " missing directx gif blitter context");
 	return *Context;
+#else
+	throw Soy::AssertException("Directx not supported on this platform");
+#endif
 }
 
 
@@ -916,11 +940,13 @@ void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPi
 		mOpenglGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
 		mDeviceJobSemaphore.reset();
 	}
+#if defined(TARGET_WINDOWS)
 	else if ( mDirectxGifBlitter && !mParams.mCpuOnly )
 	{
 		mDirectxGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
 		mDeviceJobSemaphore.reset();
 	}
+#endif
 	else
 	{
 		mCpuGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, mDeviceJobSemaphore );
@@ -1052,11 +1078,12 @@ TTextureBuffer::~TTextureBuffer()
 		mOpenglContext.reset();
 	}
 
+#if defined(TARGET_WINDOWS)
 	if ( mDirectxContext )
 	{
 		Opengl::DeferDelete( mDirectxContext, mDirectxTexture );
 		mDirectxContext.reset();
 	}
-
+#endif
 }
 

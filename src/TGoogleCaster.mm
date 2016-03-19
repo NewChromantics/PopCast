@@ -384,6 +384,11 @@ launchedApplication:(BOOL)launchedApplication {
 	std::Debug << "Load media result: " << Result << std::endl;
 }
 
+void GoogleCast::TDevice::Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context)
+{
+	throw Soy::AssertException("Not supported");
+}
+
 void GoogleCast::TDevice::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported");

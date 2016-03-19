@@ -3,10 +3,17 @@
 #include "PopUnity.h"
 
 
+#if defined(TARGET_WINDOWS)
 //	needed for the pool
 #include <SoyDirectx.h>	
 #include <SoyPool.h>
+#endif
 
+namespace Directx
+{
+	class TContext;
+	class TTexture;
+}
 
 class TCaster;
 class TCasterParams;
@@ -81,8 +88,9 @@ public:
 	std::shared_ptr<Directx::TContext>	mDirectxContext;
 	std::shared_ptr<TCaster>			mCaster;
 	SoyTime								mBaseTimestamp;
+#if defined(TARGET_WINDOWS)
 	TPool<Directx::TTexture>			mDirectxTexturePool;
-
+#endif
 private:
 	TInstanceRef	mRef;
 };
