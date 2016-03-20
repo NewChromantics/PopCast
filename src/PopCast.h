@@ -10,6 +10,7 @@
 
 class TCaster;
 class TCasterParams;
+class TJsonWriter;
 
 __export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits);
 __export bool			PopCast_Free(Unity::ulong Instance);
@@ -19,6 +20,8 @@ __export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTextu
 __export bool			PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint StreamIndex);
 __export Unity::ulong	PopCast_GetBackgroundGpuJobCount();
 
+__export const char*	PopCast_GetMetaJson(Unity::ulong Instance);
+__export void			PopCast_ReleaseString(const char* String);
 
 
 //	way too many problems with using a struct, reverting to bit flags. (which may also have problems with endianness, container size etc)
@@ -76,6 +79,7 @@ public:
 	void			WriteFrame(Directx::TTexture& Texture,size_t StreamIndex);
 	void			WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex);
 	
+	void			GetMeta(TJsonWriter& Json);
 
 public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;

@@ -1,9 +1,21 @@
 using UnityEngine;
 using System.Collections;					// required for Coroutines
 using System.Runtime.InteropServices;		// required for DllImport
-using System;								// requred for IntPtr
+using System;                               // requred for IntPtr
 
 
+public class PopCastMeta
+{
+	public int BackgroundGpuJobCount;
+	public int InstanceCount;
+	public int MuxerInputQueueCount;
+	public int MuxerDefferedQueueCount;
+	public int BytesWritten;
+	public int PendingWrites;
+	public int PendingEncodedFrames;
+	public int PushedFrameCount;
+	public int PendingFrameCount;
+};
 
 
 public class TTexturePtrCache<TEXTURE> where TEXTURE : Texture
@@ -179,6 +191,13 @@ public class PopCast
 	[DllImport(PluginName)]
 	private static extern ulong		PopCast_GetBackgroundGpuJobCount();
 
+	[DllImport(PluginName,CallingConvention = CallingConvention.Cdecl)]
+	private static extern System.IntPtr	PopCast_GetMetaJson(ulong Instance);
+
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern void		PopCast_ReleaseString(System.IntPtr Str);
+
+
 	public static void EnumDevices()
 	{
 		PopCast_EnumDevices();
@@ -351,5 +370,30 @@ public class PopCast
 		
 		return Filename;
 	}
+
+
+	public PopCastMeta GetMeta()
+	{
+		var JsonPtr = PopCast_GetMetaJson(mInstance);
+		if (JsonPtr == System.IntPtr.Zero)
+		{
+			Debug.LogError("PopCast_GetMetaJson returned null");
+			return new PopCastMeta();
+		}
+		try
+		{
+			var Json = Marshal.PtrToStringAnsi(JsonPtr);
+			PopCastMeta Meta = JsonUtility.FromJson<PopCastMeta>(Json);
+			PopCast_ReleaseString(JsonPtr);
+			return Meta;
+		}
+		catch (System.Exception e)
+		{
+			Debug.LogError("Error getting PopCast Meta JSON: " + e.Message);
+			PopCast_ReleaseString(JsonPtr);
+			return new PopCastMeta();
+		}
+	}
+
 }
 

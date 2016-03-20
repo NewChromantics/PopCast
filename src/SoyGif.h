@@ -182,6 +182,7 @@ public:
 	virtual void			Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
 	virtual void			Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context) override;
 	virtual void			Write(std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode) override;
+	virtual void			GetMeta(TJsonWriter& Json) override;
 
 protected:
 	virtual bool					CanSleep() override;

@@ -3,6 +3,8 @@
 #include "SoyGif.h"
 #include "THttpCaster.h"
 #include <SoyFileSystem.h>
+#include <SoyJson.h>
+
 
 #if defined(TARGET_OSX)
 #define ENABLE_LIBAV
@@ -250,6 +252,33 @@ TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
 	return *pEncoder;
 }
 
+void TFileCaster::GetMeta(TJsonWriter& Json)
+{
+	if ( mMuxer )
+	{
+		mMuxer->GetMeta( Json );
+	}
+
+	if ( mFileStream )
+	{
+		auto BytesWritten = mFileStream->GetBytesWritten();
+		auto PendingWrites = mFileStream->GetPendingWrites();
+		Json.Push("BytesWritten", BytesWritten );
+		Json.Push("PendingWrites", PendingWrites );
+	}
+
+	if ( mFrameBuffer )
+	{
+		auto EncodedFrames = mFrameBuffer->GetPacketCount();
+		Json.Push("PendingEncodedFrames", EncodedFrames);
+	}
+
+	for ( auto it = mEncoders.begin(); it != mEncoders.end();	it++ )
+	{
+		auto pEncoder = it->second;
+		pEncoder->GetMeta( Json );
+	}
+}
 
 
 

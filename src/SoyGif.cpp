@@ -2,6 +2,7 @@
 #include "TFileCaster.h"
 #include "TBlitterOpengl.h"
 #include "TBlitterDirectx.h"
+#include <SoyJson.h>
 
 #include "gif.h"
 
@@ -193,6 +194,10 @@ Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context,std::shared_pt
 	mTexturePool	( TexturePool )
 {
 	Soy::Assert( mContext!=nullptr, "GifBlitter Expected context");
+	
+	if ( !mTexturePool )
+		mTexturePool.reset( new TPool<TTexture> );
+		
 	mBlitter.reset( new TBlitter(mTexturePool) );
 }
 
@@ -216,6 +221,12 @@ std::shared_ptr<SoyPixelsImpl> Directx::GifBlitter::IndexImageWithShader(std::sh
 
 	auto Work = [this,JobSemaphore,Source,Palette,pIndexedImage,FragShader]
 	{
+		//	job already aborted. likely: parent has been destructed, and dx hasn't updated until afterwards with this idle job
+		//	ideally we'd have an extra lock and not allow access to this in case the destruction happens at the same time as the 
+		//	dx job queue. "dont delete me" lock?
+		if ( JobSemaphore->IsCompleted() )
+			return;
+		
 		auto& IndexedImage = *pIndexedImage;
 		SoyPixelsMeta IndexMeta( Source->GetWidth(), Source->GetHeight(), SoyPixelsFormat::Greyscale );
 
@@ -830,7 +841,13 @@ Directx::TContext& Gif::TEncoder::GetDirectxContext()
 	return *Context;
 }
 
+void Gif::TEncoder::GetMeta(TJsonWriter& Json)
+{
+	auto PendingFrameCount = mPendingFrames.GetSize();
 
+	Json.Push("PushedFrameCount", mPushedFrameCount);
+	Json.Push("PendingFrameCount", PendingFrameCount);
+}
 
 
 void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t PixelSkip)

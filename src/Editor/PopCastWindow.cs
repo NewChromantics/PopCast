@@ -51,7 +51,7 @@ public class PopCastWindow : EditorWindow
 
 		//	reflect built in properties
 		var ThisEditor = Editor.CreateEditor(this);
-		PopCastInspector.ApplyInspector(ThisEditor, this);
+		PopCastInspector.ApplyInspector(mPopCast, this);
 
 		ThisEditor.OnInspectorGUI();
 

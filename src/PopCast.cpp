@@ -4,6 +4,8 @@
 #include "TAirplayCaster.h"
 #include "PopUnity.h"
 #include "TFileCaster.h"
+#include <SoyJson.h>
+#include <SoyExportManager.h>
 
 #if defined(TARGET_OSX)
 #define ENABLE_GOOGLECAST
@@ -37,7 +39,21 @@ namespace PopCast
 	std::shared_ptr<Airplay::TContext>		AirplayContext;
 	Airplay::TContext&						GetAirplayContext();
 #endif
+
+	void		GetMeta(TJsonWriter& Json);
+
+	std::shared_ptr<TExportManager<std::string,char>>	gExportStringManager;
+	TExportManager<std::string,char>&					GetExportStringManager();
 };
+
+
+TExportManager<std::string, char>& PopCast::GetExportStringManager()
+{
+	if ( !gExportStringManager )
+		gExportStringManager.reset( new TExportManager<std::string,char>() );
+
+	return *gExportStringManager;
+}
 
 
 
@@ -279,6 +295,45 @@ __export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint Strea
 
 
 
+__export const char*	PopCast_GetMetaJson(Unity::ulong Instance)
+{
+	try
+	{
+		TJsonWriter Json;
+
+		PopCast::GetMeta( Json );
+
+		auto pInstance = PopCast::GetInstance( Instance );
+		if ( pInstance )
+		{
+			pInstance->GetMeta(Json);
+		}
+		
+		auto& StringManager = PopCast::GetExportStringManager();
+		return StringManager.Lock( Json.GetString() );
+	}
+	catch ( std::exception& e )
+	{
+		std::Debug << __func__ << " exception " << e.what() << std::endl;
+		return nullptr;
+	}
+}
+
+
+__export void	PopCast_ReleaseString(const char* String)
+{
+	try
+	{
+		auto& StringManager = PopCast::GetExportStringManager();
+		StringManager.Unlock( String );
+	}
+	catch ( std::exception& e )
+	{
+		std::Debug << __func__ << " exception " << e.what() << std::endl;
+	}
+}
+
+
 #if defined(ENABLE_GOOGLECAST)
 GoogleCast::TContext& PopCast::GetGoogleCastContext()
 {
@@ -357,6 +412,17 @@ bool PopCast::Free(TInstanceRef Instance)
 	}
 	gInstancesLock.unlock();
 	return false;
+}
+
+
+
+void PopCast::GetMeta(TJsonWriter& Json)
+{
+	auto BackgroundGpuJobCount = PopCast_GetBackgroundGpuJobCount();
+	auto InstanceCount = gInstances.size();
+
+	Json.Push("BackgroundGpuJobCount", BackgroundGpuJobCount);
+	Json.Push("InstanceCount", InstanceCount);
 }
 
 
@@ -516,3 +582,13 @@ void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_
 	}
 	
 }
+
+void PopCast::TInstance::GetMeta(TJsonWriter& Json)
+{
+	if ( mCaster )
+	{
+		mCaster->GetMeta( Json );
+	}
+}
+
+
