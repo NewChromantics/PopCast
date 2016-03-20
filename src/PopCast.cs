@@ -335,14 +335,15 @@ public class PopCast
 					Filename = System.IO.Path.Combine (Application.persistentDataPath, Filename);
 				}
 
-				//	if there is a * in the filename, insert time. That allows file:*.gif or file:streamingassets/*.gif
-				string DateString = System.DateTime.Now.ToShortDateString() + "_" + System.DateTime.Now.ToShortTimeString();
-				DateString = DateString.Replace(System.IO.Path.DirectorySeparatorChar,'_');
-				DateString = DateString.Replace(System.IO.Path.AltDirectorySeparatorChar,'_');
-				DateString = DateString.Replace(' ','_');
-				DateString = DateString.Replace(':','_');
-				Filename = Filename.Replace("*",DateString);
 			}
+
+			//	if there is a * in the filename, insert time. That allows file:*.gif or file:streamingassets/*.gif
+			string DateString = System.DateTime.Now.ToShortDateString() + "_" + System.DateTime.Now.ToShortTimeString();
+			DateString = DateString.Replace(System.IO.Path.DirectorySeparatorChar, '_');
+			DateString = DateString.Replace(System.IO.Path.AltDirectorySeparatorChar, '_');
+			DateString = DateString.Replace(' ', '_');
+			DateString = DateString.Replace(':', '_');
+			Filename = Filename.Replace("*", DateString);
 		}
 
 		if (Prefix != null)
