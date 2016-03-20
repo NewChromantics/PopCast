@@ -437,12 +437,29 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	Soy::Assert( Packet->mMeta.mCodec == SoyMediaFormat::Palettised_RGB_8 || Packet->mMeta.mCodec == SoyMediaFormat::Palettised_RGBA_8, "Expected palettised image as codec");
 	Soy::Assert( PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_RGB_8 || PalettisedImage.GetFormat() == SoyPixelsFormat::Palettised_RGBA_8, "Expected palettised image in pixel meta");
 	
+	SoyTime FinalDuration;
+
+	if ( mPrevImageTimecode.IsValid() )
+	{
+		auto Diff = Packet->mTimecode.GetDiff(mPrevImageTimecode);
+		FinalDuration.mTime = abs(Diff);
+	}
+	else
+	{
+		FinalDuration = Packet->mDuration;
+	}
+
 	//	ms to 100th's
 	//	https://bugzilla.mozilla.org/show_bug.cgi?id=232822
 	//	in chrome, 1(10ms) turns into 100ms
-	static uint16 MinDurationMs = 2;
-	auto delay = std::max( MinDurationMs, size_cast<uint16>( Packet->mDuration.GetTime() / 10 ) );
+	static uint16 MinDurationMs = 20;
+	auto delay = std::max( MinDurationMs, size_cast<uint16>( FinalDuration.GetTime() ) ) / 10;
 	
+	//	gr: looks like it's going a little funny, so cap it too
+	static uint16 MaxDurationMs = 1000 / 20;
+	delay = std::min<uint16>( delay * 10, MaxDurationMs ) / 10;
+
+
 	{
 		GifWriter LzwWriter;
 		
@@ -489,6 +506,8 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 		Output.Push( LzwWrite );
 	}
 	
+	mPrevImageTimecode = Packet->mTimecode;
+
 	static bool DebugFin = false;
 	if ( DebugFin )
 		std::Debug << "GifWriteFrameFinished" << std::endl;
