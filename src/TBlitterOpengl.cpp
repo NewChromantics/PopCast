@@ -79,6 +79,25 @@ static auto BlitFragShaderFreenectDepth10mm =
 
 
 
+Opengl::TBlitter::TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool) :
+	mTempTextures	( TexturePool )
+{
+	if ( !mTempTextures )
+		mTempTextures.reset( new TPool<TTexture> );
+}
+
+Opengl::TBlitter::~TBlitter()
+{
+	mBlitShaders.clear();
+	mBlitQuad.reset();
+	mRenderTarget.reset();
+}
+
+TPool<Opengl::TTexture>& Opengl::TBlitter::GetTexturePool()
+{
+	return *mTempTextures;
+}
+
 
 std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(const std::string& Name,const char* Source,Opengl::TContext& Context)
 {
@@ -181,13 +200,6 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl:
 	return GetBackupShader(Context);
 }
 
-
-Opengl::TBlitter::~TBlitter()
-{
-	mBlitShaders.clear();
-	mBlitQuad.reset();
-	mRenderTarget.reset();
-}
 
 
 
@@ -429,8 +441,11 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const So
 	
 	//	do normal blit
 	BlitTexture( Target, GetArrayBridge(SourceTextures), Context, UploadParams, OverrideShader );
-	
-	mTempTextures.ReleaseAll();
+
+	auto& Pool = GetTexturePool();
+	for ( int t=0;	t<SourceTextures.GetSize();	t++ )
+		Pool.Release( SourceTextures[t] );
+
 }
 
 
@@ -442,7 +457,8 @@ std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsM
 		return std::make_shared<TTexture>( Meta, Type );
 	};
 	
-	auto Texture = mTempTextures.AllocPtr( std::make_pair(Meta,Type), RealAlloc );
+	auto& Pool = GetTexturePool();
+	auto Texture = Pool.AllocPtr( TTextureMeta(Meta,Type), RealAlloc );
 	return Texture;
 }
 

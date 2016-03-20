@@ -40,6 +40,19 @@ static auto BlitFragShader_Yuv_8_8_8_Video =
 ;
 
 
+Directx::TBlitter::TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool) :
+	mTempTextures	( TexturePool )
+{
+	if ( !mTempTextures )
+		mTempTextures.reset( new TPool<TTexture>() );
+}
+
+TPool<Directx::TTexture>& Directx::TBlitter::GetTexturePool()
+{
+	return *mTempTextures;
+}
+
+
 std::shared_ptr<Directx::TGeometry> Directx::TBlitter::GetGeo(Directx::TContext& Context)
 {
 	if ( mBlitQuad )
@@ -230,6 +243,13 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 
 	//	now copy that render target to texture target
 	Target.Write( *RenderTexture, Context );
+
+	auto& TexturePool = GetTexturePool();
+	for ( int i=0;	i<SourceTextures.GetSize();	i++ )
+	{
+		TexturePool.Release(SourceTextures[i]);
+	}
+	TexturePool.Release( RenderTexture );
 }
 
 
@@ -239,8 +259,9 @@ std::shared_ptr<Directx::TTexture> Directx::TBlitter::GetTempTexturePtr(SoyPixel
 	{
 		return std::make_shared<TTexture>( Meta, Context, Mode );
 	};
-	
-	auto Texture = mTempTextures.AllocPtr( std::make_pair(Meta,Mode), RealAlloc );
+
+	auto& TexturePool = GetTexturePool();
+	auto Texture = TexturePool.AllocPtr( TTextureMeta(Meta,Mode), RealAlloc );
 	return Texture;
 }
 

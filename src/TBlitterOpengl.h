@@ -15,7 +15,9 @@ namespace Opengl
 class Opengl::TBlitter : public Soy::TBlitter
 {
 public:
+	TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool);
 	~TBlitter();
+
 	void			BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,std::shared_ptr<TShader> OverrideShader=nullptr);
 	void			BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader);
 	void			BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader=nullptr);
@@ -32,10 +34,13 @@ public:
 	std::shared_ptr<TTexture>				GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Mode);
 	Opengl::TTexture&						GetTempTexture(SoyPixelsMeta Meta,TContext& Context,GLenum Mode);
 
+protected:
+	TPool<TTexture>&						GetTexturePool();
+
 public:
-	TPool<TTexture>						mTempTextures;
-	std::shared_ptr<TRenderTargetFbo>	mRenderTarget;
-	std::shared_ptr<TGeometry>			mBlitQuad;
+	std::shared_ptr<TPool<TTexture>>		mTempTextures;	
+	std::shared_ptr<TRenderTargetFbo>		mRenderTarget;
+	std::shared_ptr<TGeometry>				mBlitQuad;
 	std::map<const char*,std::shared_ptr<TShader>>	mBlitShaders;	//	shader mapped to it's literal content address
 };
 
