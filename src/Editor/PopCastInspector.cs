@@ -8,12 +8,10 @@ using UnityEditor;
 [CustomEditor(typeof(PopCastCameraCapture))]
 public class PopCastInspector : Editor
 {
-	static bool AllowBackgroundJobs = true;
-
-	static public void ApplyInspector(PopCast Instance, Object target)
+	static public void ApplyInspector(PopCast Instance, Object target, Editor ThisEditor)
 	{
 		GUILayout.Label("PopCast Version " + PopCast.GetVersion());
-		AllowBackgroundJobs = GUILayout.Toggle(AllowBackgroundJobs, "Allow background jobs");
+		PopCast.mAllowBackgroundProcessing = GUILayout.Toggle(PopCast.mAllowBackgroundProcessing, "Allow background jobs");
 
 		string MetaString = "";
 		var Meta = (Instance != null) ? Instance.GetMeta() : null;
@@ -23,7 +21,7 @@ public class PopCastInspector : Editor
 			MetaString += "InstanceCount: " + Meta.InstanceCount + "\n";
 			MetaString += "MuxerInputQueueCount: " + Meta.MuxerInputQueueCount + "\n";
 			MetaString += "MuxerDefferedQueueCount: " + Meta.MuxerDefferedQueueCount + "\n";
-			MetaString += "BytesWritten: " + Meta.BytesWritten + "\n";
+			MetaString += "MB's Written: " + (Meta.BytesWritten/(1024.0f * 1024.0f)) + "\n";
 			MetaString += "PendingWrites: " + Meta.PendingWrites + "\n";
 			MetaString += "PendingEncodedFrames: " + Meta.PendingEncodedFrames + "\n";
 			MetaString += "PushedFrameCount: " + Meta.PushedFrameCount + "\n";
@@ -49,8 +47,8 @@ public class PopCastInspector : Editor
 
 			if (!EditorApplication.isUpdating)
 			{
-				EditorUtility.SetDirty(target);
-				if (AllowBackgroundJobs)
+				ThisEditor.Repaint();
+				if (PopCast.mAllowBackgroundProcessing)
 				{
 					Message += " (forcing GPU update)";
 					PopCast.Update();
@@ -68,15 +66,15 @@ public class PopCastInspector : Editor
 			EditorGUILayout.HelpBox(Message, MessageType.Info, true);
 		}
 
-		if ( Instance != null )
-			EditorUtility.SetDirty(target);
+		if (Instance != null)
+			ThisEditor.Repaint();
 	}
 
 
 	public override void OnInspectorGUI()
 	{
 		var This = target as PopCastCameraCapture;
-		ApplyInspector(This.mCast, target);
+		ApplyInspector(This.mCast, target, this);
 
 		DrawDefaultInspector();
 	}

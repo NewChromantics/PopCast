@@ -124,6 +124,24 @@ __export bool	PopCast_Free(Unity::ulong Instance)
 }
 
 
+__export Unity::sint	PopCast_GetPendingFrameCount(Unity::ulong Instance)
+{
+	auto pInstance = PopCast::GetInstance(Instance);
+	if ( !pInstance )
+		return -1;
+
+	try
+	{
+		return pInstance->GetPendingPacketCount();
+	}
+	catch ( std::exception& e )
+	{
+		std::Debug << __func__ << " failed: " << e.what() << std::endl;
+		return -2;
+	}
+}
+
+
 __export Unity::ulong	PopCast_GetBackgroundGpuJobCount()
 {
 	Unity::ulong JobCount = 0;
@@ -592,3 +610,9 @@ void PopCast::TInstance::GetMeta(TJsonWriter& Json)
 }
 
 
+size_t PopCast::TInstance::GetPendingPacketCount()
+{
+	Soy::Assert(mCaster != nullptr, "Caster expected");
+	
+	return mCaster->GetPendingPacketCount();
+}

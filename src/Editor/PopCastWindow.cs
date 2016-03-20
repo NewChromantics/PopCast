@@ -47,14 +47,9 @@ public class PopCastWindow : EditorWindow
 
 		//	reflect built in properties
 		var ThisEditor = Editor.CreateEditor(this);
-		PopCastInspector.ApplyInspector(mPopCast, this);
+		PopCastInspector.ApplyInspector(mPopCast, this, ThisEditor);
 
 		ThisEditor.OnInspectorGUI();
-
-		if (mPopCast != null)
-		{
-			Repaint();
-		}
 	}
 
 	void StopRecording()

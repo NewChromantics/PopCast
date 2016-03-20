@@ -280,6 +280,28 @@ void TFileCaster::GetMeta(TJsonWriter& Json)
 	}
 }
 
+size_t TFileCaster::GetPendingPacketCount()
+{
+	size_t PendingCount = 0;
+	if ( mMuxer )
+	{
+		if ( mMuxer->mInput )
+			PendingCount += mMuxer->mInput->GetPacketCount();
+		PendingCount += mMuxer->mDefferedPackets.GetSize();
+	}
+
+	if ( mFileStream )
+		PendingCount += mFileStream->GetPendingWrites();
+
+	for ( auto it = mEncoders.begin(); it != mEncoders.end();	it++ )
+	{
+		auto pEncoder = it->second;
+		PendingCount += pEncoder->GetPendingOutputCount();
+		PendingCount += pEncoder->GetPendingEncodeCount();
+	}
+
+	return PendingCount;
+}
 
 
 /*

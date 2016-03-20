@@ -19,6 +19,7 @@ __export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeT
 __export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 __export bool			PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint StreamIndex);
 __export Unity::ulong	PopCast_GetBackgroundGpuJobCount();
+__export Unity::sint	PopCast_GetPendingFrameCount(Unity::ulong Instance);
 
 __export const char*	PopCast_GetMetaJson(Unity::ulong Instance);
 __export void			PopCast_ReleaseString(const char* String);
@@ -80,6 +81,7 @@ public:
 	void			WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex);
 	
 	void			GetMeta(TJsonWriter& Json);
+	size_t			GetPendingPacketCount();
 
 public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;

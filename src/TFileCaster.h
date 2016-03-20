@@ -102,6 +102,7 @@ public:
 	virtual void		Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context) override;
 	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
 	virtual void		GetMeta(TJsonWriter& Json) override;
+	virtual size_t		GetPendingPacketCount() override;
 
 	static bool			HandlesFilename(const std::string& Filename);
 	

@@ -20,6 +20,15 @@ public class PopCastCameraCapture : MonoBehaviour
 		}
 	}
 
+	void OnDisable()
+	{
+		if ( mCast != null )
+		{
+			mCast.Free();
+			mCast = null;
+		}
+	}
+
 	void LateUpdate()
 	{
 		//	capture camera

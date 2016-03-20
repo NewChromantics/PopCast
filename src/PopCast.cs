@@ -119,6 +119,9 @@ public class PopCast
 	private ulong	mInstance = 0;
 	private static int	mPluginEventId = PopCast_GetPluginEventId();
     private bool mPushDebugFrames = false;
+#if UNITY_EDITOR
+	public static bool mAllowBackgroundProcessing = true;
+#endif
 
 	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
 	private TTexturePtrCache<Texture2D>		mTexture2DPtrCache = new TTexturePtrCache<Texture2D>();
@@ -187,6 +190,10 @@ public class PopCast
 	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern void		PopCast_ReleaseString(System.IntPtr Str);
 
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern int		PopCast_GetPendingFrameCount(ulong Instance);
+
+
 	public PopCast(string Filename,PopCastParams Params)
 	{
 		mPushDebugFrames = Params.PushDebugFrames;
@@ -228,6 +235,19 @@ public class PopCast
 		mDebugLogDelegate = null;
 		PopCast_Free (mInstance);
 		FlushDebug ();
+	}
+
+	//	returns negative on error (already free?)
+	public int GetPendingFrameCount()
+	{
+		var Pending = PopCast_GetPendingFrameCount( mInstance );
+		return Pending;
+	}
+
+	public void Free()
+	{
+		PopCast_Free(mInstance);
+		FlushDebug();
 	}
 
 	public static void EnumDevices()
