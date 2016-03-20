@@ -82,6 +82,13 @@ if not defined BASH_EXE (
 )
 echo using bash at %BASH_EXE%
 
+REM extract path from bash exe and add to the env path, so calls to mkdir, cp etc work as they're alongside bash.exe
+for %%a in (%BASH_EXE%) do (
+	set BASH_PATH=%%~dpa
+)
+echo Adding %BASH_PATH% to path env
+set PATH=%PATH%;%BASH_PATH%
+
 REM Normal post build
 %BASH_EXE% %SRCROOT%/CopyCSharpFiles.sh
 if %ERRORLEVEL% NEQ 0	(
