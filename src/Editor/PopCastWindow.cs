@@ -31,10 +31,6 @@ public class PopCastWindow : EditorWindow
 
 	void OnGUI()
 	{
-		string DebugString = "";
-		DebugString += "Frames pushed: " + (mPopCast == null ? -1 : mPopCast.GetTexturePushCount()) + "\n";
-		EditorGUILayout.HelpBox(DebugString, MessageType.None);
-
 		if (mPopCast != null)
 		{
 			if (GUILayout.Button("Stop recording"))
