@@ -8,6 +8,10 @@ class GifWriter;
 class GifPalette;
 class TRawWriteDataProtocol;
 
+template<typename TYPE>
+class TPool;
+
+
 namespace Opengl
 {
 	class TBlitter;
@@ -26,8 +30,8 @@ namespace Gif
 	class TEncoder;
 	class TEncodeParams;
 	
-	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,const TEncodeParams& Params,bool SkipFrames);
-	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,const TEncodeParams& Params,bool SkipFrames);
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,std::shared_ptr<TPool<Opengl::TTexture>> TexturePool,const TEncodeParams& Params,bool SkipFrames);
+	std::shared_ptr<TMediaEncoder>	AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,std::shared_ptr<TPool<Directx::TTexture>> TexturePool,const TEncodeParams& Params,bool SkipFrames);
 
 	typedef std::function<bool(const vec3x<uint8>& Old,const vec3x<uint8>& New)>	TMaskPixelFunc;
 }
@@ -114,47 +118,55 @@ public:
 };
 
 
-//	software version
 class TGifBlitter
 {
 public:
-	void			IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,std::shared_ptr<Soy::TSemaphore>& JobSemaphore);
+	virtual std::shared_ptr<SoyPixelsImpl>	IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSempahore)=0;
 
 public:
 };
 
 
-class Opengl::GifBlitter
+//	software version
+class TCpuGifBlitter : public TGifBlitter
 {
 public:
-	GifBlitter(std::shared_ptr<TContext> Context);
-	~GifBlitter();
-
-	std::shared_ptr<TTextureBuffer>	CopyImmediate(const TTexture& Image);
-	void							IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore);
+	virtual std::shared_ptr<SoyPixelsImpl>	IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSempahore) override;
 
 public:
-	std::shared_ptr<TContext>	mContext;
-	std::shared_ptr<TBlitter>	mBlitter;
-	
-	std::shared_ptr<TTexture>	mIndexImage;
+};
+
+class Opengl::GifBlitter : public TGifBlitter
+{
+public:
+	GifBlitter(std::shared_ptr<TContext> Context,std::shared_ptr<TPool<TTexture>> TexturePool);
+	~GifBlitter();
+
+	std::shared_ptr<TTextureBuffer>			CopyImmediate(const TTexture& Image);
+	virtual std::shared_ptr<SoyPixelsImpl>	IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSempahore) override;
+	TPool<TTexture>&						GetTexturePool()	{	return *mTexturePool;	}
+
+public:
+	std::shared_ptr<TContext>			mContext;
+	std::shared_ptr<TBlitter>			mBlitter;
+	std::shared_ptr<TPool<TTexture>>	mTexturePool;
 };
 
 
-class Directx::GifBlitter
+class Directx::GifBlitter : public TGifBlitter
 {
 public:
-	GifBlitter(std::shared_ptr<TContext> Context);
+	GifBlitter(std::shared_ptr<TContext> Context,std::shared_ptr<TPool<TTexture>> TexturePool);
 	~GifBlitter();
 
-	std::shared_ptr<TTextureBuffer>	CopyImmediate(const TTexture& Image);
-	void							IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore);
+	std::shared_ptr<TTextureBuffer>			CopyImmediate(const TTexture& Image);
+	virtual std::shared_ptr<SoyPixelsImpl>	IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSempahore) override;
+	TPool<TTexture>&						GetTexturePool()	{	return *mTexturePool;	}
 
 public:
-	std::shared_ptr<TContext>	mContext;
-	std::shared_ptr<TBlitter>	mBlitter;
-	
-	std::shared_ptr<TTexture>	mIndexImage;
+	std::shared_ptr<TContext>			mContext;
+	std::shared_ptr<TBlitter>			mBlitter;
+	std::shared_ptr<TPool<TTexture>>	mTexturePool;
 };
 
 
@@ -162,8 +174,8 @@ public:
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
 {
 public:
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,TEncodeParams Params,bool SkipFrames);
-	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,TEncodeParams Params,bool SkipFrames);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,std::shared_ptr<TPool<Opengl::TTexture>> TexturePool,TEncodeParams Params,bool SkipFrames);
+	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,std::shared_ptr<TPool<Directx::TTexture>> TexturePool,TEncodeParams Params,bool SkipFrames);
 	TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,TEncodeParams Params,bool SkipFrames);
 	~TEncoder();
 	
@@ -182,8 +194,15 @@ protected:
 
 	//	if this returns false, we're ALL transparent
 	bool					MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& IsKeyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc);
-	void					IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader);
+	std::shared_ptr<SoyPixelsImpl>	IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader);
 	
+	bool					CanPushFrame(SoyTime Timecode);
+	void					OnFramePrePushSkipped(SoyTime Timcode);
+
+private:
+	std::shared_ptr<Soy::TSemaphore>	AllocJobSempahore();
+	void								AbortJobSemaphores();
+
 public:
 	size_t					mPushedFrameCount;
 	Gif::TEncodeParams		mParams;
@@ -194,11 +213,16 @@ public:
 	Array<std::shared_ptr<TMediaPacket>>	mPendingFrames;
 	
 
-	//	when unity destructs us, the opengl thread is suspended, so we need to forcily break a semaphore
-	std::shared_ptr<Soy::TSemaphore>		mDeviceJobSemaphore;	
 	std::shared_ptr<Opengl::GifBlitter>		mOpenglGifBlitter;
 	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
 	std::shared_ptr<TGifBlitter>			mCpuGifBlitter;
 
-	std::shared_ptr<SoyPixelsImpl>		mPrevRgb;
+	std::shared_ptr<SoyPixelsImpl>			mPrevRgb;
+
+private:
+	//	when unity destructs us, the opengl thread is suspended, so we need to forcily break a semaphore
+	//	gr: this gets messy, work on it
+	std::mutex								mJobSemaphoresLock;
+	Array<std::shared_ptr<Soy::TSemaphore>>	mJobSemaphores;
+
 };

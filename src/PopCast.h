@@ -82,7 +82,9 @@ public:
 	std::shared_ptr<Directx::TContext>	mDirectxContext;
 	std::shared_ptr<TCaster>			mCaster;
 	SoyTime								mBaseTimestamp;
-	TPool<Directx::TTexture>			mDirectxTexturePool;
+
+	std::shared_ptr<TPool<Directx::TTexture>>		mDirectxTexturePool;
+	std::shared_ptr<TPool<Opengl::TTexture>>		mOpenglTexturePool;
 
 private:
 	TInstanceRef	mRef;

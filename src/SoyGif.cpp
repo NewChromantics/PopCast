@@ -40,15 +40,15 @@ const char* GifFragShaderDebugPalette_Directx =
 ;
 
 
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,const TEncodeParams& Params,bool SkipFrames)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,std::shared_ptr<TPool<Opengl::TTexture>> TexturePool,const TEncodeParams& Params,bool SkipFrames)
 {
-	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, Context, Params, SkipFrames ) );
+	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, Context, TexturePool, Params, SkipFrames ) );
 	return Encoder;
 }
 
-std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,const TEncodeParams& Params,bool SkipFrames)
+std::shared_ptr<TMediaEncoder> Gif::AllocEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,std::shared_ptr<TPool<Directx::TTexture>> TexturePool,const TEncodeParams& Params,bool SkipFrames)
 {
-	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, Context, Params, SkipFrames ) );
+	std::shared_ptr<TMediaEncoder> Encoder( new TEncoder( OutputBuffer, StreamIndex, Context, TexturePool, Params, SkipFrames ) );
 	return Encoder;
 }
 
@@ -80,11 +80,16 @@ size_t FindNearestColour(const vec3x<uint8>& rgb,const SoyPixelsImpl& Palette)
 	return Index;
 }
 
-void TGifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,std::shared_ptr<Soy::TSemaphore>& JobSemaphore)
+
+std::shared_ptr<SoyPixelsImpl> TCpuGifBlitter::IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSempahore)
 {
-	Soy::Assert( JobSemaphore!=nullptr, "Job semaphore should already be allocated");
-	
-	IndexedImage.Init(Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale);
+	Soy::Assert(Palette != nullptr, "Expected palette");
+	Soy::Assert(Source != nullptr, "Expected Source");
+	Soy::Assert(JobSempahore != nullptr, "Expected Semaphore");
+
+	std::shared_ptr<SoyPixelsImpl> pIndexedImage( new SoyPixels );
+	auto& IndexedImage = *pIndexedImage;
+	IndexedImage.Init( Source->GetWidth(), Source->GetHeight(), SoyPixelsFormat::Greyscale);
 
 	//	brute force
 	for ( int y = 0; y < IndexedImage.GetHeight(); y++ )
@@ -93,82 +98,76 @@ void TGifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixe
 		{
 			float xf = x / (float)IndexedImage.GetWidth();
 			float yf = y / (float)IndexedImage.GetHeight();
-			int sx = xf * Source.GetWidth();
-			int sy = yf * Source.GetHeight();
-			auto rgb = Source.GetPixel3(sx, sy);
-			auto Index = FindNearestColour(rgb, Palette);
+			int sx = xf * Source->GetWidth();
+			int sy = yf * Source->GetHeight();
+			auto rgb = Source->GetPixel3(sx, sy);
+			auto Index = FindNearestColour(rgb, *Palette);
 			IndexedImage.SetPixel(x, y, 0, Index);
 		}
 	}
-	
-	JobSemaphore->OnCompleted();
+
+	JobSempahore->OnCompleted();
+	return pIndexedImage;
 }
 
 
-Opengl::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context) :
-	mContext	 ( Context )
+Opengl::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context,std::shared_ptr<TPool<TTexture>> TexturePool) :
+	mContext		( Context ),
+	mTexturePool	( TexturePool )
 {
 	Soy::Assert( mContext!=nullptr, "Opengl::GifBlitter Expected context");
-	mBlitter.reset( new Opengl::TBlitter );
+	mBlitter.reset( new Opengl::TBlitter( mTexturePool ) );
 }
 
 Opengl::GifBlitter::~GifBlitter()
 {
 	//	deffered delete of stuff
-	DeferDelete( mContext, mIndexImage );
+	DeferDelete( mContext, mTexturePool );
 	DeferDelete( mContext, mBlitter );
 	
 	mContext.reset();
 }
 
-void Opengl::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore)
+std::shared_ptr<SoyPixelsImpl> Opengl::GifBlitter::IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSemaphore)
 {
-	Soy::Assert( JobSemaphore!=nullptr, "Job semaphore should already be allocated");
+	Soy::Assert(Palette != nullptr, "Expected palette");
+	Soy::Assert(Source != nullptr, "Expected Source");
+	Soy::Assert(JobSemaphore != nullptr, "Expected Semaphore");
 	Soy::Assert( mContext!=nullptr, "Cannot use shader if no context");
-	
-	std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = JobSemaphore;
-	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
-	
-	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,FragShader]
-	{
-		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
-		if ( SemaphoreCopy->IsCompleted() )
-			return;
 
-		if ( !mIndexImage )
-			mIndexImage.reset( new TTexture( IndexMeta, GL_TEXTURE_2D ) );
-		
-		if ( !mBlitter )
-			mBlitter.reset( new TBlitter );
+	std::shared_ptr<SoyPixelsImpl> pIndexedImage( new SoyPixels );
+	
+	auto Work = [this,JobSemaphore,Source,Palette,pIndexedImage,FragShader]
+	{
+		SoyPixelsMeta IndexMeta( Source->GetWidth(), Source->GetHeight(), SoyPixelsFormat::Greyscale );
+
+		auto Alloc = [IndexMeta]()
+		{
+			return std::make_shared<TTexture>( IndexMeta, GL_TEXTURE_2D );
+		};
+
+		//	pooled image
+		auto IndexTexture = mTexturePool->Alloc( TTextureMeta(IndexMeta,GL_TEXTURE_2D), Alloc );
 		
 		Array<const SoyPixelsImpl*> Sources;
-		Sources.PushBack( &Source );
-		Sources.PushBack( &Palette );
+		Sources.PushBack( Source.get() );
+		Sources.PushBack( Palette.get() );
 		
 		Opengl::TTextureUploadParams UploadParams;
 		{
 			Soy::TScopeTimerPrint Timer( "Palettising blit", Gif::TimerMinMs );
-			mBlitter->BlitTexture( *mIndexImage, GetArrayBridge(Sources), *mContext, UploadParams, FragShader );
+			mBlitter->BlitTexture( IndexTexture, GetArrayBridge(Sources), *mContext, UploadParams, FragShader );
 		}
 		{
 			Soy::TScopeTimerPrint Timer( "read back indexed image", Gif::TimerMinMs );
-			mIndexImage->Read( IndexedImage );
+			IndexTexture.Read( *pIndexedImage );
+			mTexturePool->Release( IndexTexture );
 		}
 	};
 	
 	mContext->PushJob( Work, *JobSemaphore );
-	try
-	{
-		JobSemaphore->Wait();
-	}
-	catch(std::exception& e)
-	{
-		SemaphoreCopy.reset();
-		JobSemaphore.reset();
-		
-		throw;
-	}
-	JobSemaphore.reset();
+	JobSemaphore->Wait();
+	return pIndexedImage;
 }
 
 std::shared_ptr<TTextureBuffer> Opengl::GifBlitter::CopyImmediate(const Opengl::TTexture& Image)
@@ -177,7 +176,7 @@ std::shared_ptr<TTextureBuffer> Opengl::GifBlitter::CopyImmediate(const Opengl::
 	Buffer->mOpenglTexture.reset( new TTexture( Image.mMeta, GL_TEXTURE_2D ) );
 	
 	if ( !mBlitter )
-		mBlitter.reset( new TBlitter );
+		mBlitter.reset( new TBlitter(nullptr) );
 
 	BufferArray<TTexture,1> ImageAsArray;
 	ImageAsArray.PushBack( Image );
@@ -189,78 +188,66 @@ std::shared_ptr<TTextureBuffer> Opengl::GifBlitter::CopyImmediate(const Opengl::
 
 
 
-Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context) :
-	mContext	 ( Context )
+Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context,std::shared_ptr<TPool<TTexture>> TexturePool) :
+	mContext		( Context ),
+	mTexturePool	( TexturePool )
 {
 	Soy::Assert( mContext!=nullptr, "GifBlitter Expected context");
-	mBlitter.reset( new TBlitter );
+	mBlitter.reset( new TBlitter(mTexturePool) );
 }
 
 Directx::GifBlitter::~GifBlitter()
 {
 	//	deffered delete of stuff
-	Opengl::DeferDelete( mContext, mIndexImage );
+	Opengl::DeferDelete( mContext, mTexturePool );
 	Opengl::DeferDelete( mContext, mBlitter );
 	
 	mContext.reset();
 }
 
-void Directx::GifBlitter::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore>& JobSemaphore)
+std::shared_ptr<SoyPixelsImpl> Directx::GifBlitter::IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSemaphore)
 {
-	Soy::Assert( JobSemaphore!=nullptr, "Job semaphore should already be allocated");
+	Soy::Assert(Palette != nullptr, "Expected palette");
+	Soy::Assert(Source != nullptr, "Expected Source");
+	Soy::Assert(JobSemaphore != nullptr, "Expected Semaphore");
 	Soy::Assert( mContext!=nullptr, "Cannot use shader if no context");
 	
-	std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = JobSemaphore;
+	std::shared_ptr<SoyPixelsImpl> pIndexedImage( new SoyPixels );
 
-	SoyPixelsMeta IndexMeta( Source.GetWidth(), Source.GetHeight(), SoyPixelsFormat::Greyscale );
-	
-
-	//	gr: CRASH ON EXIT HERE
-	//	source & palette deleted
-	auto Work = [this,SemaphoreCopy,&Source,&Palette,&IndexedImage,IndexMeta,FragShader]
+	auto Work = [this,JobSemaphore,Source,Palette,pIndexedImage,FragShader]
 	{
+		auto& IndexedImage = *pIndexedImage;
+		SoyPixelsMeta IndexMeta( Source->GetWidth(), Source->GetHeight(), SoyPixelsFormat::Greyscale );
+
 		Soy::TScopeTimerPrint Timer( "Directx thread IndexImageWithShader blit", 100 );
 
-		//	if this is already completed, then thread may be aborting and all this stuff may already be deleted
-		if ( SemaphoreCopy->IsCompleted() )
-			return;
-
 		auto& Context = *mContext;
-
-		if ( !mIndexImage )
-			mIndexImage.reset( new TTexture( IndexMeta, Context, TTextureMode::ReadOnly ) );
-
-		if ( !mBlitter )
-			mBlitter.reset( new TBlitter );
+		
+		auto AllocTexture = [this,&IndexMeta]
+		{
+			return std::make_shared<TTexture>( IndexMeta, *mContext, TTextureMode::ReadOnly );
+		};
+		auto& IndexTexture = mTexturePool->Alloc( TTextureMeta(IndexMeta, TTextureMode::ReadOnly), AllocTexture );
 		
 		Array<const SoyPixelsImpl*> Sources;
-		Sources.PushBack( &Source );
-		Sources.PushBack( &Palette );
+		Sources.PushBack( Source.get() );
+		Sources.PushBack( Palette.get() );
 		
 		Opengl::TTextureUploadParams UploadParams;
 		{
 			Soy::TScopeTimerPrint Timer( "Palettising blit", Gif::TimerMinMs );
-			mBlitter->BlitTexture( *mIndexImage, GetArrayBridge(Sources), Context, FragShader );	
+			mBlitter->BlitTexture( IndexTexture, GetArrayBridge(Sources), Context, FragShader );	
 		}
 		{
 			Soy::TScopeTimerPrint Timer( "read back indexed image", Gif::TimerMinMs );
-			mIndexImage->Read( IndexedImage, Context );
+			IndexTexture.Read( IndexedImage, Context );
+			mTexturePool->Release( IndexTexture );
 		}
 	};
 	
 	mContext->PushJob( Work, *JobSemaphore );
-	try
-	{
-		JobSemaphore->Wait();
-	}
-	catch(std::exception& e)
-	{
-		SemaphoreCopy.reset();
-		JobSemaphore.reset();
-		
-		throw;
-	}
-	JobSemaphore.reset();
+	JobSemaphore->Wait();
+	return pIndexedImage;
 }
 
 std::shared_ptr<TTextureBuffer> Directx::GifBlitter::CopyImmediate(const Directx::TTexture& Image)
@@ -497,11 +484,11 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 }
 
 
-Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,TEncodeParams Params,bool SkipFrames) :
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Opengl::TContext> Context,std::shared_ptr<TPool<Opengl::TTexture>> TexturePool,TEncodeParams Params,bool SkipFrames) :
 	SoyWorkerThread		( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder		( OutputBuffer ),
 	mStreamIndex		( StreamIndex ),
-	mOpenglGifBlitter	( new Opengl::GifBlitter(Context) ),
+	mOpenglGifBlitter	( new Opengl::GifBlitter(Context,TexturePool) ),
 	mParams				( Params ),
 	mPushedFrameCount	( 0 ),
 	mSkipFrames			( SkipFrames )
@@ -510,11 +497,11 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 }
 
 
-Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,TEncodeParams Params,bool SkipFrames) :
+Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,std::shared_ptr<Directx::TContext> Context,std::shared_ptr<TPool<Directx::TTexture>> TexturePool,TEncodeParams Params,bool SkipFrames) :
 	SoyWorkerThread		( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder		( OutputBuffer ),
 	mStreamIndex		( StreamIndex ),
-	mDirectxGifBlitter	( new Directx::GifBlitter(Context) ),
+	mDirectxGifBlitter	( new Directx::GifBlitter(Context,TexturePool) ),
 	mParams				( Params ),
 	mPushedFrameCount	( 0 ),
 	mSkipFrames			( SkipFrames )
@@ -527,7 +514,7 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 	SoyWorkerThread		( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder		( OutputBuffer ),
 	mStreamIndex		( StreamIndex ),
-	mCpuGifBlitter		( new TGifBlitter() ),
+	mCpuGifBlitter		( new TCpuGifBlitter() ),
 	mParams				( Params ),
 	mPushedFrameCount	( 0 ),
 	mSkipFrames			( SkipFrames )
@@ -542,9 +529,7 @@ Gif::TEncoder::~TEncoder()
 	SoyThread::Stop(false);
 	
 	//	if we're waiting on an opengl job, break it, as unity won't be running the opengl thread whilst destructing(running GC)
-	auto OpenglSemaphore = mDeviceJobSemaphore;
-	if ( OpenglSemaphore )
-		OpenglSemaphore->OnFailed(__func__);
+	AbortJobSemaphores();
 	
 	//	wait for thread to finish
 	WaitToFinish();
@@ -557,6 +542,32 @@ Gif::TEncoder::~TEncoder()
 //	mDirectxGifBlitter.reset();
 
 }
+
+
+std::shared_ptr<Soy::TSemaphore> Gif::TEncoder::AllocJobSempahore()
+{
+	std::lock_guard<std::mutex> Lock( mJobSemaphoresLock );
+
+	auto Semaphore = std::make_shared<Soy::TSemaphore>();
+	mJobSemaphores.PushBack( Semaphore );
+	return Semaphore;
+}
+
+void Gif::TEncoder::AbortJobSemaphores()
+{
+	//	pop each one, abort it and free
+	while ( true )
+	{
+		std::lock_guard<std::mutex> Lock( mJobSemaphoresLock );
+		if ( mJobSemaphores.IsEmpty() )
+			break;
+		auto Semaphore = mJobSemaphores.PopAt(0);
+		Semaphore->OnFailed(__func__);
+		Semaphore.reset();
+	}
+}
+
+
 
 void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
 {
@@ -586,10 +597,17 @@ void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Direct
 	if ( mParams.mCpuOnly )
 		throw Soy::AssertException("GPU mode disabled");
 
+	//	pre-emptively skip frames
+	if ( !CanPushFrame(Timecode) )
+	{
+		OnFramePrePushSkipped(Timecode);
+		return;
+	}
+
 	//	hacky! but the job doesn't have access to its own context...
 	Directx::TContext* ContextCopy = &Context;
 
-	//	all this needs to be done in the dx thread?
+	//	does all this needs to be done in the dx thread?
 	auto MakePacketFromTexture = [this,Image,Timecode,ContextCopy]
 	{
 		std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket );
@@ -641,22 +659,20 @@ bool Gif::TEncoder::Iteration()
 		{
 			auto& Texture = dynamic_cast<TTextureBuffer&>( *Packet.mPixelBuffer );
 		
-			mDeviceJobSemaphore.reset( new Soy::TSemaphore );
 			if ( !IsWorking() )
 				return true;
 
-			//	make a copy for jobs
-			std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = mDeviceJobSemaphore;
 
 			if ( mOpenglGifBlitter && Texture.mOpenglTexture )
 			{
+				auto Semaphore = AllocJobSempahore();
 				//	copy for other thread in case the opengl job gets defferred for a long time and the buffer gets deleted in the meantime;
 				//	run -> stop(in editor) -> opengl queue paused, frames deleted -> enable -> job runs -> frame is deleted
-				auto Read = [&Rgba,Packet,SemaphoreCopy]
+				auto Read = [&Rgba,Packet,Semaphore]
 				{
 					static bool Flip = false;
 					//	gr: if semaphore has been aborted elsewhere (destructor) we know the Texture & Rgba are deleted!
-					if ( SemaphoreCopy->IsCompleted() )
+					if ( Semaphore->IsCompleted() )
 						return;
 
 					Rgba.reset( new SoyPixels );
@@ -664,18 +680,19 @@ bool Gif::TEncoder::Iteration()
 					Texture.mOpenglTexture->Read( *Rgba, SoyPixelsFormat::RGBA, Flip );
 				};
 				auto& Context = GetOpenglContext();
-				Context.PushJob( Read, *mDeviceJobSemaphore );
+				Context.PushJob( Read, *Semaphore );
+				Semaphore->Wait();
 			}
 			else if ( mDirectxGifBlitter && Texture.mDirectxTexture )
 			{
+				auto Semaphore = AllocJobSempahore();
 				//	copy for other thread in case the opengl job gets defferred for a long time and the buffer gets deleted in the meantime;
 				//	run -> stop(in editor) -> opengl queue paused, frames deleted -> enable -> job runs -> frame is deleted
-				std::shared_ptr<Soy::TSemaphore> SemaphoreCopy = mDeviceJobSemaphore;
-				auto Read = [&Rgba,Packet,SemaphoreCopy,this]
+				auto Read = [&Rgba,Packet,Semaphore,this]
 				{
 					static bool Flip = false;
 					//	gr: if semaphore has been aborted elsewhere (destructor) we know the Texture & Rgba are deleted!
-					if ( SemaphoreCopy->IsCompleted() )
+					if ( Semaphore->IsCompleted() )
 						return;
 
 					Rgba.reset( new SoyPixels );
@@ -683,30 +700,18 @@ bool Gif::TEncoder::Iteration()
 					Texture.mDirectxTexture->Read( *Rgba, *mDirectxGifBlitter->mContext );
 				};
 				auto& Context = GetDirectxContext();
-				Context.PushJob( Read, *mDeviceJobSemaphore );
+				Context.PushJob( Read, *Semaphore );
+				Semaphore->Wait();
 			}
 			else if ( Texture.mPixels )
 			{
 				Rgba = Texture.mPixels;
-				mDeviceJobSemaphore->OnCompleted();
 			}
 			else
 			{
 				//	throw?
-				mDeviceJobSemaphore->OnFailed("No graphics device blitter");
+				throw Soy::AssertException("No graphics device blitter");
 			}
-
-			try
-			{
-				mDeviceJobSemaphore->Wait();
-			}
-			catch(...)
-			{
-				//	gr: needed?
-				SemaphoreCopy.reset();
-				throw;
-			}
-			mDeviceJobSemaphore.reset();
 			Packet.mPixelBuffer.reset();
 		}
 	
@@ -718,9 +723,6 @@ bool Gif::TEncoder::Iteration()
 	}
 	catch(std::exception& e)
 	{
-		//	gr: needed? always null here?
-		mDeviceJobSemaphore.reset();
-			
 		//	data semaphore may be early-aborted, but job still in queue (see above)
 		std::Debug << "Failed to read pixels from pending gif-encoding buffer (dropping packet); " << e.what();
 		//	drop packet
@@ -902,31 +904,26 @@ void Gif::ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Pa
 }
 
 
-
-void Gif::TEncoder::IndexImageWithShader(SoyPixelsImpl& IndexedImage,const SoyPixelsImpl& Palette,const SoyPixelsImpl& Source,const char* FragShader)
+std::shared_ptr<SoyPixelsImpl> Gif::TEncoder::IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette, std::shared_ptr<SoyPixelsImpl> Source, const char* FragShader)
 {
 	Soy::TScopeTimerPrint Timer( __func__, Gif::TimerMinMs );
 
 	if ( !IsWorking() )
-		return;
-	mDeviceJobSemaphore.reset( new Soy::TSemaphore );
-	if ( !IsWorking() )
-		return;
+		return nullptr;
 	
+	auto Semaphore = AllocJobSempahore();
+
 	if ( mOpenglGifBlitter && !mParams.mCpuOnly )
 	{
-		mOpenglGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
-		mDeviceJobSemaphore.reset();
+		return mOpenglGifBlitter->IndexImageWithShader( Palette, Source, FragShader, Semaphore );
 	}
 	else if ( mDirectxGifBlitter && !mParams.mCpuOnly )
 	{
-		mDirectxGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, FragShader, mDeviceJobSemaphore );
-		mDeviceJobSemaphore.reset();
+		return mDirectxGifBlitter->IndexImageWithShader( Palette, Source, FragShader, Semaphore );
 	}
 	else
 	{
-		mCpuGifBlitter->IndexImageWithShader( IndexedImage, Palette, Source, mDeviceJobSemaphore );
-		mDeviceJobSemaphore.reset();
+		return mCpuGifBlitter->IndexImageWithShader( Palette, Source, FragShader, Semaphore );
 	}
 }
 
@@ -970,7 +967,7 @@ void Gif::MaskImage(SoyPixelsImpl& RgbaMutable,const SoyPixelsImpl& PrevRgb,bool
 	}
 }
 
-bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& Rgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
+bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const SoyPixelsImpl& OriginalRgba,bool& Keyframe,const char* IndexingShader,const TEncodeParams& Params,TMaskPixelFunc MaskPixelFunc)
 {
 	std::shared_ptr<SoyPixelsImpl> pNewPalette;
 
@@ -985,51 +982,76 @@ bool Gif::TEncoder::MakePalettisedImage(SoyPixelsImpl& PalettisedImage,const Soy
 	bool AllowIntraFrames = (mPushedFrameCount>MinFramePushForIntra) && Params.mAllowIntraFrames;
 	bool DoMasking = TestAlphaSquare || AllowIntraFrames;
 	
-	std::shared_ptr<SoyPixelsImpl> RgbaCopy;
+	std::shared_ptr<SoyPixelsImpl> Rgba( new SoyPixels( OriginalRgba ) );
+
 	if ( DoMasking && mPrevRgb )
 	{
-		Soy::Assert( Rgba.GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
-		RgbaCopy.reset( new SoyPixels( Rgba ) );
-		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( Rgba );
+		Soy::Assert( Rgba->GetFormat() == SoyPixelsFormat::RGBA, "Need input to have an alpha channel. SHould be set form opengl read" );
+		auto& RgbaMutable = const_cast<SoyPixelsImpl&>( *Rgba );
 		MaskImage( RgbaMutable, *mPrevRgb, Keyframe, TestAlphaSquare, Params, MaskPixelFunc );
 	}
 	
 	//	gr: this currently generates a full palette (can be > 256)
 	pNewPalette.reset( new SoyPixels );
-	GetPalette( *pNewPalette, Rgba, Params, Keyframe );
+	GetPalette( *pNewPalette, *Rgba, Params, Keyframe );
 	
 	//	if the palette is empty... we're ALL transparent!
 	if ( pNewPalette->GetWidth() == 0 )
 		return false;
 
-	std::shared_ptr<SoyPixels> pIndexedImage( new SoyPixels );
-	auto& IndexedImage = *pIndexedImage;
-	
-	{
-		//	gr: sort & shrink palette here, don't use lookup table
-		ShrinkPalette( *pNewPalette, false, Params );
+	//	gr: sort & shrink palette here, don't use lookup table
+	ShrinkPalette( *pNewPalette, false, Params );
 		
-		//	insert/override transparent
-		pNewPalette->SetPixel( TransparentIndex, 0, Params.mTransparentColour );
+	//	insert/override transparent
+	pNewPalette->SetPixel( TransparentIndex, 0, Params.mTransparentColour );
 		
-		IndexImageWithShader( IndexedImage, *pNewPalette, Rgba, IndexingShader );
-	}
-	
+	std::shared_ptr<SoyPixelsImpl> pIndexedImage = IndexImageWithShader( pNewPalette, Rgba, IndexingShader );
+	Soy::Assert(pIndexedImage != nullptr, "Failed to make indexed image");
+
 	//	save unmodifed frame
 	//	gr: should this store(accumulate) a flattened image, so comparison with prev is palettised, rather than original
-	if ( RgbaCopy )
-		mPrevRgb = RgbaCopy;
-	else
-		mPrevRgb.reset( new SoyPixels( Rgba ) );
+	mPrevRgb = Rgba;
 	
 	//	join together
 	Soy::TScopeTimerPrint Timer("MakePaletteised",Gif::TimerMinMs);
 	auto WriteTransparentIndex = Params.mDebugTransparency ? DebugTransparentIndex : TransparentIndex;
-	SoyPixelsFormat::MakePaletteised( PalettisedImage, IndexedImage, *pNewPalette, WriteTransparentIndex );
+	SoyPixelsFormat::MakePaletteised( PalettisedImage, *pIndexedImage, *pNewPalette, WriteTransparentIndex );
 	
 	return true;
 }
-	
+
+bool Gif::TEncoder::CanPushFrame(SoyTime Timecode)
+{
+	//	if skipping and we have something pending, skip this one
+	if ( mSkipFrames )
+	{
+		static int MaxPending = 1;
+		auto PendingCount = mPendingFrames.GetSize();
+		if ( PendingCount >= MaxPending )
+			return false;
+	}
+
+	//	pool is full (and other OOM checks)
+	if ( mDirectxGifBlitter )
+	{
+		if ( mDirectxGifBlitter->GetTexturePool().IsFull() )
+			return false;
+	}
+
+	if ( mOpenglGifBlitter )
+	{
+		if ( mOpenglGifBlitter->GetTexturePool().IsFull() )
+			return false;
+	}
+
+	return true;
+}
+
+void Gif::TEncoder::OnFramePrePushSkipped(SoyTime Timecode)
+{
+	mOnFramePushSkipped.OnTriggered(Timecode);
+}
+
 
 TTextureBuffer::TTextureBuffer(std::shared_ptr<Opengl::TContext> Context) :
 	mOpenglContext	( Context )

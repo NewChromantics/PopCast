@@ -367,10 +367,20 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams& _Params,std
 	mDirectxContext	( DirectxContext ),
 	mBaseTimestamp	( true )	//	timestamps based on now
 {
+	if ( mOpenglContext )
+		mOpenglTexturePool.reset( new TPool<Opengl::TTexture>() );
+	if ( mDirectxContext )
+		mDirectxTexturePool.reset( new TPool<Directx::TTexture>() );
+
 	auto Params = _Params;
 	if ( TFileCaster::HandlesFilename( Params.mName ) )
 	{
-		mCaster.reset( new TFileCaster( Params, mOpenglContext, mDirectxContext ) );
+		TCasterDeviceParams DeviceParams;
+		DeviceParams.OpenglContext = mOpenglContext;
+		DeviceParams.OpenglTexturePool = mOpenglTexturePool;
+		DeviceParams.DirectxContext = mDirectxContext;
+		DeviceParams.DirectxTexturePool = mDirectxTexturePool;
+		mCaster.reset( new TFileCaster( Params, DeviceParams ) );
 	}
 #if defined(ENABLE_AIRPLAY)
 	else if ( Soy::StringTrimLeft( Params.mName, "airplay:", false ) )
@@ -470,7 +480,7 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 		{
 			std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
 			auto& TextureMutable = const_cast<Directx::TTexture&>(Texture);
-			TextureMutable.Read( *Pixels, *ContextCopy, mDirectxTexturePool );
+			TextureMutable.Read( *Pixels, *ContextCopy, mDirectxTexturePool.get() );
 			Caster->Write( Pixels, Frame );
 		};
 		Context.PushJob( ReadPixels );

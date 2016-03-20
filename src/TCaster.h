@@ -6,6 +6,17 @@
 #include "SoyGif.h"
 
 
+
+class TCasterDeviceParams
+{
+public:
+	std::shared_ptr<Opengl::TContext>			OpenglContext;
+	std::shared_ptr<TPool<Opengl::TTexture>>	OpenglTexturePool;
+
+	std::shared_ptr<Directx::TContext>			DirectxContext;
+	std::shared_ptr<TPool<Directx::TTexture>>	DirectxTexturePool;
+};
+
 class TCasterParams
 {
 public:
