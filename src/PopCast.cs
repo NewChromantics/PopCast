@@ -118,7 +118,6 @@ public class PopCast
 
 	private ulong	mInstance = 0;
 	private static int	mPluginEventId = PopCast_GetPluginEventId();
-	private int		mTexturePushCount = 0;
     private bool mPushDebugFrames = false;
 
 	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
@@ -154,15 +153,6 @@ public class PopCast
 			mDebugLogDelegate (Message);
 	}
 
-	public bool IsAllocated()
-	{
-		return mInstance != 0;
-	}
-
-	public int	GetTexturePushCount()
-	{
-		return mTexturePushCount;
-	}
 
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern ulong		PopCast_Alloc(String Filename,uint Params);
@@ -196,17 +186,6 @@ public class PopCast
 
 	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern void		PopCast_ReleaseString(System.IntPtr Str);
-
-
-	public static void EnumDevices()
-	{
-		PopCast_EnumDevices();
-	}
-
-	public static ulong GetBackgroundGpuJobCount()
-	{
-		return PopCast_GetBackgroundGpuJobCount();
-	}
 
 	public PopCast(string Filename,PopCastParams Params)
 	{
@@ -250,7 +229,22 @@ public class PopCast
 		PopCast_Free (mInstance);
 		FlushDebug ();
 	}
-	
+
+	public static void EnumDevices()
+	{
+		PopCast_EnumDevices();
+	}
+
+	public static ulong GetBackgroundGpuJobCount()
+	{
+		return PopCast_GetBackgroundGpuJobCount();
+	}
+
+	public bool IsAllocated()
+	{
+		return mInstance != 0;
+	}
+
 	void FlushDebug()
 	{
 		FlushDebug (mDebugLogDelegate);
@@ -286,12 +280,10 @@ public class PopCast
 		if (Target is RenderTexture) {
 			RenderTexture Target_rt = Target as RenderTexture;
 			PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
-			mTexturePushCount++;
 		}
 		if (Target is Texture2D) {
 			Texture2D Target_2d = Target as Texture2D;
 			PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache (ref mTexture2DPtrCache, Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
-			mTexturePushCount++;
 		}
 		FlushDebug ();
 	}
@@ -301,7 +293,6 @@ public class PopCast
 		Update();
 		FlushDebug();
 		PopCast_UpdateTextureDebug(mInstance, StreamIndex);
-		mTexturePushCount++;
 		FlushDebug();
 	}
 
