@@ -153,6 +153,7 @@ public:
 };
 
 
+#if defined(TARGET_WINDOWS)
 class Directx::GifBlitter : public TGifBlitter
 {
 public:
@@ -168,7 +169,7 @@ public:
 	std::shared_ptr<TBlitter>			mBlitter;
 	std::shared_ptr<TPool<TTexture>>	mTexturePool;
 };
-
+#endif
 
 
 class Gif::TEncoder : public TMediaEncoder, public SoyWorkerThread
@@ -216,8 +217,10 @@ public:
 	
 
 	std::shared_ptr<Opengl::GifBlitter>		mOpenglGifBlitter;
-	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
 	std::shared_ptr<TGifBlitter>			mCpuGifBlitter;
+#if defined(TARGET_WINDOWS)
+	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
+#endif
 
 	std::shared_ptr<SoyPixelsImpl>			mPrevRgb;
 

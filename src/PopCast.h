@@ -3,10 +3,17 @@
 #include "PopUnity.h"
 
 
+#if defined(TARGET_WINDOWS)
 //	needed for the pool
 #include <SoyDirectx.h>	
+#endif
 #include <SoyPool.h>
 
+namespace Directx
+{
+	class TContext;
+	class TTexture;
+}
 
 class TCaster;
 class TCasterParams;

@@ -50,7 +50,7 @@ namespace PopCast
 TExportManager<std::string, char>& PopCast::GetExportStringManager()
 {
 	if ( !gExportStringManager )
-		gExportStringManager.reset( new TExportManager<std::string,char>() );
+		gExportStringManager.reset( new TExportManager<std::string,char>(100) );
 
 	return *gExportStringManager;
 }
@@ -149,13 +149,14 @@ __export Unity::ulong	PopCast_GetBackgroundGpuJobCount()
 	try
 	{
 		auto OpenglContext = Unity::GetOpenglContextPtr();
-		auto DirectxContext = Unity::GetDirectxContextPtr();
-
 		if ( OpenglContext )
 			JobCount += OpenglContext->GetJobCount();
 
+#if defined(TARGET_WINDOWS)
+		auto DirectxContext = Unity::GetDirectxContextPtr();
 		if ( DirectxContext )
 			JobCount += DirectxContext->GetJobCount();
+#endif
 	}
 	catch (std::exception& e)
 	{
@@ -210,8 +211,10 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 	try
 	{
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
-		auto DirectxContext = Unity::GetDirectxContextPtr();
 		auto OpenglContext = Unity::GetOpenglContextPtr();
+#if defined(TARGET_WINDOWS)
+		auto DirectxContext = Unity::GetDirectxContextPtr();
+#endif
 		
 		if ( OpenglContext )
 		{
@@ -222,13 +225,15 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 			return true;
 		}
 
+#if defined(TARGET_WINDOWS)
 		if ( DirectxContext )
 		{
 			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
 			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
 			return true;
 		}
-
+#endif
+		
 		throw Soy::AssertException("Missing graphics device");
 	}
 	catch(std::exception& e)
@@ -246,9 +251,11 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	try
 	{
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
-		auto DirectxContext = Unity::GetDirectxContextPtr();
 		auto OpenglContext = Unity::GetOpenglContextPtr();
-		
+#if defined(TARGET_WINDOWS)
+		auto DirectxContext = Unity::GetDirectxContextPtr();
+#endif
+
 		if ( OpenglContext )
 		{
 			//	assuming type atm... maybe we can extract it via opengl?
@@ -258,13 +265,14 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 			return true;
 		}
 
+#if defined(TARGET_WINDOWS)
 		if ( DirectxContext )
 		{
 			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
 			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
 			return true;
 		}
-
+#endif
 		throw Soy::AssertException("Missing graphics device");
 	}
 	catch(std::exception& e)
@@ -388,9 +396,10 @@ std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::sha
 	if ( !OpenglContext )
 		OpenglContext = Unity::GetOpenglContextPtr();
 
+#if defined(TARGET_WINDOWS)
 	if ( !DirectxContext )
 		DirectxContext = Unity::GetDirectxContextPtr();
-	
+#endif
 	std::shared_ptr<TInstance> pInstance( new TInstance(InstanceRef,Params,OpenglContext,DirectxContext) );
 	
 	gInstancesLock.lock();
@@ -535,7 +544,8 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex
 
 void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamIndex)
 {
-	Soy::Assert( mDirectxContext!=nullptr, "Instance requires an opengl context" );
+#if defined(TARGET_WINDOWS)
+	Soy::Assert( mDirectxContext!=nullptr, "Instance requires an directx context" );
 	Soy::Assert( mCaster != nullptr, "Expected Caster" );
 	auto& Context = *mDirectxContext;
 	
@@ -575,7 +585,9 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 		//	failed, maybe pixels will be okay
 		//std::Debug << "WriteFrame opengl failed: " << e.what() << std::endl;
 	}
-	
+#else
+	throw Soy::AssertException("Directx not on this platform");
+#endif
 }
 
 void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex)
