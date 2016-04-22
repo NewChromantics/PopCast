@@ -101,9 +101,9 @@ public:
 	TTextureBuffer(std::shared_ptr<SoyPixelsImpl> Pixels);
 	~TTextureBuffer();
 	
-	virtual void		Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context) override	{}
-	virtual void		Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context) override	{}
-	virtual void		Lock(ArrayBridge<SoyPixelsImpl*>&& Textures) override	{}
+	virtual void		Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context,float3x3& Transform) override	{}
+	virtual void		Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context,float3x3& Transform) override	{}
+	virtual void		Lock(ArrayBridge<SoyPixelsImpl*>&& Textures,float3x3& Transform) override	{}
 	virtual void		Unlock() override	{}
 
 	
