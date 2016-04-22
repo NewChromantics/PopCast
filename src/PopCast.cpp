@@ -359,6 +359,47 @@ __export void	PopCast_ReleaseString(const char* String)
 	}
 }
 
+__export const char* PopCast_PopDebugString()
+{
+	try
+	{
+		return Unity::PopDebugString();
+	}
+	catch(std::exception& e)
+	{
+		//	gr: this could get a bit recursive
+		std::Debug << __func__ << " exception " << e.what() << std::endl;
+		return nullptr;
+	}
+}
+
+__export void PopCast_ReleaseDebugString(const char* String)
+{
+	try
+	{
+		Unity::ReleaseDebugString( String );
+	}
+	catch(std::exception& e)
+	{
+		//	gr: this could get a bit recursive
+		std::Debug << __func__ << " exception " << e.what() << std::endl;
+	}
+}
+
+__export void PopCast_ReleaseAllExports()
+{
+	try
+	{
+		Unity::ReleaseDebugStringAll();
+	}
+	catch(std::exception& e)
+	{
+		//	gr: this could get a bit recursive
+		std::Debug << __func__ << " exception " << e.what() << std::endl;
+	}
+}
+
+
 
 #if defined(ENABLE_GOOGLECAST)
 GoogleCast::TContext& PopCast::GetGoogleCastContext()

@@ -31,6 +31,11 @@ __export Unity::sint	PopCast_GetPendingFrameCount(Unity::ulong Instance);
 __export const char*	PopCast_GetMetaJson(Unity::ulong Instance);
 __export void			PopCast_ReleaseString(const char* String);
 
+__export const char*	PopCast_PopDebugString();
+__export void			PopCast_ReleaseDebugString(const char* String);
+__export void			PopCast_ReleaseAllExports();
+
+
 
 //	way too many problems with using a struct, reverting to bit flags. (which may also have problems with endianness, container size etc)
 //		android ONLY struct is offset

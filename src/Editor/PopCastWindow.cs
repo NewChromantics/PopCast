@@ -71,7 +71,7 @@ public class PopCastWindow : EditorWindow
 			RecordToTexture = new RenderTexture(RecordCamera.pixelWidth, RecordCamera.pixelHeight, 16);
 
 		mPopCast = new PopCast(Filename, Parameters);
-		mPopCast.AddDebugCallback(Debug.Log);
+		PopCast.EnableDebugLog = true;
 
 	}
 

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;		// required for DllImport
 using System;                               // requred for IntPtr
 
 
+[Serializable]
 public class PopCastMeta
 {
 	public int BackgroundGpuJobCount;
@@ -89,6 +90,7 @@ public class  PopCastParams
 	public bool Gif_LzwCompression = true;
 }
 
+
 public class PopCast
 {
 #if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
@@ -127,35 +129,37 @@ public class PopCast
 	private TTexturePtrCache<Texture2D>		mTexture2DPtrCache = new TTexturePtrCache<Texture2D>();
 	private TTexturePtrCache<RenderTexture>	mRenderTexturePtrCache = new TTexturePtrCache<RenderTexture>();
 
-	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	public delegate void DebugLogDelegate(string str);
-	private DebugLogDelegate	mDebugLogDelegate = null;
-	
-	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	public delegate void OpenglCallbackDelegate();
-
-	public void AddDebugCallback(DebugLogDelegate Function)
+	//	add your own callbacks here to catch debug output (eg. to a GUI)
+	public static System.Action<string> DebugCallback;
+	public static bool EnableDebugLog
 	{
-		if ( mDebugLogDelegate == null ) {
-			mDebugLogDelegate = new DebugLogDelegate (Function);
-		} else {
-			mDebugLogDelegate += Function;
+		get
+		{
+			return DebugCallbackWrapper != null;
 		}
-	}
-	
-	public void RemoveDebugCallback(DebugLogDelegate Function)
-	{
-		if ( mDebugLogDelegate != null ) {
-			mDebugLogDelegate -= Function;
+		set
+		{
+			if (value == false)
+			{
+				DebugCallback -= DebugCallbackWrapper;
+				DebugCallbackWrapper = null;
+			}
+			else {
+				if (DebugCallbackWrapper == null)
+				{
+					DebugCallbackWrapper = (string Message) => {
+						Debug.Log(Message);
+					};
+					DebugCallback += DebugCallbackWrapper;
+				}
+			}
 		}
-	}
-	
-	void DebugLog(string Message)
-	{
-		if ( mDebugLogDelegate != null )
-			mDebugLogDelegate (Message);
+
 	}
 
+	//	internal wrapper to allow global toggling via inspector - this is essentially our "is enabled" bool
+	private static System.Action<string> DebugCallbackWrapper;
+	
 
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern ulong		PopCast_Alloc(String Filename,uint Params);
@@ -169,9 +173,6 @@ public class PopCast
 	[DllImport (PluginName)]
 	private static extern int		PopCast_GetPluginEventId();
 	
-	[DllImport (PluginName)]
-	private static extern bool		FlushDebug([MarshalAs(UnmanagedType.FunctionPtr)]System.IntPtr FunctionPtr);
-
 	[DllImport (PluginName)]
 	private static extern bool		PopCast_UpdateTexture2D(ulong Instance,System.IntPtr TextureId,int Width,int Height,TextureFormat textureFormat,int StreamIndex);
 
@@ -192,6 +193,16 @@ public class PopCast
 
 	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern int		PopCast_GetPendingFrameCount(ulong Instance);
+
+	[DllImport(PluginName)]
+	private static extern System.IntPtr PopCast_PopDebugString();
+
+	[DllImport(PluginName)]
+	private static extern void		PopCast_ReleaseDebugString(System.IntPtr String);
+
+	[DllImport(PluginName)]
+	public static extern void		PopCast_ReleaseAllExports();
+
 
 
 	public PopCast(string Filename,PopCastParams Params)
@@ -229,12 +240,13 @@ public class PopCast
 	
 	~PopCast()
 	{
-		//	gr: don't quite get the destruction order here, but need to remove the [external] delegates in destructor. 
-		//	Assuming external delegate has been deleted, and this garbage collection (despite being explicitly called) 
-		//	is still deffered until after parent object[monobehaviour] has been destroyed (and external function no longer exists)
-		mDebugLogDelegate = null;
-		PopCast_Free (mInstance);
-		FlushDebug ();
+		Free();
+	}
+
+	public void Free()
+	{
+		PopCast_Free(mInstance);
+		FlushDebug();
 	}
 
 	//	returns negative on error (already free?)
@@ -242,12 +254,6 @@ public class PopCast
 	{
 		var Pending = PopCast_GetPendingFrameCount( mInstance );
 		return Pending;
-	}
-
-	public void Free()
-	{
-		PopCast_Free(mInstance);
-		FlushDebug();
 	}
 
 	public static void EnumDevices()
@@ -267,22 +273,35 @@ public class PopCast
 
 	void FlushDebug()
 	{
-		FlushDebug (mDebugLogDelegate);
+		FlushDebug(DebugCallback);
 	}
 
-	public static void FlushDebug(DebugLogDelegate Callback)
+	/// <summary>Flush all debug text to a callback function
+	///	</summary>
+	public static void FlushDebug(System.Action<string> Callback)
 	{
-		//	if we have no listeners, do fast flush
-		bool HasListeners = (Callback != null) && (Callback.GetInvocationList ().Length > 0);
-		if (HasListeners) {
-			//	IOS (and aot-only platforms cannot get a function pointer. Find a workaround!
-#if UNITY_IOS && !UNITY_EDITOR
-			FlushDebug (System.IntPtr.Zero);
-#else
-			FlushDebug (Marshal.GetFunctionPointerForDelegate (Callback));
-#endif
-		} else {
-			FlushDebug (System.IntPtr.Zero);
+		int MaxFlushPerFrame = 100;
+		int i = 0;
+		while (i++ < MaxFlushPerFrame)
+		{
+			System.IntPtr StringPtr = PopCast_PopDebugString();
+
+			//	no more strings to pop
+			if (StringPtr == System.IntPtr.Zero)
+				break;
+
+			try
+			{
+				string Str = Marshal.PtrToStringAnsi(StringPtr);
+				if (Callback != null)
+					Callback.Invoke(Str);
+				PopCast_ReleaseDebugString(StringPtr);
+			}
+			catch
+			{
+				PopCast_ReleaseDebugString(StringPtr);
+				throw;
+			}
 		}
 	}
 

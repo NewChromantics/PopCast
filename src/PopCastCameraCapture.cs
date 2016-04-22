@@ -10,13 +10,15 @@ public class PopCastCameraCapture : MonoBehaviour
 	public string mOutputTarget = "file:StreamingAssets/*.gif";
 	public Camera mCaptureCamera;
 	public RenderTexture mCaptureCameraTexture;
+	public bool EnableDebug = true;
 
 	void OnEnable()
 	{
 		if (mCast == null)
 		{
 			mCast = new PopCast(mOutputTarget, CastParams);
-			mCast.AddDebugCallback(Debug.Log);
+			if (EnableDebug)
+				PopCast.EnableDebugLog = EnableDebug;
 		}
 	}
 
