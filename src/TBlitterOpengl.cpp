@@ -1,6 +1,7 @@
 #include "TBlitterOpengl.h"
 #include "TBlitter.h"
 #include <SoyMedia.h>
+#include <SoyJson.h>
 
 
 
@@ -36,18 +37,35 @@ const char* WatermarkGlsl =
 static auto BlitFragShader_Yuv_8_88_Full =
 #include "BlitYuv_8_88_Full.glsl.frag"
 ;
-
-static auto BlitFragShader_Yuv_8_88_Video =
-#include "BlitYuv_8_88_Full.glsl.frag"
+static auto BlitFragShader_Yuv_8_88_Ntsc =
+#include "BlitYuv_8_88_Ntsc.glsl.frag"
 ;
+static auto BlitFragShader_Yuv_8_88_Smptec =
+#include "BlitYuv_8_88_Ntsc.glsl.frag"
+;
+
 
 static auto BlitFragShader_Yuv_8_8_8_Full =
 #include "BlitYuv_8_8_8_Full.glsl.frag"
 ;
-
-static auto BlitFragShader_Yuv_8_8_8_Video =
-#include "BlitYuv_8_8_8_Video.glsl.frag"
+static auto BlitFragShader_Yuv_8_8_8_Ntsc =
+#include "BlitYuv_8_8_8_Ntsc.glsl.frag"
 ;
+static auto BlitFragShader_Yuv_8_8_8_Smptec =
+#include "BlitYuv_8_8_8_Ntsc.glsl.frag"
+;
+
+/*
+static auto BlitFragShader_Yuv_844_Full =
+#include "BlitYuv_844_Full.glsl.frag"
+;
+static auto BlitFragShader_Yuv_844_Ntsc =
+#include "BlitYuv_844_Ntsc.glsl.frag"
+;
+static auto BlitFragShader_Yuv_844_Smptec =
+#include "BlitYuv_844_Ntsc.glsl.frag"
+;
+*/
 
 static auto BlitFragShaderRectangle __unused =
 #include "BlitRectangle.glsl.frag"
@@ -135,7 +153,7 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(const std::string& 
 			return nullptr;
 		}
 
-		std::Debug << "Failed to allocate shader " << Name << ", reverting to test shader..." << std::endl;
+		std::Debug << "Failed to allocate shader " << Name << ", reverting to test shader... Exception: " << e.what()  << std::endl;
 		return GetBackupShader( Context );
 	}
 }
@@ -169,9 +187,17 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl:
 		switch ( MergedFormat )
 		{
 			case SoyPixelsFormat::Yuv_8_88_Full:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Full, Context );
-			case SoyPixelsFormat::Yuv_8_88_Video:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Video, Context );
+			case SoyPixelsFormat::Yuv_8_88_Ntsc:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Ntsc, Context );
+			case SoyPixelsFormat::Yuv_8_88_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Smptec, Context );
+			
 			case SoyPixelsFormat::Yuv_8_8_8_Full:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Full, Context );
-			case SoyPixelsFormat::Yuv_8_8_8_Video:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Video, Context );
+			case SoyPixelsFormat::Yuv_8_8_8_Ntsc:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Ntsc, Context );
+			case SoyPixelsFormat::Yuv_8_8_8_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Smptec, Context );
+			
+			//case SoyPixelsFormat::Yuv_844_Full:		return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_844_Full, Context );
+			//case SoyPixelsFormat::Yuv_844_Ntsc:		return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_844_Ntsc, Context );
+			//case SoyPixelsFormat::Yuv_844_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_844_Smptec, Context );
+			
 			default:break;
 		}
 
@@ -262,6 +288,9 @@ std::shared_ptr<Opengl::TGeometry> Opengl::TBlitter::GetGeo(Opengl::TContext& Co
 
 void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Error,Opengl::TContext& Context)
 {
+	//	gr: until we have text blitting, we need to at least print out the error
+	std::Debug << "BlitError(" << Error << ")" << std::endl;
+
 	//	gr: add non-
 	std::shared_ptr<TShader> ErrorShader = GetErrorShader( Context );
 
@@ -468,5 +497,15 @@ Opengl::TTexture& Opengl::TBlitter::GetTempTexture(SoyPixelsMeta Meta,TContext& 
 	auto pTexture = GetTempTexturePtr( Meta, Context, Mode );
 	Soy::Assert( pTexture!=nullptr, "Failed to alloc temp texture");
 	return *pTexture;
+}
+
+
+void Opengl::TBlitter::GetMeta(TJsonWriter& Json)
+{
+	Soy::TBlitter::GetMeta( Json );
+
+	auto& Pool = GetTexturePool();
+
+	Json.Push("BlitterTexturePoolSize", Pool.GetAllocCount() );
 }
 

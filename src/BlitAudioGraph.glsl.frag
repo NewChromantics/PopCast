@@ -24,6 +24,7 @@ void main()
 	
 	vec3 rgb = uv.x < Timeu ? BehindColour : AheadColour;
 	
+	/*
 	//	Draw time bar
 	float TimeBarHalfWidth = 0.01;
 	if ( uv.x >= Timeu - TimeBarHalfWidth && uv.x <= Timeu + TimeBarHalfWidth )
@@ -31,6 +32,7 @@ void main()
 		gl_FragColor = vec4( TimeColour, 1 );
 		return;
 	}
+	 */
 	
 	float Sample = texture2D( AudioData, vec2( Sampleu, 0 ) ).r;
 	float SampleRange = (Sample * 2.0) - 1.0 ;

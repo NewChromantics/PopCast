@@ -3,11 +3,11 @@
 #include <SoyVector.h>
 
 
-#define WATERMARK_RGB		"1, 0, 0.376"
-#define WATERMARK_PREAMBLE_GLSL	"#define WATERMARK_RGB	vec3(" WATERMARK_RGB ")\n"
-#define WATERMARK_PREAMBLE_HLSL	"#define WATERMARK_RGB	float3(" WATERMARK_RGB ")\n"
+#define WATERMARK_PREAMBLE_GLSL	""
+#define WATERMARK_PREAMBLE_HLSL	""
 
 
+class TJsonWriter;
 
 namespace Soy
 {
@@ -34,6 +34,8 @@ public:
 		mMergeYuv		( true )
 	{
 	}
+	
+	virtual void	GetMeta(TJsonWriter& Json)	{}	//	todo
 
 	//	gr: function in case we can cache it in future and skip the SetUniform later
 	void			SetTransform(const float3x3& Transform)		{	mTransform = Transform;	}

@@ -15,6 +15,8 @@ class Directx::TBlitter : public Soy::TBlitter
 public:
 	TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool);
 
+	virtual void				GetMeta(TJsonWriter& Json) override;
+
 	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,std::shared_ptr<TShader> OverrideShader);
 	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,const char* OverrideShader=nullptr);
 	void						BlitError(TTexture& Target,const std::string& Error,TContext& Context);
@@ -24,7 +26,7 @@ public:
 	TRenderTarget&				GetRenderTarget(std::shared_ptr<TTexture>& Texture,TContext& Context);
 	
 	std::shared_ptr<TGeometry>	GetGeo(Directx::TContext& Context);
-	std::shared_ptr<TShader>	GetShader(ArrayBridge<const SoyPixelsImpl*>& Sources,Directx::TContext& Context);
+	std::shared_ptr<TShader>	GetShader(ArrayBridge<std::shared_ptr<Directx::TTexture>>& Sources,Directx::TContext& Context);
 
 	std::shared_ptr<TShader>	GetShader(const std::string& Name,const char* Source,TContext& Context);
 	std::shared_ptr<TShader>	GetBackupShader(TContext& Context);		//	shader for when a shader doesn't compile

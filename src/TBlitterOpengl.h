@@ -18,6 +18,8 @@ public:
 	TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool);
 	~TBlitter();
 
+	virtual void	GetMeta(TJsonWriter& Json) override;
+
 	void			BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,std::shared_ptr<TShader> OverrideShader=nullptr);
 	void			BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader);
 	void			BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader=nullptr);

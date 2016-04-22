@@ -1,6 +1,6 @@
 #include "TBlitterDirectx.h"
 #include <SoyMedia.h>
-
+#include <SoyJson.h>
 
 
 const char* Directx::BlitVertShader = 
@@ -23,20 +23,38 @@ const char* WatermarkHlsl =
 #include "BlitWatermark.hlsl.frag"
 ;
 
+
 static auto BlitFragShader_Yuv_8_88_Full =
 #include "BlitYuv_8_88_Full.hlsl.frag"
 ;
-
-static auto BlitFragShader_Yuv_8_88_Video =
-#include "BlitYuv_8_88_Full.hlsl.frag"
+static auto BlitFragShader_Yuv_8_88_Ntsc =
+#include "BlitYuv_8_88_Ntsc.hlsl.frag"
 ;
+static auto BlitFragShader_Yuv_8_88_Smptec =
+#include "BlitYuv_8_88_Ntsc.hlsl.frag"
+;
+
+
 
 static auto BlitFragShader_Yuv_8_8_8_Full =
 #include "BlitYuv_8_8_8_Full.hlsl.frag"
 ;
+static auto BlitFragShader_Yuv_8_8_8_Ntsc =
+#include "BlitYuv_8_8_8_Ntsc.hlsl.frag"
+;
+static auto BlitFragShader_Yuv_8_8_8_Smptec =
+#include "BlitYuv_8_8_8_Ntsc.hlsl.frag"
+;
 
-static auto BlitFragShader_Yuv_8_8_8_Video =
-#include "BlitYuv_8_8_8_Video.hlsl.frag"
+
+static auto BlitFragShader_Yuv_844_Full =
+#include "BlitYuv_844_Ntsc.hlsl.frag"
+;
+static auto BlitFragShader_Yuv_844_Ntsc =
+#include "BlitYuv_844_Ntsc.hlsl.frag"
+;
+static auto BlitFragShader_Yuv_844_Smptec =
+#include "BlitYuv_844_Ntsc.hlsl.frag"
 ;
 
 
@@ -106,7 +124,7 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(const std::string
 			return nullptr;
 		}
 
-		std::Debug << "Failed to allocate shader " << Name << ", reverting to test shader..." << std::endl;
+		std::Debug << "Failed to allocate shader " << Name << ", reverting to test shader... Exception: " << e.what() << std::endl;
 		return GetBackupShader( Context );
 	}
 }
@@ -124,7 +142,7 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetErrorShader(TContext& Co
 }
 
 
-std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<const SoyPixelsImpl*>& Sources,Directx::TContext& Context)
+std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<std::shared_ptr<Directx::TTexture>>& Sources,Directx::TContext& Context)
 {
 	if ( Sources.GetSize() == 0 )
 		return GetBackupShader(Context);
@@ -140,12 +158,50 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<const
 		switch ( MergedFormat )
 		{
 			case SoyPixelsFormat::Yuv_8_88_Full:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Full, Context );
-			case SoyPixelsFormat::Yuv_8_88_Video:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Video, Context );
+			case SoyPixelsFormat::Yuv_8_88_Ntsc:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Ntsc, Context );
+			case SoyPixelsFormat::Yuv_8_88_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Smptec, Context );
+	
 			case SoyPixelsFormat::Yuv_8_8_8_Full:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Full, Context );
-			case SoyPixelsFormat::Yuv_8_8_8_Video:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Video, Context );
+			case SoyPixelsFormat::Yuv_8_8_8_Ntsc:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Ntsc, Context );
+			case SoyPixelsFormat::Yuv_8_8_8_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Smptec, Context );
 		}
 
 		std::Debug << "Warning: No frag shader specified for merged format " << MergedFormat << " (" << Texture0.GetMeta().GetFormat() << " + " << Texture1.GetMeta().GetFormat() << ")" << std::endl;
+	}
+
+	//	special formats
+	if ( Sources.GetSize() == 1 )
+	{
+		//	if the directx format is YUY2 the RGBA hardware filtering does the conversion for us
+		if ( Texture0.GetDirectxFormat() == DXGI_FORMAT_YUY2 )
+		{
+			return GetShader( "Rgba", BlitFragShaderRgba, Context  );
+		}
+
+		//	special YUY2 format
+		if ( Texture0.GetDirectxFormat() == DXGI_FORMAT_R8G8_B8G8_UNORM )
+		{
+			return GetShader( "DXGI_FORMAT_R8G8_B8G8", BlitFragShader_Yuv_844_Full, Context  );
+			//return GetShader( "Rgba", BlitFragShaderRgba, Context  );
+		}
+		
+		//	gr: different formats wanted for different texture types really...
+		//	gr: these are only required if the hardware doesn't support the YUY2 format (win8... check the target texture format?)
+		/*
+		switch ( Format0 )
+		{
+			case SoyPixelsFormat::Yuv_844_Full:		return GetShader( SoyPixelsFormat::ToString(Format0), BlitFragShader_Yuv_844_Full, Context  );
+			case SoyPixelsFormat::Yuv_844_Ntsc:		return GetShader( SoyPixelsFormat::ToString(Format0), BlitFragShader_Yuv_844_Ntsc, Context  );
+			case SoyPixelsFormat::Yuv_844_Smptec:	return GetShader( SoyPixelsFormat::ToString(Format0), BlitFragShader_Yuv_844_Smptec, Context  );
+		}
+		*/
+		auto Format0 = Texture0.GetMeta().GetFormat();
+		switch ( Format0 )
+		{
+			case SoyPixelsFormat::YYuv_8888_Full:	return GetShader( SoyPixelsFormat::ToString(Format0), BlitFragShader_Yuv_844_Full, Context  );
+			case SoyPixelsFormat::YYuv_8888_Ntsc:	return GetShader( SoyPixelsFormat::ToString(Format0), BlitFragShader_Yuv_844_Ntsc, Context  );
+			case SoyPixelsFormat::YYuv_8888_Smptec:	return GetShader( SoyPixelsFormat::ToString(Format0), BlitFragShader_Yuv_844_Smptec, Context  );
+		}
 	}
 
 	return GetShader( "Rgba", BlitFragShaderRgba, Context  );
@@ -154,6 +210,9 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<const
 
 void Directx::TBlitter::BlitError(Directx::TTexture& Target,const std::string& Error,Directx::TContext& Context)
 {
+	//	gr: until we have text blitting, we need to at least print out the error
+	std::Debug << "BlitError(" << Error << ")" << std::endl;
+
 	//	gr: add non-
 	std::shared_ptr<Directx::TShader> ErrorShader = GetErrorShader( Context );
 
@@ -206,7 +265,7 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 	RenderTarget.ClearColour( Context, Soy::TRgb(0,1,0) );
 
 	auto BlitGeo = GetGeo( Context );
-	auto BlitShader = OverrideShader ? OverrideShader : GetShader( Sources, Context );
+	auto BlitShader = OverrideShader ? OverrideShader : GetShader( GetArrayBridge(SourceTextures), Context );
 	
 	Soy::Assert( BlitGeo!=nullptr, "Failed to get geo for blit");
 	Soy::Assert( BlitShader!=nullptr,"Failed to get shader for blit");
@@ -293,4 +352,14 @@ Directx::TRenderTarget& Directx::TBlitter::GetRenderTarget(std::shared_ptr<TText
 	return *RenderTarget;
 }
 
+
+void Directx::TBlitter::GetMeta(TJsonWriter& Json)
+{
+	Soy::TBlitter::GetMeta( Json );
+
+	auto& Pool = GetTexturePool();
+
+	Json.Push("BlitterTexturePoolSize", Pool.GetAllocCount() );
+	Json.Push("BlitterRenderTargetPoolSize", mRenderTargets.GetSize() );
+}
 
