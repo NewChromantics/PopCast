@@ -254,5 +254,8 @@
     <None Include="..\src\Editor\PopCastInspector.cs">
       <Filter>src</Filter>
     </None>
+    <None Include="..\src\UnityEventsSpecialised.cs">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
 </Project>

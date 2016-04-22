@@ -101,6 +101,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="..\src\UnityEventsSpecialised.cs" />
     <None Include="..\WindowsPostBuild.bat" />
   </ItemGroup>
   <ItemGroup>
