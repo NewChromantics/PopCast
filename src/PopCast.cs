@@ -19,45 +19,6 @@ public class PopCastMeta
 };
 
 
-public class TTexturePtrCache<TEXTURE> where TEXTURE : Texture
-{
-public TEXTURE			mTexture;
-public System.IntPtr	mPtr;
-};
-
-public class TexturePtrCache
-{
-static public System.IntPtr GetCache<T>(ref TTexturePtrCache<T> Cache,T texture) where T : Texture
-{
-if (Cache==null)
-return texture.GetNativeTexturePtr();
-
-if ( texture.Equals(Cache.mTexture) )
-return Cache.mPtr;
-Cache.mPtr = texture.GetNativeTexturePtr();
-if ( Cache.mPtr != System.IntPtr.Zero )
-Cache.mTexture = texture;
-return Cache.mPtr;
-}
-
-static public System.IntPtr GetCache(ref TTexturePtrCache<RenderTexture> Cache,RenderTexture texture)
-{
-if (Cache==null)
-return texture.GetNativeTexturePtr();
-
-if ( texture.Equals(Cache.mTexture) )
-return Cache.mPtr;
-var Prev = RenderTexture.active;
-RenderTexture.active = texture;
-Cache.mPtr = texture.GetNativeTexturePtr();
-RenderTexture.active = Prev;
-if ( Cache.mPtr != System.IntPtr.Zero )
-Cache.mTexture = texture;
-return Cache.mPtr;
-}
-};
-
-
 
 [Serializable]
 public class  PopCastParams
@@ -126,8 +87,8 @@ public class PopCast
 #endif
 
 	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
-	private TTexturePtrCache<Texture2D>		mTexture2DPtrCache = new TTexturePtrCache<Texture2D>();
-	private TTexturePtrCache<RenderTexture>	mRenderTexturePtrCache = new TTexturePtrCache<RenderTexture>();
+	private PopTexturePtrCache<Texture2D>		mTexture2DPtrCache = new PopTexturePtrCache<Texture2D>();
+	private PopTexturePtrCache<RenderTexture>	mRenderTexturePtrCache = new PopTexturePtrCache<RenderTexture>();
 
 	//	add your own callbacks here to catch debug output (eg. to a GUI)
 	public static System.Action<string> DebugCallback;
@@ -318,11 +279,11 @@ public class PopCast
 
 		if (Target is RenderTexture) {
 			RenderTexture Target_rt = Target as RenderTexture;
-			PopCast_UpdateRenderTexture (mInstance, TexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
+			PopCast_UpdateRenderTexture (mInstance, PopTexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
 		}
 		if (Target is Texture2D) {
 			Texture2D Target_2d = Target as Texture2D;
-			PopCast_UpdateTexture2D (mInstance, TexturePtrCache.GetCache (ref mTexture2DPtrCache, Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
+			PopCast_UpdateTexture2D (mInstance, PopTexturePtrCache.GetCache (ref mTexture2DPtrCache, Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
 		}
 		FlushDebug ();
 	}
