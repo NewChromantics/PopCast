@@ -555,15 +555,16 @@ MonoBehaviour:
     ShowFinishedFile: 1
     SkipFrames: 0
     Gif_AllowIntraFrames: 1
-    Gif_DebugPalette: 1
+    Gif_DebugPalette: 0
     Gif_DebugIndexes: 0
     Gif_DebugTransparency: 0
     Gif_CPUOnly: 0
     PushDebugFrames: 0
     Gif_LzwCompression: 1
-  mOutputTarget: file:StreamingAssets/*.gif
+  mOutputTarget: file:StreamingAssets/*.mp4
   mCaptureCamera: {fileID: 572881025}
   mCaptureCameraTexture: {fileID: 0}
+  EnableDebug: 1
 --- !u!4 &843894333
 Transform:
   m_ObjectHideFlags: 0
