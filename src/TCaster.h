@@ -23,7 +23,9 @@ public:
 	TCasterParams() :
 		mShowFinishedFile	( false ),
 		mSkipFrames			( false ),
-		mLzwCompression		( true )
+		mLzwCompression		( true ),
+		mFrameRate			( 60 ),
+		mBitRate			( 800000 )
 	{
 	}
 	
@@ -33,6 +35,11 @@ public:
 	bool				mSkipFrames;
 	Gif::TEncodeParams	mGifParams;
 	bool				mLzwCompression;
+
+
+	//	options for video encoding, try to auto-calc these!
+	size_t				mFrameRate;
+	size_t				mBitRate;
 };
 
 class TCastDeviceMeta

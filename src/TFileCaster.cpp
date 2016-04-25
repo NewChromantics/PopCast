@@ -19,6 +19,10 @@
 #include "AvfMuxer.h"
 #endif
 
+#if defined(TARGET_WINDOWS)
+#include "MfMuxer.h"
+#endif
+
 
 
 std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished)
@@ -27,6 +31,12 @@ std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared
 	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
 	{
 		return std::make_shared<Avf::TFileMuxer>( Filename, Input, OnStreamFinished );
+	}
+#endif
+#if defined(TARGET_WINDOWS)
+	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
+	{
+		return std::make_shared<MediaFoundation::TFileMuxer>( Filename, Input, OnStreamFinished );
 	}
 #endif
 	return nullptr;

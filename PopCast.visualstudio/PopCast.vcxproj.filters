@@ -46,6 +46,9 @@
     <ClCompile Include="..\src\TBlitter.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\MfMuxer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\TBlitter.h">
@@ -106,6 +109,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\TAirplayCaster.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MfMuxer.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
@@ -254,7 +260,7 @@
     <None Include="..\src\Editor\PopCastInspector.cs">
       <Filter>src</Filter>
     </None>
-    <None Include="..\src\UnityEventsSpecialised.cs">
+    <None Include="..\src\PopTexturePtrCache.cs">
       <Filter>src</Filter>
     </None>
   </ItemGroup>

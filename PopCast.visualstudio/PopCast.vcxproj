@@ -89,6 +89,7 @@
     <None Include="..\src\GifNearest.hlsl.frag" />
     <None Include="..\src\PopCast.cs" />
     <None Include="..\src\PopCastCameraCapture.cs" />
+    <None Include="..\src\PopTexturePtrCache.cs" />
     <None Include="..\src\TAirplayCaster.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">true</ExcludedFromBuild>
@@ -101,7 +102,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="..\src\UnityEventsSpecialised.cs" />
     <None Include="..\WindowsPostBuild.bat" />
   </ItemGroup>
   <ItemGroup>
@@ -130,6 +130,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="..\src\MfMuxer.h" />
     <ClInclude Include="..\src\PopCast.h" />
     <ClInclude Include="..\src\PopCastFramework.h" />
     <ClInclude Include="..\src\PopUnity.h" />
@@ -163,6 +164,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\MfMuxer.cpp" />
     <ClCompile Include="..\src\PopCast.cpp" />
     <ClCompile Include="..\src\PopUnity.cpp" />
     <ClCompile Include="..\src\SoyGif.cpp" />
