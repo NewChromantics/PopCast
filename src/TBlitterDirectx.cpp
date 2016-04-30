@@ -144,15 +144,25 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetErrorShader(TContext& Co
 
 std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<std::shared_ptr<Directx::TTexture>>& Sources,Directx::TContext& Context)
 {
+	BufferArray<Directx::TTexture,10> SourcesNoPtr;
+	for ( int i=0;	i<Sources.GetSize();	i++ )
+	{
+		SourcesNoPtr.PushBack( *Sources[i] );
+	}
+	return GetShader( GetArrayBridge(SourcesNoPtr), Context );
+}
+
+std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<Directx::TTexture>& Sources,Directx::TContext& Context)
+{
 	if ( Sources.GetSize() == 0 )
 		return GetBackupShader(Context);
 	
-	auto& Texture0 = *Sources[0];
+	auto& Texture0 = Sources[0];
 	
 	//	alloc and return the shader we need
 	if ( Sources.GetSize() > 1  && mMergeYuv )
 	{
-		auto& Texture1 = *Sources[1];
+		auto& Texture1 = Sources[1];
 		auto MergedFormat = SoyPixelsFormat::GetMergedFormat( Texture0.GetMeta().GetFormat(), Texture1.GetMeta().GetFormat() );
 
 		switch ( MergedFormat )
@@ -208,6 +218,7 @@ std::shared_ptr<Directx::TShader> Directx::TBlitter::GetShader(ArrayBridge<std::
 }
 
 
+
 void Directx::TBlitter::BlitError(Directx::TTexture& Target,const std::string& Error,Directx::TContext& Context)
 {
 	//	gr: until we have text blitting, we need to at least print out the error
@@ -238,13 +249,14 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 	if ( mUseTestBlit && !OverrideShader )
 		OverrideShader = GetBackupShader( Context );
 
-	Array<std::shared_ptr<Directx::TTexture>> SourceTextures;
+	Array<std::shared_ptr<Directx::TTexture>> SourcePoolTextures;
+	Array<Directx::TTexture> SourceTextures;
 	for ( int s=0;	s<Sources.GetSize();	s++ )
 	{
 		//	copy pixels to a dynamic texture and then copy that to target
 		Soy::Assert( Sources[s] != nullptr, "Expected non-null pixels");
 		auto& Pixels = *Sources[s];
-		
+
 		//	allocate a dynamic texture to put pixels into
 		auto PixelTexture = GetTempTexturePtr( Pixels.GetMeta(), Context, TTextureMode::WriteOnly );
 
@@ -252,63 +264,97 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 		Error << "Failed to allocate temp texture " << Pixels.GetMeta();
 		Soy::Assert( PixelTexture!=nullptr, Error.str() );
 		PixelTexture->Write( Pixels, Context );
-		SourceTextures.PushBack( PixelTexture );
+		SourcePoolTextures.PushBack( PixelTexture );
+		SourceTextures.PushBack( *PixelTexture );
 	}
+
+	auto& TexturePool = GetTexturePool();
+	for ( int i=0;	i<SourceTextures.GetSize();	i++ )
+	{
+		TexturePool.Release(SourcePoolTextures[i]);
+	}
+}
+
+
+void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<Directx::TTexture>&& Sources,TContext& Context,const char* OverrideShader)
+{
+	//	grab provided shader if it's already compiled
+	std::shared_ptr<TShader> OverrideShaderPtr;
+	if ( OverrideShader )
+	{
+		OverrideShaderPtr = GetShader( "OverrideShader", OverrideShader, Context );
+	}
+
+	BlitTexture( Target, GetArrayBridge(Sources), Context, OverrideShaderPtr );
+}
+
+void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<Directx::TTexture>&& SourceTextures,TContext& Context,std::shared_ptr<Directx::TShader> OverrideShader)
+{
+	if ( mUseTestBlit && !OverrideShader )
+		OverrideShader = GetBackupShader( Context );
 
 	//	now create a rendertarget texture we can blit that texture[s] to the final target
 	//	todo: if target is a render texture, blit directly into that instead of an intermediate temp texture
 	auto RenderTexture = GetTempTexturePtr( Target.mMeta, Context, TTextureMode::RenderTarget );
 
-	//	blit pixels into it
-	auto& RenderTarget = GetRenderTarget( RenderTexture, Context );
-	RenderTarget.Bind( Context );
-	RenderTarget.ClearColour( Context, Soy::TRgb(0,1,0) );
-
-	auto BlitGeo = GetGeo( Context );
-	auto BlitShader = OverrideShader ? OverrideShader : GetShader( GetArrayBridge(SourceTextures), Context );
-	
-	Soy::Assert( BlitGeo!=nullptr, "Failed to get geo for blit");
-	Soy::Assert( BlitShader!=nullptr,"Failed to get shader for blit");
-
+	auto Dealloc = [this,&RenderTexture]
 	{
-		auto Shader = BlitShader->Bind( Context );
-		try
+		auto& TexturePool = GetTexturePool();
+		TexturePool.Release( RenderTexture );
+	};
+
+	try
+	{
+		//	blit pixels into it
+		auto& RenderTarget = GetRenderTarget( RenderTexture, Context );
+		RenderTarget.Bind( Context );
+		RenderTarget.ClearColour( Context, Soy::TRgb(0,1,0) );
+
+		auto BlitGeo = GetGeo( Context );
+		auto BlitShader = OverrideShader ? OverrideShader : GetShader( GetArrayBridge(SourceTextures), Context );
+
+		Soy::Assert( BlitGeo!=nullptr, "Failed to get geo for blit");
+		Soy::Assert( BlitShader!=nullptr,"Failed to get shader for blit");
+
 		{
-			static bool setuniforms = true;
-			if (setuniforms)
+			auto Shader = BlitShader->Bind( Context );
+			try
 			{
-				Shader.SetUniform("Transform", mTransform );
-				//	try to set all the uniforms
-				//	assume pixel size might fail, not all shaders need it
-				const char* TextureUniforms[] = { "Texture0", "Texture1" };
-				//const char* TextureSizeUniforms[] = { "Texture0_PixelSize", "Texture1_PixelSize" };
-				for (int t = 0; t < SourceTextures.GetSize(); t++)
+				static bool setuniforms = true;
+				if (setuniforms)
 				{
-					Shader.SetUniform(TextureUniforms[t], *SourceTextures[t] );
-					//vec2f PixelSize(Sources[t].GetWidth(), Sources[t].GetHeight());
-					//Shader.SetUniform(TextureSizeUniforms[t], PixelSize);
+					Shader.SetUniform("Transform", mTransform );
+					//	try to set all the uniforms
+					//	assume pixel size might fail, not all shaders need it
+					const char* TextureUniforms[] = { "Texture0", "Texture1" };
+					//const char* TextureSizeUniforms[] = { "Texture0_PixelSize", "Texture1_PixelSize" };
+					for (int t = 0; t < SourceTextures.GetSize(); t++)
+					{
+						Shader.SetUniform(TextureUniforms[t], SourceTextures[t] );
+						//vec2f PixelSize(Sources[t].GetWidth(), Sources[t].GetHeight());
+						//Shader.SetUniform(TextureSizeUniforms[t], PixelSize);
+					}
 				}
+				Shader.Bake();
+				BlitGeo->Draw( Context );
 			}
-			Shader.Bake();
-			BlitGeo->Draw( Context );
+			catch(std::exception& e)
+			{
+				std::Debug << "Geo blit error: " << e.what() << std::endl;
+				RenderTarget.ClearColour( Context, Soy::TRgb(1,0,0) );
+			}
 		}
-		catch(std::exception& e)
-		{
-			std::Debug << "Geo blit error: " << e.what() << std::endl;
-			RenderTarget.ClearColour( Context, Soy::TRgb(1,0,0) );
-		}
+		RenderTarget.Unbind(Context);
+
+		//	now copy that render target to texture target
+		Target.Write( *RenderTexture, Context );
+		Dealloc();
 	}
-	RenderTarget.Unbind(Context);
-
-	//	now copy that render target to texture target
-	Target.Write( *RenderTexture, Context );
-
-	auto& TexturePool = GetTexturePool();
-	for ( int i=0;	i<SourceTextures.GetSize();	i++ )
+	catch(...)
 	{
-		TexturePool.Release(SourceTextures[i]);
+		Dealloc();
+		throw;
 	}
-	TexturePool.Release( RenderTexture );
 }
 
 

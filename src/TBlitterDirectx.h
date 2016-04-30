@@ -19,6 +19,8 @@ public:
 
 	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,std::shared_ptr<TShader> OverrideShader);
 	void						BlitTexture(TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& Source,TContext& Context,const char* OverrideShader=nullptr);
+	void						BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,std::shared_ptr<TShader> OverrideShader);
+	void						BlitTexture(TTexture& Target,ArrayBridge<TTexture>&& Source,TContext& Context,const char* OverrideShader=nullptr);
 	void						BlitError(TTexture& Target,const std::string& Error,TContext& Context);
 	
 	TTexture&					GetTempTexture(SoyPixelsMeta Meta,TContext& Context,TTextureMode::Type Mode);			//	alloc/find a temp texture from the pool. throw if we can't make one
@@ -27,6 +29,7 @@ public:
 	
 	std::shared_ptr<TGeometry>	GetGeo(Directx::TContext& Context);
 	std::shared_ptr<TShader>	GetShader(ArrayBridge<std::shared_ptr<Directx::TTexture>>& Sources,Directx::TContext& Context);
+	std::shared_ptr<TShader>	GetShader(ArrayBridge<Directx::TTexture>& Sources,Directx::TContext& Context);
 
 	std::shared_ptr<TShader>	GetShader(const std::string& Name,const char* Source,TContext& Context);
 	std::shared_ptr<TShader>	GetBackupShader(TContext& Context);		//	shader for when a shader doesn't compile
