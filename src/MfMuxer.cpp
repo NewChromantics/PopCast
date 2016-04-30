@@ -34,8 +34,13 @@ TSinkWriter::TSinkWriter(const std::string& Filename)
 	mSinkWriter->AddRef();
 }
 
-size_t TSinkWriter::CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRate,size_t BitRate,SoyPixelsMeta InputMeta)
+size_t TSinkWriter::CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRate,size_t BitRate,SoyPixelsMeta InputMeta,size_t StreamIndex)
 {
+	//	restrictive sizes
+	//	http://stackoverflow.com/questions/33030620/imfsinkwriter-cant-export-a-large-size-video-of-mp4
+	InputMeta.DumbSetWidth( 600 );
+	InputMeta.DumbSetHeight( 400 );
+
 	auto OutputMeta = InputMeta;
 	
 	auto FormatOut = MediaFoundation::CreateFormat( SoyMediaFormat::H264_ES, FrameRate, BitRate, OutputMeta.GetWidth(), OutputMeta.GetHeight() );
@@ -44,18 +49,12 @@ size_t TSinkWriter::CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRa
 	auto& SinkWriter = *mSinkWriter.mObject;
 	
 	//	assign output & input
-	DWORD StreamIndex = 0;
-	auto Result = SinkWriter.AddStream( FormatOut.mObject, &StreamIndex );
+	auto StreamIndexD = size_cast<DWORD>( StreamIndex );
+	auto Result = SinkWriter.AddStream( FormatOut.mObject, &StreamIndexD );
 	MediaFoundation::IsOkay( Result, "SinkWriter.AddStream" );
 	IMFAttributes* EncodingAttribs = nullptr;
 	Result = SinkWriter.SetInputMediaType( StreamIndex, FormatIn.mObject, EncodingAttribs );   
 	MediaFoundation::IsOkay( Result, "SinkWriter.SetInputMediaType" );
-
-
-	//	setup all streams, start
-	//	gr: deffer this until after we have the first frame?
-	Result = SinkWriter.BeginWriting();
-	MediaFoundation::IsOkay( Result, "SinkWriter.BeginWriting" );
 
 	return StreamIndex;
 }
@@ -63,11 +62,13 @@ size_t TSinkWriter::CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRa
 
 
 MediaFoundation::TFileMuxer::TFileMuxer(const std::string& Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished) :
-	TMediaMuxer			( nullptr, Input ),
-	mOnStreamFinished	( OnStreamFinished ),
-	mStarted			( false ),
-	mFinished			( false )
+	TMediaMuxer				( nullptr, Input ),
+	mMediaFoundationContext	( MediaFoundation::GetContext() ),
+	mOnStreamFinished		( OnStreamFinished ),
+	mStarted				( false ),
+	mFinished				( false )
 {
+	Soy::Assert( mMediaFoundationContext != nullptr, "Missing Media foundation context");
 	mSinkWriter.reset( new TSinkWriter(Filename) );
 }
 
@@ -104,13 +105,13 @@ void MediaFoundation::TFileMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& 
 		{
 			auto FrameRate = size_cast<size_t>( Stream.mFramesPerSecond );
 			if ( FrameRate == 0 )
-				FrameRate = 60;
+				FrameRate = VIDEO_FPS;
 			auto BitRate = Stream.mAverageBitRate;
 			if ( BitRate == 0 )
-				BitRate = 8000;
+				BitRate = VIDEO_BIT_RATE;
 
 			auto OutputFormat = SoyMediaFormat::H264_ES;
-			auto OutputStreamIndex = mSinkWriter->CreateVideoStream( OutputFormat, FrameRate, BitRate, Stream.mPixelMeta );
+			auto OutputStreamIndex = mSinkWriter->CreateVideoStream( OutputFormat, FrameRate, BitRate, Stream.mPixelMeta, Stream.mStreamIndex );
 			mInputToOutputStreamIndex[Stream.mStreamIndex] = OutputStreamIndex;
 		}
 		catch(std::exception& e)
@@ -149,5 +150,8 @@ void MediaFoundation::TFileMuxer::Finish()
 		auto Result = mSinkWriter->mSinkWriter->Finalize();
 		IsOkay( Result, "Finalize sink");
 		mFinished = true;
+
+		bool Dummy;
+		mOnStreamFinished(Dummy);
 	}
 }

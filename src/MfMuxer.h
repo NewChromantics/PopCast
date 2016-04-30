@@ -2,6 +2,7 @@
 
 #include "TCaster.h"
 #include <SoyMedia.h>
+#include <SoyMediaFoundation.h>
 
 
 namespace MediaFoundation
@@ -19,7 +20,7 @@ class TSinkWriter
 public:
 	TSinkWriter(const std::string& Filename);
 
-	size_t		CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRate,size_t BitRate,SoyPixelsMeta InputMeta);	//	returns output stream index
+	size_t		CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRate,size_t BitRate,SoyPixelsMeta InputMeta,size_t StreamIndex);	//	returns output stream index
 
 public:
 	AutoReleasePtr<IMFSinkWriter>	mSinkWriter;
@@ -38,6 +39,8 @@ protected:
 	size_t			GetOutputStream(size_t InputStreamIndex);	//	throws if we have no stream assigned
 
 public:
+	std::shared_ptr<TContext>		mMediaFoundationContext;
+
 	std::map<size_t,size_t>			mInputToOutputStreamIndex;
 	std::function<void(bool&)>		mOnStreamFinished;
 	std::shared_ptr<TSinkWriter>	mSinkWriter;
