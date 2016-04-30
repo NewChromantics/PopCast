@@ -34,9 +34,14 @@ std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared
 	}
 #endif
 #if defined(TARGET_WINDOWS)
-	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
+	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
 	{
-		return std::make_shared<MediaFoundation::TFileMuxer>( Filename, Input, OnStreamFinished );
+		const char* SupportedExtensions[] = {".mp4"};
+
+		if ( Soy::StringEndsWith( Filename, SupportedExtensions, false ) )
+		{
+			return std::make_shared<MediaFoundation::TFileMuxer>( Filename, Input, OnStreamFinished );
+		}
 	}
 #endif
 	return nullptr;
@@ -57,10 +62,11 @@ std::function<std::shared_ptr<TStreamWriter>()> GetAllocStreamWriterFunc(std::st
 	//	detect directory to put file in
 	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
 	{
-		return [Filename]
+		auto f = [Filename]
 		{
 			return std::make_shared<TFileStreamWriter>( Filename );
 		};
+		return f;
 	}
 
 	return nullptr;
