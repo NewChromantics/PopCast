@@ -288,19 +288,43 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<Direct
 	BlitTexture( Target, GetArrayBridge(Sources), Context, OverrideShaderPtr );
 }
 
-void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<Directx::TTexture>&& SourceTextures,TContext& Context,std::shared_ptr<Directx::TShader> OverrideShader)
+void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<Directx::TTexture>&& OrigSourceTextures,TContext& Context,std::shared_ptr<Directx::TShader> OverrideShader)
 {
 	if ( mUseTestBlit && !OverrideShader )
 		OverrideShader = GetBackupShader( Context );
 
+	Array<std::shared_ptr<TTexture>> TempTextures;
+
+	//	if sources are X, we cannot bind them as input, so need to be copied
+	Array<Directx::TTexture> SourceTextures;
+	for ( int t=0;	t<OrigSourceTextures.GetSize();	t++ )
+	{
+		auto& OrigSource = OrigSourceTextures[t];
+		
+		if ( OrigSource.CanBindToShaderUniform() )
+		{
+			SourceTextures.PushBack( OrigSource );
+		}
+		else
+		{
+			//	copy
+			auto OrigSourceCopy = GetTempTexturePtr( OrigSource.mMeta, Context, TTextureMode::GpuOnly );
+			TempTextures.PushBack( OrigSourceCopy );
+			OrigSourceCopy->Write( OrigSource, Context );
+			SourceTextures.PushBack( *OrigSourceCopy );
+		}
+	}
+
 	//	now create a rendertarget texture we can blit that texture[s] to the final target
 	//	todo: if target is a render texture, blit directly into that instead of an intermediate temp texture
 	auto RenderTexture = GetTempTexturePtr( Target.mMeta, Context, TTextureMode::RenderTarget );
+	TempTextures.PushBack( RenderTexture );
 
-	auto Dealloc = [this,&RenderTexture]
+	auto Dealloc = [this,&TempTextures]
 	{
 		auto& TexturePool = GetTexturePool();
-		TexturePool.Release( RenderTexture );
+		for ( int i=0;	i<TempTextures.GetSize();	i++ )
+			TexturePool.Release( TempTextures[i] );
 	};
 
 	try
@@ -317,9 +341,9 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<Direct
 		Soy::Assert( BlitShader!=nullptr,"Failed to get shader for blit");
 
 		{
-			auto Shader = BlitShader->Bind( Context );
 			try
 			{
+				auto Shader = BlitShader->Bind( Context );
 				static bool setuniforms = true;
 				if (setuniforms)
 				{
