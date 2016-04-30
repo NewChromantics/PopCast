@@ -241,3 +241,23 @@ void MfEncoder::PushPixelBufferFrame(std::shared_ptr<TPixelBuffer>& PixelBuffer,
 	PushFrame( pPacket, Block );
 }
 
+TPool<Directx::TTexture>& MfEncoder::GetDirectxTexturePool()
+{
+	if ( !mDirectxTexturePool )
+	{
+		mDirectxTexturePool.reset( new TPool<Directx::TTexture>() );
+	}
+	return *mDirectxTexturePool;
+}
+
+Directx::TBlitter& MfEncoder::GetDirectxBlitter()
+{
+	if ( !mDirectxBlitter )
+	{
+		//alloc the pool
+		GetDirectxTexturePool();
+		mDirectxBlitter.reset( new Directx::TBlitter( mDirectxTexturePool ) );
+	}
+	return *mDirectxBlitter;
+}
+
