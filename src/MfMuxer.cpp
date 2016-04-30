@@ -22,6 +22,10 @@ const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
 const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
 
 
+static auto BlitFragShader_RgbaToBgraAndFlip =
+//#include "BlitTest.hlsl.frag"
+#include "BlitRgba.hlsl.frag"
+;
 
 
 TSinkWriter::TSinkWriter(const std::string& Filename)
@@ -172,9 +176,6 @@ void MfEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TCo
 }
 
 
-static auto BlitFragShader_RgbaToBgraAndFlip =
-#include "BlitTest.hlsl.frag"
-;
 
 void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context)
 {
