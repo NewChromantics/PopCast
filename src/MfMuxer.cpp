@@ -38,8 +38,8 @@ size_t TSinkWriter::CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRa
 {
 	//	restrictive sizes
 	//	http://stackoverflow.com/questions/33030620/imfsinkwriter-cant-export-a-large-size-video-of-mp4
-	InputMeta.DumbSetWidth( 600 );
-	InputMeta.DumbSetHeight( 400 );
+//	InputMeta.DumbSetWidth( 600 );
+//	InputMeta.DumbSetHeight( 400 );
 
 	auto OutputMeta = InputMeta;
 	
@@ -155,3 +155,89 @@ void MediaFoundation::TFileMuxer::Finish()
 		mOnStreamFinished(Dummy);
 	}
 }
+
+
+
+MfEncoder::MfEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,SoyPixelsMeta OutputMeta) :
+	TMediaEncoder	( OutputBuffer ),
+	mOutputMeta		( OutputMeta ),
+	mStreamIndex	( StreamIndex )
+{
+}
+
+
+void MfEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
+{
+	throw Soy::AssertException("Not supported on this platform");
+}
+
+
+static auto BlitFragShader_RgbaToBgraAndFlip =
+#include "BlitTest.hlsl.frag"
+;
+
+void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context)
+{
+	//	blit texture
+	auto* ContextCopy = &Context;
+	auto CopyTexture = [this,Image,Timecode,ContextCopy]
+	{
+		//	alloc new texture from the pool
+		auto& Pool = GetDirectxTexturePool();
+		auto Alloc = [this,ContextCopy]
+		{
+			return std::make_shared<Directx::TTexture>( mOutputMeta, *ContextCopy, Directx::TTextureMode::ReadOnly );
+		};
+		auto Meta = Directx::TTextureMeta( mOutputMeta, Directx::TTextureMode::ReadOnly );
+		auto CopyTarget = Pool.AllocPtr( Meta, Alloc );
+
+		//	copy
+		//	todo: conversion & watermark blit
+		auto& Blitter = GetDirectxBlitter();
+
+		BufferArray<Directx::TTexture,1> Sources;
+		Sources.PushBack( Image );
+
+		Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, BlitFragShader_RgbaToBgraAndFlip );
+
+		//	make output
+		std::shared_ptr<TPixelBuffer> PixelBuffer( new TTextureBuffer( CopyTarget, mDirectxTexturePool ) );
+		PushPixelBufferFrame( PixelBuffer, Timecode, mOutputMeta );
+	};
+
+	Context.PushJob( CopyTexture );
+}
+
+
+void MfEncoder::Write(std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
+{
+	throw Soy::AssertException("Not supported on this platform");
+}
+
+
+void MfEncoder::OnError(const std::string& Error)
+{
+	mFatalError << Error;
+}
+
+void MfEncoder::PushPixelBufferFrame(std::shared_ptr<TPixelBuffer>& PixelBuffer,SoyTime Timecode,SoyPixelsMeta PixelMeta)
+{
+	Soy::Assert( PixelBuffer!=nullptr, "PixelBuffer expected");
+
+	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
+	auto& Packet = *pPacket;
+
+	Packet.mPixelBuffer = PixelBuffer;
+	Packet.mTimecode = Timecode;
+	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( PixelMeta.GetFormat() );
+	Packet.mMeta.mPixelMeta = PixelMeta;
+	Packet.mMeta.mStreamIndex = mStreamIndex;
+
+	auto Block = []()
+	{
+		return false;
+	};
+
+	PushFrame( pPacket, Block );
+}
+
