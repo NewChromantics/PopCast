@@ -54,7 +54,7 @@ public:
 class MfEncoder : public TMediaEncoder
 {
 public:
-	MfEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,SoyPixelsMeta OutputMeta);
+	MfEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,SoyPixelsMeta OutputMeta);
 
 	virtual void		Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context) override;
 	virtual void		Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context) override;

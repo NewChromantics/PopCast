@@ -158,7 +158,7 @@ void MediaFoundation::TFileMuxer::Finish()
 
 
 
-MfEncoder::MfEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex,SoyPixelsMeta OutputMeta) :
+MfEncoder::MfEncoder(std::shared_ptr<TMediaPacketBuffer> OutputBuffer,size_t StreamIndex,SoyPixelsMeta OutputMeta) :
 	TMediaEncoder	( OutputBuffer ),
 	mOutputMeta		( OutputMeta ),
 	mStreamIndex	( StreamIndex )
