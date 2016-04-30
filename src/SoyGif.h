@@ -92,31 +92,6 @@ public:
 };
 
 
-class TTextureBuffer : public TPixelBuffer
-{
-public:
-	TTextureBuffer()	{}
-	TTextureBuffer(std::shared_ptr<Opengl::TContext> Context);
-	TTextureBuffer(std::shared_ptr<Directx::TContext> Context);
-	TTextureBuffer(std::shared_ptr<SoyPixelsImpl> Pixels);
-	~TTextureBuffer();
-	
-	virtual void		Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context,float3x3& Transform) override	{}
-	virtual void		Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context,float3x3& Transform) override	{}
-	virtual void		Lock(ArrayBridge<SoyPixelsImpl*>&& Textures,float3x3& Transform) override	{}
-	virtual void		Unlock() override	{}
-
-	
-public:
-	std::shared_ptr<SoyPixelsImpl>		mPixels;
-
-	std::shared_ptr<Opengl::TContext>	mOpenglContext;
-	std::shared_ptr<Opengl::TTexture>	mOpenglTexture;
-
-	std::shared_ptr<Directx::TContext>	mDirectxContext;
-	std::shared_ptr<Directx::TTexture>	mDirectxTexture;
-};
-
 
 class TGifBlitter
 {

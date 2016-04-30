@@ -1116,36 +1116,3 @@ void Gif::TEncoder::OnFramePrePushSkipped(SoyTime Timecode)
 	mOnFramePushSkipped.OnTriggered(Timecode);
 }
 
-
-TTextureBuffer::TTextureBuffer(std::shared_ptr<Opengl::TContext> Context) :
-	mOpenglContext	( Context )
-{	
-}
-
-TTextureBuffer::TTextureBuffer(std::shared_ptr<Directx::TContext> Context) :
-	mDirectxContext	( Context )
-{
-}
-
-TTextureBuffer::TTextureBuffer(std::shared_ptr<SoyPixelsImpl> Pixels) :
-	mPixels	( Pixels )
-{
-}
-
-TTextureBuffer::~TTextureBuffer()
-{
-	if ( mOpenglContext )
-	{
-		Opengl::DeferDelete( mOpenglContext, mOpenglTexture );
-		mOpenglContext.reset();
-	}
-
-#if defined(TARGET_WINDOWS)
-	if ( mDirectxContext )
-	{
-		Opengl::DeferDelete( mDirectxContext, mDirectxTexture );
-		mDirectxContext.reset();
-	}
-#endif
-}
-
