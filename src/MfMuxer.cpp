@@ -184,7 +184,7 @@ void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::T
 	{
 		//	alloc new texture from the pool
 		auto& Pool = GetDirectxTexturePool();
-		auto TextureMode = Directx::TTextureMode::GpuOnly;
+		auto TextureMode = Directx::TTextureMode::ReadOnly;
 		auto Alloc = [this,ContextCopy,TextureMode]
 		{
 			return std::make_shared<Directx::TTexture>( mOutputMeta, *ContextCopy, TextureMode );
@@ -202,8 +202,22 @@ void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::T
 
 		Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, BlitFragShader_RgbaToBgraAndFlip );
 
+		std::shared_ptr<TPixelBuffer> PixelBuffer;
+
+		//	maybe can do this as a job later?
+		static bool ReadPixelsNow = true;
+		if ( ReadPixelsNow )
+		{
+			PixelBuffer.reset( new TDumbPixelBuffer() );
+			auto& DumbPixelBuffer = static_cast<TDumbPixelBuffer&>( *PixelBuffer );
+			CopyTarget->Read( DumbPixelBuffer.mPixels, *ContextCopy, Pool );
+		}
+		else
+		{
+			PixelBuffer.reset( new TTextureBuffer( CopyTarget, mDirectxTexturePool ) );
+		}
+
 		//	make output
-		std::shared_ptr<TPixelBuffer> PixelBuffer( new TTextureBuffer( CopyTarget, mDirectxTexturePool ) );
 		PushPixelBufferFrame( PixelBuffer, Timecode, mOutputMeta );
 	};
 
@@ -247,7 +261,8 @@ TPool<Directx::TTexture>& MfEncoder::GetDirectxTexturePool()
 {
 	if ( !mDirectxTexturePool )
 	{
-		mDirectxTexturePool.reset( new TPool<Directx::TTexture>() );
+		static int Limit = 200;
+		mDirectxTexturePool.reset( new TPool<Directx::TTexture>(Limit) );
 	}
 	return *mDirectxTexturePool;
 }
