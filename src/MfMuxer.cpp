@@ -191,34 +191,55 @@ void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::T
 		};
 		auto Meta = Directx::TTextureMeta( mOutputMeta, TextureMode );
 		auto CopyTarget = Pool.AllocPtr( Meta, Alloc );
-
-		//	copy
-		//	todo: conversion & watermark blit
-		auto& Blitter = GetDirectxBlitter();
-
-		BufferArray<Directx::TTexture,1> Sources;
-		auto ImageMode = Image.GetMode();
-		Sources.PushBack( Image );
-
-		Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, BlitFragShader_RgbaToBgraAndFlip );
-
-		std::shared_ptr<TPixelBuffer> PixelBuffer;
-
-		//	maybe can do this as a job later?
-		static bool ReadPixelsNow = true;
-		if ( ReadPixelsNow )
+		auto DeallocTemp = [&Pool,&CopyTarget]
 		{
-			PixelBuffer.reset( new TDumbPixelBuffer() );
-			auto& DumbPixelBuffer = static_cast<TDumbPixelBuffer&>( *PixelBuffer );
-			CopyTarget->Read( DumbPixelBuffer.mPixels, *ContextCopy, Pool );
-		}
-		else
+			if ( CopyTarget )
+			{
+				Pool.Release( CopyTarget );
+				CopyTarget = nullptr;
+			}
+		};
+			
+		try
 		{
-			PixelBuffer.reset( new TTextureBuffer( CopyTarget, mDirectxTexturePool ) );
-		}
+			//	copy
+			auto& Blitter = GetDirectxBlitter();
 
-		//	make output
-		PushPixelBufferFrame( PixelBuffer, Timecode, mOutputMeta );
+			BufferArray<Directx::TTexture,1> Sources;
+			auto ImageMode = Image.GetMode();
+			Sources.PushBack( Image );
+
+			Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, BlitFragShader_RgbaToBgraAndFlip );
+
+			std::shared_ptr<TPixelBuffer> PixelBuffer;
+
+			//	maybe can do this as a job later?
+			static bool ReadPixelsNow = true;
+			if ( ReadPixelsNow )
+			{
+				PixelBuffer.reset( new TDumbPixelBuffer() );
+				auto& DumbPixelBuffer = static_cast<TDumbPixelBuffer&>( *PixelBuffer );
+				CopyTarget->Read( DumbPixelBuffer.mPixels, *ContextCopy, Pool );
+				Pool.Release( CopyTarget );
+				CopyTarget = nullptr;
+			}
+			else
+			{
+				PixelBuffer.reset( new TTextureBuffer( CopyTarget, mDirectxTexturePool ) );
+
+				//	don't release back to pool!
+				CopyTarget = nullptr;
+			}
+
+			//	make output
+			PushPixelBufferFrame( PixelBuffer, Timecode, mOutputMeta );
+			DeallocTemp();
+		}
+		catch(...)
+		{
+			DeallocTemp();
+			throw;
+		}
 	};
 
 	Context.PushJob( CopyTexture );
