@@ -184,11 +184,12 @@ void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::T
 	{
 		//	alloc new texture from the pool
 		auto& Pool = GetDirectxTexturePool();
-		auto Alloc = [this,ContextCopy]
+		auto TextureMode = Directx::TTextureMode::GpuOnly;
+		auto Alloc = [this,ContextCopy,TextureMode]
 		{
-			return std::make_shared<Directx::TTexture>( mOutputMeta, *ContextCopy, Directx::TTextureMode::ReadOnly );
+			return std::make_shared<Directx::TTexture>( mOutputMeta, *ContextCopy, TextureMode );
 		};
-		auto Meta = Directx::TTextureMeta( mOutputMeta, Directx::TTextureMode::ReadOnly );
+		auto Meta = Directx::TTextureMeta( mOutputMeta, TextureMode );
 		auto CopyTarget = Pool.AllocPtr( Meta, Alloc );
 
 		//	copy
@@ -196,6 +197,7 @@ void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::T
 		auto& Blitter = GetDirectxBlitter();
 
 		BufferArray<Directx::TTexture,1> Sources;
+		auto ImageMode = Image.GetMode();
 		Sources.PushBack( Image );
 
 		Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, BlitFragShader_RgbaToBgraAndFlip );
