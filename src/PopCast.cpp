@@ -1,6 +1,6 @@
 #include "PopCast.h"
 #include "TCaster.h"
-
+#include "TBlitter.h"
 #include "TAirplayCaster.h"
 #include "PopUnity.h"
 #include "TFileCaster.h"
@@ -78,6 +78,23 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float 
 	Params.mGifParams.mDebugTransparency = HasBit(ParamBits, TPluginParams::Gif_DebugTransparency);
 	Params.mGifParams.mCpuOnly = HasBit(ParamBits, TPluginParams::Gif_CpuOnly);
 	Params.mGifParams.mLzwCompression = HasBit(ParamBits, TPluginParams::Gif_LzwCompression);
+
+	//	gr: this is here to make gif stuff simpler
+	//	force watermark palette
+	if ( Soy::TBlitter::HasWatermark() )
+	{
+		auto LimeColour = Soy::TRgb8( 218.0, 245.0, 25.0 );
+		auto StickColour = Soy::TRgb8( 191.0, 147.0, 79.0 );
+		auto StickShadowColour = Soy::TRgb8( 103.0, 80.0, 43.0 );
+		auto HighlightColour = Soy::TRgb8( 255.0, 255.0, 255.0 );
+
+		Params.mGifParams.mForcedPaletteColours.PushBack( LimeColour );
+		Params.mGifParams.mForcedPaletteColours.PushBack( StickColour );
+		Params.mGifParams.mForcedPaletteColours.PushBack( StickShadowColour );
+		Params.mGifParams.mForcedPaletteColours.PushBack( HighlightColour );
+	}
+
+
 
 	Params.mMpegParams.mCodec = SoyMediaFormat::H264_ES;
 	

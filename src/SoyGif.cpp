@@ -561,20 +561,6 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 	mPushedFrameCount	( 0 ),
 	mSkipFrames			( SkipFrames )
 {
-	//	force watermark palette
-	if ( Soy::TBlitter::HasWatermark() )
-	{
-		auto LimeColour = Soy::TRgb8( 218.0, 245.0, 25.0 );
-		auto StickColour = Soy::TRgb8( 191.0, 147.0, 79.0 );
-		auto StickShadowColour = Soy::TRgb8( 103.0, 80.0, 43.0 );
-		auto HighlightColour = Soy::TRgb8( 255.0, 255.0, 255.0 );
-
-		mParams.mForcedPaletteColours.PushBack( LimeColour );
-		mParams.mForcedPaletteColours.PushBack( StickColour );
-		mParams.mForcedPaletteColours.PushBack( StickShadowColour );
-		mParams.mForcedPaletteColours.PushBack( HighlightColour );
-	}
-
 	Start();
 }
 
@@ -964,18 +950,26 @@ void Gif::ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Pa
 {
 	Soy::TScopeTimerPrint Timer( __func__, Gif::TimerMinMs );
 
+	//	gr: starting one less, was't catching last colour on directx... odd sampling of palette? can't quite figure it out atm
+	static int StartIndex = 254;
+
 	//	already shrunk
 	if ( Palette.GetWidth() <= Params.mMaxColours && !Sort )
+	{
+		//	overwrite the forced colours
+		//	gr: change palettiser to only get 256-forced
+		for ( int i=0;	i<Params.mForcedPaletteColours.GetSize();	i++ )
+			Palette.SetPixel( StartIndex - i, 0, Params.mForcedPaletteColours[i] );
 		return;
-	
-	auto ShrinkToSize = 256 - Params.mForcedPaletteColours.GetSize();
+	}
 
 	std::shared_ptr<GifPalette> SmallPalette;
-	GifMakePalette( Palette, false, SmallPalette, ShrinkToSize );
+	GifMakePalette( Palette, false, SmallPalette, 256 );
 
-	//	append the forced colours
+	//	overwrite the forced colours
+	//	gr: change palettiser to only get 256-forced
 	for ( int i=0;	i<Params.mForcedPaletteColours.GetSize();	i++ )
-		SmallPalette->SetColour( ShrinkToSize + i, Params.mForcedPaletteColours[i] );
+		SmallPalette->SetColour( StartIndex - i, Params.mForcedPaletteColours[i] );
 
 	Palette.Copy( SmallPalette->GetPalette() );
 
