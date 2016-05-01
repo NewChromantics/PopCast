@@ -55,6 +55,7 @@
     <None Include="..\src\BlitOesExternal.glsl.frag" />
     <None Include="..\src\BlitRectangle.glsl.frag" />
     <None Include="..\src\BlitRgba.hlsl.frag" />
+    <None Include="..\src\BlitRgbaFlip.hlsl.frag" />
     <None Include="..\src\BlitTest.glsl.frag" />
     <None Include="..\src\BlitTest.hlsl.frag" />
     <None Include="..\src\BlitWatermark.glsl.frag" />

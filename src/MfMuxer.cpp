@@ -11,20 +11,9 @@
 #pragma comment(lib, "mfuuid")
 
 
-const UINT32 VIDEO_WIDTH = 640;
-const UINT32 VIDEO_HEIGHT = 480;
-const UINT32 VIDEO_FPS = 30;
-const UINT64 VIDEO_FRAME_DURATION = 10 * 1000 * 1000 / VIDEO_FPS;
-const UINT32 VIDEO_BIT_RATE = 800000;
-const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
-const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB32;
-const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
-const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
-
 
 static auto BlitFragShader_RgbaToBgraAndFlip =
-//#include "BlitTest.hlsl.frag"
-#include "BlitRgba.hlsl.frag"
+#include "BlitRgbaFlip.hlsl.frag"
 ;
 
 

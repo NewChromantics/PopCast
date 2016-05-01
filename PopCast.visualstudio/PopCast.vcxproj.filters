@@ -263,5 +263,8 @@
     <None Include="..\src\PopTexturePtrCache.cs">
       <Filter>src</Filter>
     </None>
+    <None Include="..\src\BlitRgbaFlip.hlsl.frag">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
 </Project>
