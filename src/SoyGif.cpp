@@ -561,6 +561,20 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 	mPushedFrameCount	( 0 ),
 	mSkipFrames			( SkipFrames )
 {
+	//	force watermark palette
+	if ( Soy::TBlitter::HasWatermark() )
+	{
+		auto LimeColour = Soy::TRgb8( 218.0, 245.0, 25.0 );
+		auto StickColour = Soy::TRgb8( 191.0, 147.0, 79.0 );
+		auto StickShadowColour = Soy::TRgb8( 103.0, 80.0, 43.0 );
+		auto HighlightColour = Soy::TRgb8( 255.0, 255.0, 255.0 );
+
+		mParams.mForcedPaletteColours.PushBack( LimeColour );
+		mParams.mForcedPaletteColours.PushBack( StickColour );
+		mParams.mForcedPaletteColours.PushBack( StickShadowColour );
+		mParams.mForcedPaletteColours.PushBack( HighlightColour );
+	}
+
 	Start();
 }
 
@@ -913,15 +927,15 @@ void GifExtractPalette(const SoyPixelsImpl& Frame,SoyPixelsImpl& Palette,size_t 
 	else
 	{
 		int PaletteIndex = 0;
+
 		for ( int i=0;	i<Palette.GetWidth();	i++ )
 		{
 			auto xy = Frame.GetXy( i*PixelStep );
 			auto rgba = Frame.GetPixel4( xy.x, xy.y );
-			
 			//	skip alphas
 			if ( rgba.w == 0 )
 				continue;
-			
+
 			Palette.SetPixel( PaletteIndex, 0, rgba.xyz() );
 			PaletteIndex++;
 		}
@@ -954,8 +968,15 @@ void Gif::ShrinkPalette(SoyPixelsImpl& Palette,bool Sort,const TEncodeParams& Pa
 	if ( Palette.GetWidth() <= Params.mMaxColours && !Sort )
 		return;
 	
+	auto ShrinkToSize = 256 - Params.mForcedPaletteColours.GetSize();
+
 	std::shared_ptr<GifPalette> SmallPalette;
-	GifMakePalette( Palette, false, SmallPalette, 256 );
+	GifMakePalette( Palette, false, SmallPalette, ShrinkToSize );
+
+	//	append the forced colours
+	for ( int i=0;	i<Params.mForcedPaletteColours.GetSize();	i++ )
+		SmallPalette->SetColour( ShrinkToSize + i, Params.mForcedPaletteColours[i] );
+
 	Palette.Copy( SmallPalette->GetPalette() );
 
 	//	shrink to required size

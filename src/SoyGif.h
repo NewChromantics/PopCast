@@ -64,6 +64,7 @@ public:
 	float			mMaskMaxDiff;			//	if zero, exact pixel colour matches required
 	bool			mCpuOnly;				//	no gpu stuff. good for debugging muxer etc
 	bool			mLzwCompression;
+	BufferArray<Soy::TRgb8,10>	mForcedPaletteColours;	//	for watermark, ensure these colours exist
 };
 
 
