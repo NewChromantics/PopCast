@@ -63,7 +63,7 @@ bool HasBit(Unity::uint ParamBits,TPluginParams::PopCastFlags Param)
 	return Masked != 0;
 }
 
-TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename)
+TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float RateMegaBytesPerSec)
 {
 	//	decoder params
 	TCasterParams Params;
@@ -82,14 +82,14 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename)
 	Params.mMpegParams.mCodec = SoyMediaFormat::H264_ES;
 	
 	//	60fps is just black on mediafoundation...
-	Params.mMpegParams.mAverageBitRate = 800000;
-	Params.mMpegParams.mFrameRate = 30;
+	Params.mMpegParams.SetBitRateMegaBytesPerSecond( RateMegaBytesPerSec );
+	Params.mMpegParams.mFrameRate = 60;
 
 	return Params;
 }
 
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits)
+__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	if ( Filename == nullptr )
@@ -98,7 +98,7 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits)
 		return 0;
 	}
 	
-	auto Params = MakeCasterParams( ParamBits, Filename );
+	auto Params = MakeCasterParams( ParamBits, Filename, RateMegaBytesPerSec );
 
 	try
 	{

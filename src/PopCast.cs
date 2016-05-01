@@ -23,32 +23,43 @@ public class PopCastMeta
 [Serializable]
 public class  PopCastParams
 {
-    [Header("if we record to a local file, pop up explorer/finder with the file when its ready")]
+    [Tooltip("if we record to a local file, pop up explorer/finder with the file when its ready")]
     public bool ShowFinishedFile = false;
 
-    [Header("Record smooth video, or skip for live casting")]
+    [Tooltip("Record smooth video, or skip for live casting")]
     public bool SkipFrames = false;
 
-    [Header("Use transparency between frames to reduce file size")]
+	[Tooltip("Debug writer by drawing plain blocks of colour")]
+	public bool PushDebugFrames = false;
+	
+
+	[Header("Mpeg/video Parameters")]
+
+	[Tooltip("Bitrate for encoder in mb/s. 32 seems to be the h264 limit on windows")]
+	[Range(0, 32)]
+	public float BitRateMegaBytesPerSec = 32.0f;
+
+	
+	[Header("Gif Parameters")]
+
+	[Tooltip("Use transparency between frames to reduce file size")]
     public bool Gif_AllowIntraFrames = true;
 
-    [Header("Make a debug palette")]
+    [Tooltip("Make a debug palette")]
     public bool Gif_DebugPalette = false;
 
-    [Header("Render the pallete top to bottom")]
+    [Tooltip("Render the pallete top to bottom")]
     public bool Gif_DebugIndexes = false;
 
-    [Header("Highlight transparent regions")]
+    [Tooltip("Highlight transparent regions")]
     public bool Gif_DebugTransparency = false;
 
-    [Header("Don't use any GPU for conversion, encoding etc")]
+    [Tooltip("Don't use any GPU for conversion, encoding etc")]
     public bool Gif_CPUOnly = false;
 
-	[Header("Debug writer by drawing plain blocks of colour")]
-	public bool PushDebugFrames = false;
-
-	[Header("Debug gif LZW compression by turning this off")]
+	[Tooltip("Debug gif LZW compression by turning this off")]
 	public bool Gif_LzwCompression = true;
+
 }
 
 
@@ -123,7 +134,7 @@ public class PopCast
 	
 
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ulong		PopCast_Alloc(String Filename,uint Params);
+	private static extern ulong		PopCast_Alloc(String Filename,uint Params,float RateMegaBytesPerSec);
 	
 	[DllImport (PluginName)]
 	private static extern bool		PopCast_Free(ulong Instance);
@@ -184,7 +195,7 @@ public class PopCast
 
 		Filename = ResolveFilename (Filename);
 		Debug.LogWarning ("resolved filename: " + Filename);
-		mInstance = PopCast_Alloc ( Filename, ParamFlags32 );
+		mInstance = PopCast_Alloc ( Filename, ParamFlags32, Params.BitRateMegaBytesPerSec);
 
 		//	if this fails, capture the flush and throw an exception
 		if (mInstance == 0) {

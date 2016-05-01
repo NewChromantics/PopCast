@@ -19,7 +19,7 @@ class TCaster;
 class TCasterParams;
 class TJsonWriter;
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits);
+__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec);
 __export bool			PopCast_Free(Unity::ulong Instance);
 __export void			PopCast_EnumDevices();
 __export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
