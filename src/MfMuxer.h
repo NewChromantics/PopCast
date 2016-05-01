@@ -20,7 +20,7 @@ class TSinkWriter
 public:
 	TSinkWriter(const std::string& Filename);
 
-	size_t		CreateVideoStream(SoyMediaFormat::Type Format,size_t FrameRate,size_t BitRate,SoyPixelsMeta InputMeta,size_t StreamIndex);	//	returns output stream index
+	size_t		CreateVideoStream(TMediaEncoderParams Params,SoyPixelsMeta InputMeta,size_t StreamIndex);	//	returns output stream index
 
 public:
 	AutoReleasePtr<IMFSinkWriter>	mSinkWriter;
@@ -29,7 +29,7 @@ public:
 class MediaFoundation::TFileMuxer : public TMediaMuxer
 {
 public:
-	TFileMuxer(const std::string& Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished);
+	TFileMuxer(const std::string& Filename,const TMediaEncoderParams& Params,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished);
 	
 protected:
 	virtual void	SetupStreams(const ArrayBridge<TStreamMeta>&& Streams) override;
@@ -48,7 +48,10 @@ public:
 	bool							mStarted;
 	bool							mFinished;
 	std::mutex						mWriteLock;
+
+	TMediaEncoderParams				mEncoderParams;
 };
+
 
 
 class MfEncoder : public TMediaEncoder

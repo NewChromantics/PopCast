@@ -79,6 +79,12 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename)
 	Params.mGifParams.mCpuOnly = HasBit(ParamBits, TPluginParams::Gif_CpuOnly);
 	Params.mGifParams.mLzwCompression = HasBit(ParamBits, TPluginParams::Gif_LzwCompression);
 
+	Params.mMpegParams.mCodec = SoyMediaFormat::H264_ES;
+	
+	//	60fps is just black on mediafoundation...
+	Params.mMpegParams.mAverageBitRate = 800000;
+	Params.mMpegParams.mFrameRate = 30;
+
 	return Params;
 }
 
@@ -291,7 +297,7 @@ __export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint Strea
 	try
 	{
 		//	make up a debug image
-		SoyPixelsMeta Meta( 200, 200, SoyPixelsFormat::RGBA );
+		SoyPixelsMeta Meta( 640, 480, SoyPixelsFormat::RGB );
 		auto pPixels = std::make_shared<SoyPixels>();
 		auto& Pixels = *pPixels;
 		Pixels.Init( Meta );

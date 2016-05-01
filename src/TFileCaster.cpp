@@ -25,7 +25,7 @@
 
 
 
-std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc)
+std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMediaEncoderParams& EncoderParams,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc)
 {
 #if defined(TARGET_OSX)
 	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
@@ -47,7 +47,7 @@ std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared
 
 				return std::shared_ptr<TMediaEncoder>( new MfEncoder( Input, StreamIndex, OutputMeta ) );
 			};
-			return std::make_shared<MediaFoundation::TFileMuxer>( Filename, Input, OnStreamFinished );
+			return std::make_shared<MediaFoundation::TFileMuxer>( Filename, EncoderParams, Input, OnStreamFinished );
 		}
 	}
 #endif
@@ -157,7 +157,7 @@ TFileCaster::TFileCaster(const TCasterParams& Params,TCasterDeviceParams& Device
 	};
 	
 	//	see if there are OS specialisations
-	mMuxer = AllocPlatformMuxer( Params.mName, mFrameBuffer, OnStreamFinished, mAllocEncoder );
+	mMuxer = AllocPlatformMuxer( Params.mName, Params.mMpegParams, mFrameBuffer, OnStreamFinished, mAllocEncoder );
 	
 	//	alloc stream & muxer from name
 	if ( !mMuxer )

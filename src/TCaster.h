@@ -4,6 +4,7 @@
 #include <SoyThread.h>
 #include "PopUnity.h"
 #include "SoyGif.h"
+#include <SoyH264.h>
 
 
 
@@ -17,15 +18,14 @@ public:
 	std::shared_ptr<TPool<Directx::TTexture>>	DirectxTexturePool;
 };
 
+
+
 class TCasterParams
 {
 public:
 	TCasterParams() :
 		mShowFinishedFile	( false ),
-		mSkipFrames			( false ),
-		mLzwCompression		( true ),
-		mFrameRate			( 60 ),
-		mBitRate			( 800000 )
+		mSkipFrames			( false )
 	{
 	}
 	
@@ -34,12 +34,7 @@ public:
 	bool				mShowFinishedFile;
 	bool				mSkipFrames;
 	Gif::TEncodeParams	mGifParams;
-	bool				mLzwCompression;
-
-
-	//	options for video encoding, try to auto-calc these!
-	size_t				mFrameRate;
-	size_t				mBitRate;
+	TMediaEncoderParams	mMpegParams;
 };
 
 class TCastDeviceMeta
