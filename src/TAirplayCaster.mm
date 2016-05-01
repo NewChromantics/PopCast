@@ -218,12 +218,17 @@ Airplay::TMirrorDevice::TMirrorDevice(const std::string& Name,const std::string&
 }
 
 
+void Airplay::TMirrorDevice::Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context)
+{
+	throw Soy::AssertException("Not supported");
+}
+
 void Airplay::TMirrorDevice::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
 	throw Soy::AssertException("Not supported");
 }
 
-void Airplay::TMirrorDevice::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
+void Airplay::TMirrorDevice::Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
 	throw Soy::AssertException("Not supported");
 }

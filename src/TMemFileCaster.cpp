@@ -13,9 +13,9 @@ TMemFileHeader::TMemFileHeader(const SoyPixelsMeta& Meta,SoyTime Time) :
 	mPixelFormat	( static_cast<uint32>( Meta.GetFormat() ) ),
 	mWidth			( Meta.GetWidth() ),
 	mHeight			( Meta.GetHeight() ),
-	mTimecode		( Time.GetTime() ),
-	mError			{ 0 }
+	mTimecode		( Time.GetTime() )
 {
+	memset( mError, 0, sizeof(mError) );
 	memcpy( &mMagic, Magic, sizeof(mMagic) );
 }
 
@@ -48,8 +48,9 @@ void TMemFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& F
 	throw Soy::AssertException("todo");
 }
 
-void TMemFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
+void TMemFileCaster::Write(std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
 {
+	Soy::Assert( pImage != nullptr, "Pixels expected");
 	auto& Image = *pImage;
 	
 	//	make sure file is allocated

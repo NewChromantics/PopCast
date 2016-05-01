@@ -1,7 +1,7 @@
 #include "TBlitterOpengl.h"
 #include "TBlitter.h"
-#include "TBlitterWatermark.h"
 #include <SoyMedia.h>
+#include <SoyJson.h>
 
 
 
@@ -17,118 +17,59 @@ namespace PopMovie
 //	ES2 (what glsl?) requires precision, but not on mat?
 //	ES3 glsl 100 (android s6) requires precision on vec's and mat
 //	gr: changed to highprecision to fix sampling aliasing with the bjork video
+//	gr: pretty much unused now (easier to put highp in the code), but left for for the comments
 #define PREC	"highp "
 
 
+
 const char* Opengl::BlitVertShader =
-//"layout(location = 0) in vec3 TexCoord;\n"
-"attribute vec3 TexCoord;\n"
-"varying " PREC " vec2 oTexCoord;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(TexCoord.x,TexCoord.y,0,1);\n"
-//	move to view space 0..1 to -1..1
-"	gl_Position.xy *= vec2(2,2);\n"
-"	gl_Position.xy -= vec2(1,1);\n"
-//	flip uv in vertex shader to apply to all
-"	oTexCoord = vec2( TexCoord.x, 1.0-TexCoord.y);\n"
-"}\n";
+#include "Blit.glsl.vert"
+;
 
 static auto BlitFragShader2D =
-"" WATERMARK_PREAMBLE_GLSL ""
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform sampler2D Texture0;\n"
-//"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC "vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC "vec4 rgba = texture2D(Texture0,uv);\n"
-APPLY_WATERMARK_GLSL("rgba","uv")
+#include "Blit2D.glsl.frag"
+;
 
-//	on GLES2 on ios, alpha comes out zero. I'm SURE this breaks some platforms (bad compilers?) android maybe. so very specific atm
-#if defined(TARGET_IOS)
-"	rgba.a = 1.0;\n"
-#endif
-"	gl_FragColor = rgba;\n"
-"}\n";
+const char* WatermarkGlsl =
+#include "BlitWatermark.glsl.frag"
+;
 
-
-static std::string BlitFragShaderYuv(const Soy::TYuvParams& Yuv,SoyPixelsFormat::Type ChromaFormat)
-{
-	std::stringstream Shader;
-	Shader <<
-	"varying " PREC " vec2 oTexCoord;\n"
-	"uniform sampler2D Texture0;\n"
-	"uniform sampler2D Texture1;\n"
-	//"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n";
-	"uniform " PREC "mat3 Transform;\n";
-	
-	//	gles compiler won't accept 1 or 0 as a float. force decimal places
-	Shader << "const float LumaMin = " << std::fixed << Yuv.mLumaMin << ";\n";
-	Shader << "const float LumaMax = " << std::fixed << Yuv.mLumaMax << ";\n";
-	Shader << "const float ChromaVRed = " << std::fixed << Yuv.mChromaVRed << ";\n";
-	Shader << "const float ChromaUGreen = " << std::fixed << Yuv.mChromaUGreen << ";\n";
-	Shader << "const float ChromaVGreen = " << std::fixed << Yuv.mChromaVGreen << ";\n";
-	Shader << "const float ChromaUBlue = " << std::fixed << Yuv.mChromaUBlue << ";\n";
-	
-	Shader <<
-	"void main()\n"
-	"{\n"
-	"	" PREC "vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-	//	scale video luma to to 0..1
-	"	float Luma = texture2D(Texture0,uv).x;\n"
-	"	Luma = (Luma-LumaMin) / (LumaMax-LumaMin);\n"
-	;
-
-	//	get chroma
-	if ( ChromaFormat == SoyPixelsFormat::ChromaUV_88 )
-	{
-		Shader << "	" PREC "vec2 ChromaUv = texture2D(Texture1,uv).xy;\n";
-	}
-	else if ( ChromaFormat == SoyPixelsFormat::ChromaUV_8_8 )
-	{
-		Shader << "	" PREC "float ChromaU = texture2D(Texture1,uv*vec2(1.0,0.5)+vec2(0,0)).x;\n";
-		Shader << "	" PREC "float ChromaV = texture2D(Texture1,uv*vec2(1.0,0.5)+vec2(0,0.5)).x;\n";
-		Shader << "	" PREC "vec2 ChromaUv = vec2(ChromaU,ChromaV);\n";
-	}
-	else
-	{
-		std::stringstream Error;
-		Error << __func__ << " cannot handle chroma format " << ChromaFormat;
-		throw Soy::AssertException( Error.str() );
-	}
-	
-	//	convert chroma from 0..1 to -0.5..0.5
-	Shader <<
-	"	ChromaUv -= vec2(0.5,0.5);\n"
-	//	convert to rgb
-	"	" PREC "vec4 rgba;\n"
-	"	rgba.r = Luma + ChromaVRed * ChromaUv.y;\n"
-	"	rgba.g = Luma + ChromaUGreen * ChromaUv.x + ChromaVGreen * ChromaUv.y;\n"
-	"	rgba.b = Luma + ChromaUBlue * ChromaUv.x;\n"
-	"	rgba.a = 1.0;\n"
-	APPLY_WATERMARK_GLSL("rgba","uv")
-	"	gl_FragColor = rgba;\n"
-	"}\n";
-	return Shader.str();
-};
+static auto BlitFragShader_Yuv_8_88_Full =
+#include "BlitYuv_8_88_Full.glsl.frag"
+;
+static auto BlitFragShader_Yuv_8_88_Ntsc =
+#include "BlitYuv_8_88_Ntsc.glsl.frag"
+;
+static auto BlitFragShader_Yuv_8_88_Smptec =
+#include "BlitYuv_8_88_Ntsc.glsl.frag"
+;
 
 
-auto BlitFragShaderRectangle =
-"" WATERMARK_PREAMBLE_GLSL ""
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform sampler2DRect Texture0;\n"
-"uniform " PREC " vec2 Texture0_PixelSize;\n"
-//"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC " vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC " vec4 rgba = texture2DRect(Texture0,uv*Texture0_PixelSize);\n"
-	APPLY_WATERMARK_GLSL("rgba","uv")
-"	gl_FragColor = rgba;\n"
-"}\n";
+static auto BlitFragShader_Yuv_8_8_8_Full =
+#include "BlitYuv_8_8_8_Full.glsl.frag"
+;
+static auto BlitFragShader_Yuv_8_8_8_Ntsc =
+#include "BlitYuv_8_8_8_Ntsc.glsl.frag"
+;
+static auto BlitFragShader_Yuv_8_8_8_Smptec =
+#include "BlitYuv_8_8_8_Ntsc.glsl.frag"
+;
+
+/*
+static auto BlitFragShader_Yuv_844_Full =
+#include "BlitYuv_844_Full.glsl.frag"
+;
+static auto BlitFragShader_Yuv_844_Ntsc =
+#include "BlitYuv_844_Ntsc.glsl.frag"
+;
+static auto BlitFragShader_Yuv_844_Smptec =
+#include "BlitYuv_844_Ntsc.glsl.frag"
+;
+*/
+
+static auto BlitFragShaderRectangle __unused =
+#include "BlitRectangle.glsl.frag"
+;
 
 
 //	While the OpenGL ES3 API is backwards compatible with the OpenGL ES2 API, and it supports both GLSL 1.0 and 3.0, GLSL 3.0 isn't defined to be backwards compatible with GLSL 1.0.
@@ -137,207 +78,154 @@ auto BlitFragShaderRectangle =
 
 //	for glsl3 support, try this extension
 //	https://www.khronos.org/registry/gles/extensions/OES/OES_EGL_image_external_essl3.txt
-auto BlitFragShaderOesExternal =
-"" WATERMARK_PREAMBLE_GLSL ""
-"#extension GL_OES_EGL_image_external : require\n"
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform samplerExternalOES Texture0;\n"
-//"const " PREC "mat3 Transform = mat3(	1,0,0,	0,1,0,	0,0,1	);\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC "vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC "vec4 rgba = texture2D(Texture0,uv);\n"
-//"	rgba.a = 1.0;\n"	//	on jon's sony android, setting alpha turns the scene greeny/purple!? either here or in the frag. NO idea why. direct copy is fine
-	APPLY_WATERMARK_GLSL("rgba","uv")
-"	gl_FragColor = rgba;\n"
-"}\n";
+static auto BlitFragShaderOesExternal __unused =
+#include "BlitOesExternal.glsl.frag"
+;
 
 static auto BlitFragShaderTest =
-"" WATERMARK_PREAMBLE_GLSL ""
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC "vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC "vec4 rgba = vec4(uv.x,uv.y,0,1);\n"
-"	if ( uv.x < 0.0 )	rgba.xyz=vec3(0,0,1);\n"
-"	if ( uv.y < 0.0 )	rgba.xyz=vec3(1,1,0);\n"
-APPLY_WATERMARK_GLSL("rgba","uv")
-"	gl_FragColor = rgba;\n"
-"}\n";
-
+#include "BlitTest.glsl.frag"
+;
 
 static auto BlitFragShaderError =
-"" WATERMARK_PREAMBLE_GLSL ""
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC "vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC "vec4 rgba = vec4( mix(0.6,1.0,max(uv.x,uv.y)),uv.x*0.3,uv.y*0.3,1);\n"
-APPLY_WATERMARK_GLSL("rgba","uv")
-"	gl_FragColor = rgba;\n"
-"}\n";
-
-
+#include "BlitError.glsl.frag"
+;
 
 //	gr: have this conversion somewhere in the lib
-auto BlitFragShaderFreenectDepth10mm =
-"" WATERMARK_PREAMBLE_GLSL ""
-"varying " PREC " vec2 oTexCoord;\n"
-"uniform sampler2D Texture0;\n"
-"const float DepthInvalid = 0.f/1000.f;\n"
-"const float DepthMax = 10000.f;\n"
-"uniform " PREC "mat3 Transform;\n"
-"void main()\n"
-"{\n"
-"	" PREC "vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;\n"
-"	" PREC "vec4 rgba = texture2D(Texture0,uv);\n"
-//	get depth as a float
-"	" PREC "float Depth = ( (rgba.x * 255.f) + (rgba.y * 255.f * 255.f) ) / DepthMax;"
-//	identify bad depth values and write them to the blue channel
-"	rgba.z = ( Depth <= DepthInvalid ) ? 1 : 0;\n"
-//	convert depth back to a full range float
-"	Depth = Depth * ((255.f*255.f)+255.f);\n"
-"	rgba.x = mod( Depth, 255.f );\n"
-"	rgba.y = (Depth-rgba.x) / (255.f*255.f);\n"
-APPLY_WATERMARK_GLSL("rgba","uv")
-"	gl_FragColor = rgba;\n"
-"}\n";
+static auto BlitFragShaderFreenectDepth10mm =
+#include "BlitFreenectDepth10mm.glsl.frag"
+;
 
 
 
-
-std::shared_ptr<Opengl::TShader> AllocShader(std::shared_ptr<Opengl::TShader>& Shader,const std::string& Name,const std::string& VertShader,const std::string& FragShader,Opengl::TGeometryVertex& VertexDescription,std::shared_ptr<Opengl::TShader> BackupShader,Opengl::TContext& Context)
+Opengl::TBlitter::TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool) :
+	mTempTextures	( TexturePool )
 {
-	if ( Shader )
-		return Shader;
-	
+	if ( !mTempTextures )
+		mTempTextures.reset( new TPool<TTexture> );
+}
+
+Opengl::TBlitter::~TBlitter()
+{
+	mBlitShaders.clear();
+	mBlitQuad.reset();
+	mRenderTarget.reset();
+}
+
+TPool<Opengl::TTexture>& Opengl::TBlitter::GetTexturePool()
+{
+	return *mTempTextures;
+}
+
+
+std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(const std::string& Name,const char* Source,Opengl::TContext& Context)
+{
+	//	see if it's already allocated
+	{
+		auto ShaderIt = mBlitShaders.find( Source );
+		if ( ShaderIt != mBlitShaders.end() )
+		{
+			Soy::Assert( ShaderIt->second != nullptr, "Null shader in blit list");
+			return ShaderIt->second;
+		}
+	}
+
+	//	get the stuff we need to allocate
+	auto BlitGeo = GetGeo( Context );
+	if ( !BlitGeo )
+	{
+		throw Soy::AssertException("Cannot allocate shader without geometry");
+		return nullptr;
+	}
+	auto& VertexDesc = BlitGeo->mVertexDescription;
+
 	try
 	{
-		Shader.reset( new Opengl::TShader( VertShader, FragShader, VertexDescription, Name, Context ) );
+		auto pShader = std::make_shared<Opengl::TShader>( BlitVertShader, Source, VertexDesc, Name, Context );
+		mBlitShaders[Source] = pShader;
+		return pShader;
 	}
-	catch( std::exception& e )
+	catch(std::exception& e)
 	{
-		std::Debug << "Failed to allocate shader: " << e.what() << std::endl;
-		return BackupShader;
+		//	don't recurse
+		if ( Source == BlitFragShaderTest )
+		{
+			std::Debug << "Failed to allocate test shader(" << Name << "): " << e.what() << std::endl;
+			return nullptr;
+		}
+
+		std::Debug << "Failed to allocate shader " << Name << ", reverting to test shader... Exception: " << e.what()  << std::endl;
+		return GetBackupShader( Context );
 	}
-	
-	
-	return Shader;
 }
 
 
 
-std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetTestShader(Opengl::TContext& Context)
+std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetBackupShader(TContext& Context)
 {
-	auto BlitGeo = GetGeo( Context );
-	if ( !BlitGeo )
-	{
-		throw Soy::AssertException("Cannot allocate shader without geometry");
-		return nullptr;
-	}
-	auto& VertexDesc = BlitGeo->mVertexDescription;
-	
-	
-	//	make sure the test shader is allocated and return it if any others failed
-	if ( !mBlitShaderTest )
-	{
-		AllocShader( mBlitShaderTest, "Test", BlitVertShader, BlitFragShaderTest, VertexDesc, nullptr, Context );
-	}
-
-	return mBlitShaderTest;
+	return GetShader("Backup", BlitFragShaderTest, Context );
 }
 
-
-std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetErrorShader(Opengl::TContext& Context)
+std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetErrorShader(TContext& Context)
 {
-	auto BlitGeo = GetGeo( Context );
-	if ( !BlitGeo )
-	{
-		throw Soy::AssertException("Cannot allocate shader without geometry");
-		return nullptr;
-	}
-	auto& VertexDesc = BlitGeo->mVertexDescription;
-	
-	if ( !mBlitShaderError )
-	{
-		AllocShader( mBlitShaderError, "Error", BlitVertShader, BlitFragShaderError, VertexDesc, nullptr, Context );
-	}
-	
-	return mBlitShaderError;
+	return GetShader("Error", BlitFragShaderError, Context );
 }
 
 
 std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl::TTexture>& Sources,Opengl::TContext& Context)
 {
-	auto BlitGeo = GetGeo( Context );
-	if ( !BlitGeo )
-	{
-		throw Soy::AssertException("Cannot allocate shader without geometry");
-		return nullptr;
-	}
-	auto& VertexDesc = BlitGeo->mVertexDescription;
-	
-	
-	//	make sure the test shader is allocated and return it if any others failed
-	if ( !mBlitShaderTest )
-	{
-		AllocShader( mBlitShaderTest, "Test", BlitVertShader, BlitFragShaderTest, VertexDesc, nullptr, Context );
-	}
-	
 	if ( Sources.GetSize() == 0 )
-		return mBlitShaderTest;
+		return GetBackupShader(Context);
 	
 	auto& Texture0 = Sources[0];
 	
 	//	alloc and return the shader we need
-	if ( Sources.GetSize() > 1 )
+	if ( Sources.GetSize() > 1 && mMergeYuv )
 	{
 		auto& Texture1 = Sources[1];
-		if ( Texture0.mMeta.GetFormat() == SoyPixelsFormat::LumaVideo )
-			return AllocShader( mBlitShaderYuvVideo, SoyPixelsFormat::ToString(Texture0.mMeta.GetFormat()), BlitVertShader, BlitFragShaderYuv( Soy::TYuvParams::Video(), Texture1.GetFormat() ), VertexDesc, mBlitShaderError, Context  );
-		
-		//if ( Texture0.mMeta.GetFormat() == SoyPixelsFormat::LumaFull )
-		return AllocShader( mBlitShaderYuvFull, SoyPixelsFormat::ToString(Texture0.mMeta.GetFormat()), BlitVertShader, BlitFragShaderYuv( Soy::TYuvParams::Full(), Texture1.GetFormat() ), VertexDesc, mBlitShaderError, Context  );
+		auto MergedFormat = SoyPixelsFormat::GetMergedFormat( Texture0.mMeta.GetFormat(), Texture1.mMeta.GetFormat() );
+
+		switch ( MergedFormat )
+		{
+			case SoyPixelsFormat::Yuv_8_88_Full:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Full, Context );
+			case SoyPixelsFormat::Yuv_8_88_Ntsc:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Ntsc, Context );
+			case SoyPixelsFormat::Yuv_8_88_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_88_Smptec, Context );
+			
+			case SoyPixelsFormat::Yuv_8_8_8_Full:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Full, Context );
+			case SoyPixelsFormat::Yuv_8_8_8_Ntsc:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Ntsc, Context );
+			case SoyPixelsFormat::Yuv_8_8_8_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_8_8_8_Smptec, Context );
+			
+			//case SoyPixelsFormat::Yuv_844_Full:		return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_844_Full, Context );
+			//case SoyPixelsFormat::Yuv_844_Ntsc:		return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_844_Ntsc, Context );
+			//case SoyPixelsFormat::Yuv_844_Smptec:	return GetShader( SoyPixelsFormat::ToString(MergedFormat), BlitFragShader_Yuv_844_Smptec, Context );
+			
+			default:break;
+		}
+
+		std::Debug << "Warning: No frag shader specified for merged format " << MergedFormat << " (" << Texture0.mMeta.GetFormat() << " + " << Texture1.mMeta.GetFormat() << ")" << std::endl;
 	}
-	
+
 	if ( Texture0.mMeta.GetFormat() == SoyPixelsFormat::FreenectDepthmm )
-		return AllocShader( mBlitShaderFreenectDepth10mm, SoyPixelsFormat::ToString(SoyPixelsFormat::FreenectDepthmm), BlitVertShader, BlitFragShaderFreenectDepth10mm, VertexDesc, mBlitShaderError, Context  );
+		return GetShader( SoyPixelsFormat::ToString(SoyPixelsFormat::FreenectDepthmm), BlitFragShaderFreenectDepth10mm, Context );
 	
 	//	gr: note; these are all for rgba, don't we ever need to merge?
 	if ( Texture0.mType == GL_TEXTURE_2D )
-		return AllocShader( mBlitShader2D, "2D", BlitVertShader, BlitFragShader2D, VertexDesc, mBlitShaderError, Context  );
+		return GetShader( "2D", BlitFragShader2D, Context  );
 	
 #if defined(GL_TEXTURE_RECTANGLE)
 	if ( Texture0.mType == GL_TEXTURE_RECTANGLE )
-		return AllocShader( mBlitShaderRect, "Rectangle", BlitVertShader, BlitFragShaderRectangle, VertexDesc, mBlitShaderError, Context  );
+		return GetShader( "Rectangle", BlitFragShaderRectangle, Context  );
 #endif
 	
 #if defined(GL_TEXTURE_EXTERNAL_OES)
 	if ( Texture0.mType == GL_TEXTURE_EXTERNAL_OES )
-		return AllocShader( mBlitShaderOes, "OesExternal", BlitVertShader, BlitFragShaderOesExternal, VertexDesc, mBlitShaderTest, Context );
+		return GetShader( "OesExternal", BlitFragShaderOesExternal, Context );
 #endif
 	
 	//	don't know which shader to use!
-	std::Debug << "Don't know what blit shader to use for texture " << Opengl::GetEnumString(Texture0.mType) << std::endl;
-	return mBlitShaderTest;
+	std::Debug << "Don't know what blit shader to use for texture " << Opengl::GetEnumString(Texture0.mType) << '/' << Texture0.mMeta << std::endl;
+	return GetBackupShader(Context);
 }
 
-
-Opengl::TBlitter::~TBlitter()
-{
-	mTempTextures.Clear(true);
-	mBlitShader2D.reset();
-	mBlitShaderTest.reset();
-	mBlitShaderRect.reset();
-	mBlitShaderOes.reset();
-	mBlitShaderYuvVideo.reset();
-	mBlitShaderYuvFull.reset();
-	mBlitQuad.reset();
-	mRenderTarget.reset();
-}
 
 
 
@@ -400,10 +288,13 @@ std::shared_ptr<Opengl::TGeometry> Opengl::TBlitter::GetGeo(Opengl::TContext& Co
 
 void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Error,Opengl::TContext& Context)
 {
-	//	gr: add non-
-	std::shared_ptr<Opengl::TShader> ErrorShader = GetErrorShader( Context );
+	//	gr: until we have text blitting, we need to at least print out the error
+	std::Debug << "BlitError(" << Error << ")" << std::endl;
 
-	BufferArray<Opengl::TTexture,2> Textures;
+	//	gr: add non-
+	std::shared_ptr<TShader> ErrorShader = GetErrorShader( Context );
+
+	BufferArray<TTexture,2> Textures;
 	TTextureUploadParams UploadParams;
 	BlitTexture( Target, GetArrayBridge(Textures), Context, UploadParams, ErrorShader );
 }
@@ -412,18 +303,10 @@ void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Err
 void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::TTexture>&& Sources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	//	grab provided shader if it's already compiled
-	std::shared_ptr<Opengl::TShader> OverrideShaderPtr;
+	std::shared_ptr<TShader> OverrideShaderPtr;
 	if ( OverrideShader )
 	{
-		auto& pOverrideShader = mBlitShaders[OverrideShader];
-		if ( !pOverrideShader )
-		{
-			auto BlitGeo = GetGeo( Context );
-			Soy::Assert( BlitGeo!=nullptr, "Cannot allocate shader without geometry");
-			auto& VertexDesc = BlitGeo->mVertexDescription;
-			AllocShader( pOverrideShader, "OverrideShader", BlitVertShader, OverrideShader, VertexDesc, mBlitShaderTest, Context );
-		}
-		OverrideShaderPtr = pOverrideShader;
+		OverrideShaderPtr = GetShader( "OverrideShader", OverrideShader, Context );
 	}
 	
 	BlitTexture( Target, GetArrayBridge(Sources), Context, UploadParams, OverrideShaderPtr );
@@ -439,7 +322,7 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 		throw Soy::AssertException("VAO not supported");
 	
 	if ( mUseTestBlit && !OverrideShader )
-		OverrideShader = GetTestShader( Context );
+		OverrideShader = GetBackupShader( Context );
 	
 	
 	//	gr: pre-empt these failures too
@@ -523,7 +406,7 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 	}
 }
 
-void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
+void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	ofScopeTimerWarning Timer("Blit SoyPixel Texture[s]",2);
 	
@@ -537,7 +420,8 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixel
 			std::Debug << "Unexpected null pixels " << i << "/" << OrigSources.GetSize() << " in blit" << std::endl;
 			continue;
 		}
-		auto& Source = *OrigSources[i];
+		//	gr: non const for SplitPlanes... not neccesarily unsafe, but then means we need a const std::shared<SoyPixelsImpl>...
+		auto& Source = const_cast<SoyPixelsImpl&>( *OrigSources[i] );
 
 		//	if the format has multiple planes we need to split the image
 		Array<std::shared_ptr<SoyPixelsImpl>> PixelPlanes;
@@ -586,31 +470,24 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<SoyPixel
 	
 	//	do normal blit
 	BlitTexture( Target, GetArrayBridge(SourceTextures), Context, UploadParams, OverrideShader );
+
+	auto& Pool = GetTexturePool();
+	for ( int t=0;	t<SourceTextures.GetSize();	t++ )
+		Pool.Release( SourceTextures[t] );
+
 }
 
 
 
-std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Mode)
+std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Type)
 {
-	//	already have one?
-	for ( int t=0;	t<mTempTextures.GetSize();	t++ )
+	auto RealAlloc = [&Meta,&Type,&Context]()
 	{
-		auto pTexture = mTempTextures[t];
-		if ( !pTexture )
-			continue;
-		
-		if ( pTexture->mMeta != Meta )
-			continue;
-		
-		if ( pTexture->mType != Mode )
-			continue;
-		
-		return pTexture;
-	}
+		return std::make_shared<TTexture>( Meta, Type );
+	};
 	
-	//	no matching ones, allocate a new one
-	std::shared_ptr<TTexture> Texture( new TTexture( Meta, Mode ) );
-	mTempTextures.PushBack( Texture );
+	auto& Pool = GetTexturePool();
+	auto Texture = Pool.AllocPtr( TTextureMeta(Meta,Type), RealAlloc );
 	return Texture;
 }
 
@@ -618,6 +495,17 @@ std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsM
 Opengl::TTexture& Opengl::TBlitter::GetTempTexture(SoyPixelsMeta Meta,TContext& Context,GLenum Mode)
 {
 	auto pTexture = GetTempTexturePtr( Meta, Context, Mode );
+	Soy::Assert( pTexture!=nullptr, "Failed to alloc temp texture");
 	return *pTexture;
+}
+
+
+void Opengl::TBlitter::GetMeta(TJsonWriter& Json)
+{
+	Soy::TBlitter::GetMeta( Json );
+
+	auto& Pool = GetTexturePool();
+
+	Json.Push("BlitterTexturePoolSize", Pool.GetAllocCount() );
 }
 

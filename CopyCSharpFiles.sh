@@ -1,9 +1,11 @@
 
 
 echo "Copying c# to Unity dir"
-UNITY_PLUGINS_PATH="$SRCROOT/Unity/Assets/Plugins"
+UNITY_PLUGINS_PATH="$SRCROOT/Unity/Assets/$PROJECT"
 mkdir -p $UNITY_PLUGINS_PATH
-cp "$SRCROOT/src/$PROJECT.cs" $UNITY_PLUGINS_PATH
+cp $SRCROOT/src/*.cs $UNITY_PLUGINS_PATH
+if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1; } fi
+cp -r "$SRCROOT/src/Editor" $UNITY_PLUGINS_PATH
 if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1; } fi
 
 # replace GIT_REVISION with the git revision in the copied file
@@ -20,7 +22,7 @@ else
 {
 	echo "Replacing $GIT_REV_MATCH in C# with $GIT_REV..."
 	# streamedit -inplace <backupextension> -e command
-	sed -i '' -e "s/$GIT_REV_MATCH/$GIT_REV/g" "$UNITY_PLUGINS_PATH/$PROJECT.cs"
+	sed -i '' -e "s/$GIT_REV_MATCH/$GIT_REV/g" $UNITY_PLUGINS_PATH/*.cs
 	# gr: on windows, sed not known... error code still 0 :/
 	if [ $? -ne 0 ]; then
 	{

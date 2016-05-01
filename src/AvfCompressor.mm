@@ -527,7 +527,7 @@ void Avf::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 }
 
 
-void Avf::TEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
+void Avf::TEncoder::Write(std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
 {
 	auto& Image = *pImage;
 	Soy::Assert( mSession != nullptr, "Session expected" );
@@ -574,65 +574,4 @@ void Avf::TEncoder::OnError(const std::string& Error)
 	mFatalError << Error;
 }
 
-
-
-
-Avf::TPassThroughEncoder::TPassThroughEncoder(const TCasterParams& Params,std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t StreamIndex) :
-	TMediaEncoder	( OutputBuffer ),
-	mOutputMeta		( 256, 256, SoyPixelsFormat::RGBA ),
-	mStreamIndex	( StreamIndex )
-{
-}
-
-
-void Avf::TPassThroughEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl::TContext& Context)
-{
-	//	todo: proper opengl -> CvPixelBuffer
-	
-	//	gr: Avf won't accept RGBA, but it will take RGB so we can force reading that format here
-	if ( Image.GetFormat() != SoyPixelsFormat::RGBA )
-	{
-		throw Soy::AssertException("opengl mode unsupported");
-	}
-	
-	//	gr: cannot currently block for an opengl task, this is called from the main thread on mono, even though the render thread
-	//		is different, it seems to block and our opengl callback isn't called... so, like the higher level code, no block
-	auto ReadPixels = [this,Image,Timecode]
-	{
-		std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
-		Image.Read( *Pixels, SoyPixelsFormat::RGB );
-		Write( Pixels, Timecode );
-	};
-	Context.PushJob( ReadPixels );
-}
-
-
-void Avf::TPassThroughEncoder::Write(const std::shared_ptr<SoyPixelsImpl> pImage,SoyTime Timecode)
-{
-	Soy::Assert( pImage!=nullptr, "Image expected");
-	auto& Image = *pImage;
-	
-	std::shared_ptr<TMediaPacket> pPacket( new TMediaPacket() );
-	auto& Packet = *pPacket;
-	
-	auto& PixelsArray = Image.GetPixelsArray();
-	Packet.mData.Copy( PixelsArray );
-	Packet.mTimecode = Timecode;
-	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Image.GetFormat() );
-	Packet.mMeta.mPixelMeta = Image.GetMeta();
-	Packet.mMeta.mStreamIndex = mStreamIndex;
-	
-	auto Block = []()
-	{
-		return false;
-	};
-
-	PushFrame( pPacket, Block );
-}
-
-
-void Avf::TPassThroughEncoder::OnError(const std::string& Error)
-{
-	mFatalError << Error;
-}
 

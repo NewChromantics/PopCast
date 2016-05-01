@@ -9,7 +9,7 @@ REM set UNITY_EXE=$(UnityExe)
 REM set BUILD_DLL=$(TargetPath)
  
 REM Setup some other vars we don't need to put in VS
-set TARGET_PATH=%SRCROOT%\Unity\Assets\Plugins\Windows\
+set TARGET_PATH=%SRCROOT%\Unity\Assets\%PROJECT%\Windows\
 set TARGET_WINDOWS=true
 
 REM todo: check these vars are set
@@ -38,12 +38,17 @@ copy /Y "%BUILD_DLL%" "%TARGET_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1008	)
 
 REM for windows, in case the scripts below don't work, force an early C# copy
-set BUILD_CSHARP=%SRCROOT%\src\%PROJECT%.cs
+set BUILD_CSHARP=%SRCROOT%\src\*.cs
 set TARGET_CSHARP_PATH=%TARGET_PATH%"..\
 echo "Copying %BUILD_CSHARP% to Unity dir %TARGET_CSHARP_PATH%"
 copy /Y "%BUILD_CSHARP%" "%TARGET_CSHARP_PATH%"
-if %ERRORLEVEL% NEQ 0	(	EXIT /b 1008	)
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 1013	)
 
+set BUILD_CSHARPEDITOR=%SRCROOT%\src\Editor
+set TARGET_CSHARPEDITOR_PATH=%TARGET_PATH%..\Editor\*
+echo "Copying %BUILD_CSHARPEDITOR% to Unity dir %TARGET_CSHARPEDITOR_PATH%"
+xcopy /E /Y "%BUILD_CSHARPEDITOR%" "%TARGET_CSHARPEDITOR_PATH%"
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 1014	)
 
 set BASH_FILENAME=bash.exe
 
@@ -76,6 +81,13 @@ if not defined BASH_EXE (
 	exit /b 1012
 )
 echo using bash at %BASH_EXE%
+
+REM extract path from bash exe and add to the env path, so calls to mkdir, cp etc work as they're alongside bash.exe
+for %%a in (%BASH_EXE%) do (
+	set BASH_PATH=%%~dpa
+)
+echo Adding %BASH_PATH% to path env
+set PATH=%PATH%;%BASH_PATH%
 
 REM Normal post build
 %BASH_EXE% %SRCROOT%/CopyCSharpFiles.sh

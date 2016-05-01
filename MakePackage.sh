@@ -12,7 +12,7 @@ if [ -z "$UNITY_EXE" ]; then
 } fi
 
 export LOG_FILE="./MakePackage.log"
-export PROJECT_PACKAGE_PATHS="Assets/Plugins"
+export PROJECT_PACKAGE_PATHS="Assets/$PROJECT"
 
 echo "Making .unitypackage... using UNITY_EXE=${UNITY_EXE}"
 echo "PROJECT_PATH=${PROJECT_PATH}"

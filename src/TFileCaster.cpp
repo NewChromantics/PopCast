@@ -1,23 +1,54 @@
 #include "TFileCaster.h"
 #include <SoyMedia.h>
-#include "AvfCompressor.h"
-#include "LibavMuxer.h"
 #include "SoyGif.h"
 #include "THttpCaster.h"
+#include <SoyFileSystem.h>
+#include <SoyJson.h>
+
 
 #if defined(TARGET_OSX)
+#define ENABLE_LIBAV
+#endif
+
+#if defined(ENABLE_LIBAV)
+#include "LibavMuxer.h"
+#endif
+
+#if defined(TARGET_OSX)
+#include "AvfCompressor.h"
 #include "AvfMuxer.h"
+#endif
+
+#if defined(TARGET_WINDOWS)
+#include "MfMuxer.h"
 #endif
 
 
 
-
-std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,std::shared_ptr<TMediaPacketBuffer>& Input)
+std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMediaEncoderParams& EncoderParams,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>& EncoderFunc)
 {
 #if defined(TARGET_OSX)
 	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
 	{
-		return std::make_shared<Avf::TFileMuxer>( Filename, Input );
+		return std::make_shared<Avf::TFileMuxer>( Filename, Input, OnStreamFinished );
+	}
+#endif
+#if defined(TARGET_WINDOWS)
+	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
+	{
+		const char* SupportedExtensions[] = {".mp4"};
+
+		if ( Soy::StringEndsWith( Filename, SupportedExtensions, false ) )
+		{
+			EncoderFunc = [Input](size_t StreamIndex,const SoyPixelsMeta& InputMeta)
+			{
+				//	get this meta from MediaFoundation::TFileMuxer
+				SoyPixelsMeta OutputMeta( InputMeta.GetWidth(), InputMeta.GetHeight(), SoyPixelsFormat::BGRA );
+
+				return std::shared_ptr<TMediaEncoder>( new MfEncoder( Input, StreamIndex, OutputMeta ) );
+			};
+			return std::make_shared<MediaFoundation::TFileMuxer>( Filename, EncoderParams, Input, OnStreamFinished );
+		}
 	}
 #endif
 	return nullptr;
@@ -38,10 +69,11 @@ std::function<std::shared_ptr<TStreamWriter>()> GetAllocStreamWriterFunc(std::st
 	//	detect directory to put file in
 	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
 	{
-		return [Filename]
+		auto f = [Filename]
 		{
 			return std::make_shared<TFileStreamWriter>( Filename );
 		};
+		return f;
 	}
 
 	return nullptr;
@@ -61,16 +93,21 @@ std::shared_ptr<TStreamWriter> AllocStreamWriter(const std::string& Filename)
 }
 
 
-std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc,std::shared_ptr<Opengl::TContext> OpenglContext)
+std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>& EncoderFunc,TCasterDeviceParams& DeviceParams)
 {
 	if ( Soy::StringEndsWith( Filename, ".gif", false ) )
 	{
-		auto AllocGifEncoder = [Input,OpenglContext,Params](size_t StreamIndex)
+		auto AllocGifEncoder = [Input,DeviceParams,Params](size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 		{
-			return Gif::AllocEncoder( Input, StreamIndex, OpenglContext, Params.mGifParams );
+			if ( DeviceParams.OpenglContext )
+				return Gif::AllocEncoder( Input, StreamIndex, DeviceParams.OpenglContext, DeviceParams.OpenglTexturePool, Params.mGifParams, Params.mSkipFrames );
+			else if ( DeviceParams.DirectxContext )
+				return Gif::AllocEncoder( Input, StreamIndex, DeviceParams.DirectxContext, DeviceParams.DirectxTexturePool, Params.mGifParams, Params.mSkipFrames );
+
+			throw Soy::AssertException("Missing graphics context");
 		};
 		EncoderFunc = AllocGifEncoder;
-		return std::make_shared<Gif::TMuxer>( Output, Input, Filename );
+		return std::make_shared<Gif::TMuxer>( Output, Input, Filename, Params.mGifParams );
 	}
 	
 	if ( Soy::StringEndsWith( Filename, ".raw", false ) )
@@ -99,7 +136,7 @@ std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string 
 
 
 
-TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext) :
+TFileCaster::TFileCaster(const TCasterParams& Params,TCasterDeviceParams& DeviceParams) :
 	TCaster			( Params )
 {
 	auto& Filename = Params.mName;
@@ -107,15 +144,28 @@ TFileCaster::TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TCo
 	//	alloc & listen for new packets
 	mFrameBuffer.reset( new TMediaPacketBuffer() );
 
+
+	bool ShowFileOnFinished = Params.mShowFinishedFile;
+	auto OnStreamFinished = [Filename,ShowFileOnFinished](bool& Success)
+	{
+		if ( !Success )
+			return;
+		if ( !ShowFileOnFinished )
+			return;
+
+		Platform::ShowFileExplorer( Filename );
+	};
 	
 	//	see if there are OS specialisations
-	mMuxer = AllocPlatformMuxer( Params.mName, mFrameBuffer );
+	mMuxer = AllocPlatformMuxer( Params.mName, Params.mMpegParams, mFrameBuffer, OnStreamFinished, mAllocEncoder );
 	
 	//	alloc stream & muxer from name
 	if ( !mMuxer )
 	{
 		mFileStream = AllocStreamWriter( Params.mName );
-		mMuxer = AllocMuxer( Params, Filename, mFileStream, mFrameBuffer, mAllocEncoder, OpenglContext );
+		Soy::Assert( mFileStream != nullptr, "Failed to allocate filestream");
+		mFileStream->mOnShutdown.AddListener( OnStreamFinished );
+		mMuxer = AllocMuxer( Params, Filename, mFileStream, mFrameBuffer, mAllocEncoder, DeviceParams );
 	}
 
 	
@@ -191,18 +241,24 @@ bool TFileCaster::HandlesFilename(const std::string& Filename)
 
 void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
-	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex, Image.GetMeta() );
 	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
-void TFileCaster::Write(const std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
+void TFileCaster::Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context)
 {
-	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex, Image.GetMeta() );
+	Encoder.Write( Image, FrameMeta.mTimecode, Context );
+}
+
+void TFileCaster::Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
+{
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex, Image->GetMeta() );
 	Encoder.Write( Image, FrameMeta.mTimecode );
 }
 
 
-TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
+TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 {
 	auto& pEncoder = mEncoders[StreamIndex];
 	if ( pEncoder )
@@ -210,16 +266,65 @@ TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
 	
 	if ( mAllocEncoder )
 	{
-		pEncoder = mAllocEncoder( StreamIndex );
+		pEncoder = mAllocEncoder( StreamIndex, InputMeta );
 		if ( pEncoder )
 			return *pEncoder;
 	}
 	
-	pEncoder.reset( new Avf::TPassThroughEncoder( mParams, mFrameBuffer, StreamIndex ) );
+	pEncoder.reset( new TMediaPassThroughEncoder( mFrameBuffer, StreamIndex ) );
 	return *pEncoder;
 }
 
+void TFileCaster::GetMeta(TJsonWriter& Json)
+{
+	if ( mMuxer )
+	{
+		mMuxer->GetMeta( Json );
+	}
 
+	if ( mFileStream )
+	{
+		auto BytesWritten = mFileStream->GetBytesWritten();
+		auto PendingWrites = mFileStream->GetPendingWrites();
+		Json.Push("BytesWritten", BytesWritten );
+		Json.Push("PendingWrites", PendingWrites );
+	}
+
+	if ( mFrameBuffer )
+	{
+		auto EncodedFrames = mFrameBuffer->GetPacketCount();
+		Json.Push("PendingEncodedFrames", EncodedFrames);
+	}
+
+	for ( auto it = mEncoders.begin(); it != mEncoders.end();	it++ )
+	{
+		auto pEncoder = it->second;
+		pEncoder->GetMeta( Json );
+	}
+}
+
+size_t TFileCaster::GetPendingPacketCount()
+{
+	size_t PendingCount = 0;
+	if ( mMuxer )
+	{
+		if ( mMuxer->mInput )
+			PendingCount += mMuxer->mInput->GetPacketCount();
+		PendingCount += mMuxer->mDefferedPackets.GetSize();
+	}
+
+	if ( mFileStream )
+		PendingCount += mFileStream->GetPendingWrites();
+
+	for ( auto it = mEncoders.begin(); it != mEncoders.end();	it++ )
+	{
+		auto pEncoder = it->second;
+		PendingCount += pEncoder->GetPendingOutputCount();
+		PendingCount += pEncoder->GetPendingEncodeCount();
+	}
+
+	return PendingCount;
+}
 
 
 /*
