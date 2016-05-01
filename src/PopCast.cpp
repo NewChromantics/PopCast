@@ -100,7 +100,8 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float 
 	
 	//	60fps is just black on mediafoundation...
 	Params.mMpegParams.SetBitRateMegaBytesPerSecond( RateMegaBytesPerSec );
-	Params.mMpegParams.mFrameRate = 60;
+	static int fps = 30;
+	Params.mMpegParams.mFrameRate = fps;
 
 	return Params;
 }
