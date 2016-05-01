@@ -268,6 +268,8 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target, ArrayBridge<const
 		SourceTextures.PushBack( *PixelTexture );
 	}
 
+	BlitTexture( Target, GetArrayBridge(SourceTextures), Context, OverrideShader );
+
 	auto& TexturePool = GetTexturePool();
 	for ( int i=0;	i<SourceTextures.GetSize();	i++ )
 	{
