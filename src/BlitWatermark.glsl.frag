@@ -10,18 +10,21 @@ R"*###*(
 	#define InsideRectf(p,Minx,Miny,Maxx,Maxy)	(p.x >= Minx && p.x <= Maxx && p.y >= Miny && p.y <= Maxy)
 	#define InsideRect(p,Rect)					InsideRectf( p, Rect.x, Rect.y, Rect.z, Rect.w )
 	
-	//	opengl only
+#if !defined(CORRECT_UV)
 	//#define CORRECT_UV(v)						(1.0-v)
 	#define CORRECT_UV(v)						(v)
+#endif
 
 	//	box uv
 	//float AspectRatio = iResolution.x/iResolution.y;
 	float AspectRatio = 4.0/3.0;
 	float BlocksWide = 8.0;
 	//	align to middle for top & bottom
-	float onev = MODULOUS( BlocksWide / AspectRatio , 1.0 );
+	bool OnlyCorner = true;
+	float onev = OnlyCorner ? 0.0 : MODULOUS( BlocksWide / AspectRatio , 1.0 );
 	vec2 boxuv = vec2( MODULOUS( uv.x * BlocksWide, 1.00 ), MODULOUS( (CORRECT_UV(uv.y)-onev) * BlocksWide / AspectRatio , 1.0 ) );
-   
+	vec2 boxindex = vec2( uv.x * BlocksWide, CORRECT_UV(uv.y) * (BlocksWide / AspectRatio) );
+  
 	vec3 LimeColour = vec3( 218.0/255.0, 245.0/255.0, 25.0/255.0 );
 	//vec3 OrangeColour = vec3( 253.0/255.0, 166.0/255.0, 25.0/255.0 );
 	vec3 StickColour = vec3( 191.0/255.0, 147.0/255.0, 79.0/255.0 );
@@ -34,7 +37,11 @@ R"*###*(
 	vec4 StickShadowRect = StickRect;
 	StickShadowRect.w = StickRect.y + (StickRect.w-StickRect.y)*0.20;
 
-	if ( boxuv.x >= PopsicleRect.x && boxuv.x <= PopsicleRect.z &&
+	if ( OnlyCorner && (boxindex.x > 1.0 || boxindex.y > 1.0 ) )
+    {
+		//	do nothing
+    }
+    else if ( boxuv.x >= PopsicleRect.x && boxuv.x <= PopsicleRect.z &&
 		boxuv.y >= PopsicleRect.y && boxuv.y <= PopsicleRect.w )
 	{
 		//	calc curve

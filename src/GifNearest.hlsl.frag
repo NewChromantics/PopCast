@@ -38,6 +38,8 @@ float4 Frag(PixelInputType input) : SV_TARGET
 	float2 uv = input.tex;
 	float4 rgba = Texture0.Sample( Texture0Sampler, uv );
 
+	#define CORRECT_UV(v)	(1.0-v)
+
 	//	apply watermark here where we read from the source
 )*###*"
 
