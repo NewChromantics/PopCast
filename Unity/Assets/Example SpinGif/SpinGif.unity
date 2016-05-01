@@ -554,16 +554,18 @@ MonoBehaviour:
   CastParams:
     ShowFinishedFile: 1
     SkipFrames: 0
+    PushDebugFrames: 0
+    BitRateMegaBytesPerSec: 32
     Gif_AllowIntraFrames: 1
     Gif_DebugPalette: 0
     Gif_DebugIndexes: 0
     Gif_DebugTransparency: 0
     Gif_CPUOnly: 0
-    PushDebugFrames: 0
     Gif_LzwCompression: 1
   mOutputTarget: file:StreamingAssets/*.mp4
   mCaptureCamera: {fileID: 572881025}
-  mCaptureCameraTexture: {fileID: 0}
+  mCaptureCameraTexture: {fileID: 8400000, guid: d6458c910efcfa7459df8d094985d492,
+    type: 2}
   EnableDebug: 1
 --- !u!4 &843894333
 Transform:
