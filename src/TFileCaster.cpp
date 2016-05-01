@@ -25,7 +25,7 @@
 
 
 
-std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMediaEncoderParams& EncoderParams,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc)
+std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMediaEncoderParams& EncoderParams,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>& EncoderFunc)
 {
 #if defined(TARGET_OSX)
 	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
@@ -40,10 +40,10 @@ std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMedi
 
 		if ( Soy::StringEndsWith( Filename, SupportedExtensions, false ) )
 		{
-			EncoderFunc = [Input](size_t StreamIndex)
+			EncoderFunc = [Input](size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 			{
 				//	get this meta from MediaFoundation::TFileMuxer
-				SoyPixelsMeta OutputMeta( 640, 480, SoyPixelsFormat::BGRA );
+				SoyPixelsMeta OutputMeta( InputMeta.GetWidth(), InputMeta.GetHeight(), SoyPixelsFormat::BGRA );
 
 				return std::shared_ptr<TMediaEncoder>( new MfEncoder( Input, StreamIndex, OutputMeta ) );
 			};
@@ -93,11 +93,11 @@ std::shared_ptr<TStreamWriter> AllocStreamWriter(const std::string& Filename)
 }
 
 
-std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t)>& EncoderFunc,TCasterDeviceParams& DeviceParams)
+std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string Filename,std::shared_ptr<TStreamWriter> Output,std::shared_ptr<TMediaPacketBuffer> Input,std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>& EncoderFunc,TCasterDeviceParams& DeviceParams)
 {
 	if ( Soy::StringEndsWith( Filename, ".gif", false ) )
 	{
-		auto AllocGifEncoder = [Input,DeviceParams,Params](size_t StreamIndex)
+		auto AllocGifEncoder = [Input,DeviceParams,Params](size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 		{
 			if ( DeviceParams.OpenglContext )
 				return Gif::AllocEncoder( Input, StreamIndex, DeviceParams.OpenglContext, DeviceParams.OpenglTexturePool, Params.mGifParams, Params.mSkipFrames );
@@ -241,24 +241,24 @@ bool TFileCaster::HandlesFilename(const std::string& Filename)
 
 void TFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
 {
-	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex, Image.GetMeta() );
 	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
 void TFileCaster::Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context)
 {
-	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex, Image.GetMeta() );
 	Encoder.Write( Image, FrameMeta.mTimecode, Context );
 }
 
 void TFileCaster::Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta)
 {
-	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex );
+	auto& Encoder = AllocEncoder( FrameMeta.mStreamIndex, Image->GetMeta() );
 	Encoder.Write( Image, FrameMeta.mTimecode );
 }
 
 
-TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
+TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 {
 	auto& pEncoder = mEncoders[StreamIndex];
 	if ( pEncoder )
@@ -266,7 +266,7 @@ TMediaEncoder& TFileCaster::AllocEncoder(size_t StreamIndex)
 	
 	if ( mAllocEncoder )
 	{
-		pEncoder = mAllocEncoder( StreamIndex );
+		pEncoder = mAllocEncoder( StreamIndex, InputMeta );
 		if ( pEncoder )
 			return *pEncoder;
 	}

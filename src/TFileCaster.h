@@ -107,7 +107,7 @@ public:
 	static bool			HandlesFilename(const std::string& Filename);
 	
 private:
-	TMediaEncoder&		AllocEncoder(size_t StreamIndex);
+	TMediaEncoder&		AllocEncoder(size_t StreamIndex,const SoyPixelsMeta& InputMeta);
 
 protected:
 	std::map<size_t,std::shared_ptr<TMediaEncoder>>	mEncoders;
@@ -116,7 +116,7 @@ protected:
 	std::shared_ptr<TStreamWriter>		mFileStream;
 	
 	
-	std::function<std::shared_ptr<TMediaEncoder>(size_t)>	mAllocEncoder;
+	std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>	mAllocEncoder;
 };
 
 
