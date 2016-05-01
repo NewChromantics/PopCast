@@ -46,9 +46,15 @@ size_t TSinkWriter::CreateVideoStream(TMediaEncoderParams Params,SoyPixelsMeta I
 //	InputMeta.DumbSetHeight( 400 );
 
 	auto OutputMeta = InputMeta;
-	
+
+	//	need to send frame rate/bitrate or we'll only see one frame
+	TMediaEncoderParams InputParams;
+	InputParams.mAverageBitRate = 0;
+	InputParams.mFrameRate = 60;
+	InputParams.mCodec = SoyMediaFormat::FromPixelFormat( InputMeta.GetFormat() );
+
 	auto FormatOut = MediaFoundation::GetPlatformFormat( Params, OutputMeta.GetWidth(), OutputMeta.GetHeight() );
-	auto FormatIn = MediaFoundation::GetPlatformFormat( SoyMediaFormat::FromPixelFormat( InputMeta.GetFormat() ), InputMeta.GetWidth(), InputMeta.GetHeight() );
+	auto FormatIn = MediaFoundation::GetPlatformFormat( InputParams, InputMeta.GetWidth(), InputMeta.GetHeight() );
 
 	auto& SinkWriter = *mSinkWriter.mObject;
 	
