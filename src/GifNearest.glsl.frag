@@ -1,3 +1,6 @@
+WATERMARK_PREAMBLE_HLSL
+
+
 R"*###*(
 
 
@@ -19,6 +22,15 @@ void main()
 {
 	highp vec2 uv = (vec3(oTexCoord.x,oTexCoord.y,1)*Transform).xy;
 	highp vec4 rgba = texture2D(Texture0,oTexCoord);
+
+
+	//	apply watermark here where we read from the source
+)*###*"
+
+#include "BlitWatermark.glsl.frag"
+
+R"*###*(
+
 	float NearestScore = -1;
 	float NearestIndex = 1;
 	

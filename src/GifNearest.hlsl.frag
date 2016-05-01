@@ -1,3 +1,6 @@
+WATERMARK_PREAMBLE_HLSL
+
+
 R"*###*(
 
 
@@ -34,6 +37,15 @@ float4 Frag(PixelInputType input) : SV_TARGET
 
 	float2 uv = input.tex;
 	float4 rgba = Texture0.Sample( Texture0Sampler, uv );
+
+	//	apply watermark here where we read from the source
+)*###*"
+
+#include "BlitWatermark.hlsl.frag"
+
+R"*###*(
+
+
 	float NearestScore = -1;
 	int NearestIndex = 1;
 	
