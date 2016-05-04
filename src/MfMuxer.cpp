@@ -137,7 +137,7 @@ void MediaFoundation::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Pa
 void MediaFoundation::TFileMuxer::Finish()
 {
 	std::lock_guard<std::mutex> Lock( mWriteLock );
-	if ( !mFinished )
+	if ( mStarted && !mFinished )
 	{
 		auto Result = mSinkWriter->mSinkWriter->Finalize();
 		IsOkay( Result, "Finalize sink");
@@ -145,6 +145,10 @@ void MediaFoundation::TFileMuxer::Finish()
 
 		bool Dummy;
 		mOnStreamFinished(Dummy);
+	}
+	else if ( !mStarted )
+	{
+		std::Debug << "SinkWriter not finished, never started." << std::endl;
 	}
 }
 
