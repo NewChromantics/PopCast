@@ -140,7 +140,7 @@ void MediaFoundation::TFileMuxer::Finish()
 	if ( mStarted && !mFinished )
 	{
 		auto Result = mSinkWriter->mSinkWriter->Finalize();
-		IsOkay( Result, "Finalize sink");
+		IsOkay( Result, "Finalize sink", false );
 		mFinished = true;
 
 		bool Dummy;
