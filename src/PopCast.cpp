@@ -107,7 +107,7 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float 
 }
 
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec)
+__export Unity::uint	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	if ( Filename == nullptr )
@@ -141,14 +141,14 @@ __export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,U
 	return 0;
 }
 
-__export bool	PopCast_Free(Unity::ulong Instance)
+__export bool	PopCast_Free(Unity::uint Instance)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	return PopCast::Free( Instance );
 }
 
 
-__export Unity::sint	PopCast_GetPendingFrameCount(Unity::ulong Instance)
+__export Unity::sint	PopCast_GetPendingFrameCount(Unity::uint Instance)
 {
 	auto pInstance = PopCast::GetInstance(Instance);
 	if ( !pInstance )
@@ -166,9 +166,9 @@ __export Unity::sint	PopCast_GetPendingFrameCount(Unity::ulong Instance)
 }
 
 
-__export Unity::ulong	PopCast_GetBackgroundGpuJobCount()
+__export Unity::uint	PopCast_GetBackgroundGpuJobCount()
 {
-	Unity::ulong JobCount = 0;
+	Unity::uint JobCount = 0;
 
 	try
 	{
@@ -226,7 +226,7 @@ __export void	PopCast_EnumDevices()
 	}
 }
 
-__export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex)
+__export bool	PopCast_UpdateRenderTexture(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex)
 {
 	auto pInstance = PopCast::GetInstance( Instance );
 	if ( !pInstance )
@@ -266,7 +266,7 @@ __export bool	PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTex
 		return false;
 	}
 }
-__export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex)
+__export bool	PopCast_UpdateTexture2D(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex)
 {
 	auto pInstance = PopCast::GetInstance( Instance );
 	if ( !pInstance )
@@ -306,7 +306,7 @@ __export bool	PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexture
 	}
 }
 
-__export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint StreamIndex)
+__export bool PopCast_UpdateTextureDebug(Unity::uint Instance,Unity::sint StreamIndex)
 {
 	auto pInstance = PopCast::GetInstance( Instance );
 	if ( !pInstance )
@@ -345,7 +345,7 @@ __export bool PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint Strea
 
 
 
-__export const char*	PopCast_GetMetaJson(Unity::ulong Instance)
+__export const char*	PopCast_GetMetaJson(Unity::uint Instance)
 {
 	try
 	{

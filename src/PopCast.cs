@@ -90,9 +90,9 @@ public class PopCast
 		Gif_LzwCompression			= 1<<7,
 	};
 
-	private ulong	mInstance = 0;
+	private uint		mInstance = 0;
 	private static int	mPluginEventId = PopCast_GetPluginEventId();
-    private bool mPushDebugFrames = false;
+    private bool		mPushDebugFrames = false;
 #if UNITY_EDITOR
 	public static bool mAllowBackgroundProcessing = true;
 #endif
@@ -134,45 +134,45 @@ public class PopCast
 	
 
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern ulong		PopCast_Alloc(String Filename,uint Params,float RateMegaBytesPerSec);
+	private static extern uint		PopCast_Alloc(String Filename,uint Params,float RateMegaBytesPerSec);
 	
-	[DllImport (PluginName)]
-	private static extern bool		PopCast_Free(ulong Instance);
+	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern bool		PopCast_Free(uint Instance);
 
-	[DllImport (PluginName)]
+	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern void		PopCast_EnumDevices();
 
-	[DllImport (PluginName)]
+	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern int		PopCast_GetPluginEventId();
 	
-	[DllImport (PluginName)]
-	private static extern bool		PopCast_UpdateTexture2D(ulong Instance,System.IntPtr TextureId,int Width,int Height,TextureFormat textureFormat,int StreamIndex);
+	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern bool		PopCast_UpdateTexture2D(uint Instance,System.IntPtr TextureId,int Width,int Height,TextureFormat textureFormat,int StreamIndex);
 
-	[DllImport (PluginName)]
-	private static extern bool		PopCast_UpdateRenderTexture(ulong Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat,int StreamIndex);
+	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern bool		PopCast_UpdateRenderTexture(uint Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat,int StreamIndex);
 
-	[DllImport(PluginName)]
-	private static extern bool		PopCast_UpdateTextureDebug(ulong Instance,int StreamIndex);
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern bool		PopCast_UpdateTextureDebug(uint Instance,int StreamIndex);
 
-	[DllImport(PluginName)]
-	private static extern ulong		PopCast_GetBackgroundGpuJobCount();
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern uint		PopCast_GetBackgroundGpuJobCount();
 
 	[DllImport(PluginName,CallingConvention = CallingConvention.Cdecl)]
-	private static extern System.IntPtr	PopCast_GetMetaJson(ulong Instance);
+	private static extern System.IntPtr	PopCast_GetMetaJson(uint Instance);
 
 	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern void		PopCast_ReleaseString(System.IntPtr Str);
 
 	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern int		PopCast_GetPendingFrameCount(ulong Instance);
+	private static extern int		PopCast_GetPendingFrameCount(uint Instance);
 
-	[DllImport(PluginName)]
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern System.IntPtr PopCast_PopDebugString();
 
-	[DllImport(PluginName)]
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern void		PopCast_ReleaseDebugString(System.IntPtr String);
 
-	[DllImport(PluginName)]
+	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern void		PopCast_ReleaseAllExports();
 
 
@@ -233,7 +233,7 @@ public class PopCast
 		PopCast_EnumDevices();
 	}
 
-	public static ulong GetBackgroundGpuJobCount()
+	public static uint GetBackgroundGpuJobCount()
 	{
 		return PopCast_GetBackgroundGpuJobCount();
 	}

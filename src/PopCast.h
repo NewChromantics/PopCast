@@ -19,16 +19,16 @@ class TCaster;
 class TCasterParams;
 class TJsonWriter;
 
-__export Unity::ulong	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec);
-__export bool			PopCast_Free(Unity::ulong Instance);
+__export Unity::uint	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec);
+__export bool			PopCast_Free(Unity::uint Instance);
 __export void			PopCast_EnumDevices();
-__export bool			PopCast_UpdateRenderTexture(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
-__export bool			PopCast_UpdateTexture2D(Unity::ulong Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
-__export bool			PopCast_UpdateTextureDebug(Unity::ulong Instance,Unity::sint StreamIndex);
-__export Unity::ulong	PopCast_GetBackgroundGpuJobCount();
-__export Unity::sint	PopCast_GetPendingFrameCount(Unity::ulong Instance);
+__export bool			PopCast_UpdateRenderTexture(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
+__export bool			PopCast_UpdateTexture2D(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
+__export bool			PopCast_UpdateTextureDebug(Unity::uint Instance,Unity::sint StreamIndex);
+__export Unity::uint	PopCast_GetBackgroundGpuJobCount();
+__export Unity::sint	PopCast_GetPendingFrameCount(Unity::uint Instance);
 
-__export const char*	PopCast_GetMetaJson(Unity::ulong Instance);
+__export const char*	PopCast_GetMetaJson(Unity::uint Instance);
 __export void			PopCast_ReleaseString(const char* String);
 
 __export const char*	PopCast_PopDebugString();
@@ -61,7 +61,7 @@ namespace TPluginParams
 namespace PopCast
 {
 	class TInstance;
-	typedef Unity::ulong	TInstanceRef;
+	typedef Unity::uint	TInstanceRef;
 
 	std::shared_ptr<TInstance>	Alloc(TCasterParams Params,std::shared_ptr<Opengl::TContext> OpenglContext=nullptr,std::shared_ptr<Directx::TContext> DirectxContext=nullptr);
 	std::shared_ptr<TInstance>	GetInstance(TInstanceRef Instance);
