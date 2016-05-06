@@ -7,6 +7,7 @@
 #include <map>
 
 #include "PopUnity.h"
+//#include "PopMovieDecoder.h"
 #include <SoyEvent.h>
 #include <SoyThread.h>
 #include <SoyMedia.h>
@@ -16,24 +17,24 @@
 #import <AVFoundation/AVFoundation.h>
 #endif
 
+
 class AvfMovieDecoder;
 class AvfDecoderRenderer;
 class AvfTextureCache;
+
+
+namespace Platform
+{
+	std::string				GetCVReturnString(CVReturn Error);
+	std::string				GetCodec(CMFormatDescriptionRef FormatDescription);
+	std::string				GetExtensions(CMFormatDescriptionRef FormatDescription);
+}
+
 
 namespace Directx
 {
 	class TContext;
 	class TTexture;
-}
-
-namespace Soy
-{
-	namespace Platform
-	{
-		std::string		GetCVReturnString(CVReturn Error);
-		std::string		GetCodec(CMFormatDescriptionRef FormatDescription);
-		std::string		GetExtensions(CMFormatDescriptionRef FormatDescription);
-	}
 }
 
 
@@ -42,15 +43,20 @@ namespace Soy
 class AvfTextureCache
 {
 public:
-	AvfTextureCache();
+	AvfTextureCache(Metal::TContext* MetalContext);
 	~AvfTextureCache();
 	
 	void				Flush();
+	void				AllocOpengl();
+	void				AllocMetal(Metal::TContext& MetalContext);
 	
+#if defined(ENABLE_METAL)
+	CFPtr<CVMetalTextureCacheRef>		mMetalTextureCache;
+#endif
 #if defined(TARGET_IOS)
-	CFPtr<CVOpenGLESTextureCacheRef>	mTextureCache;
+	CFPtr<CVOpenGLESTextureCacheRef>	mOpenglTextureCache;
 #elif defined(TARGET_OSX)
-	CFPtr<CVOpenGLTextureCacheRef>		mTextureCache;
+	CFPtr<CVOpenGLTextureCacheRef>		mOpenglTextureCache;
 #endif
 };
 #endif
@@ -68,7 +74,7 @@ public:
 		mTextureCaches.Clear();
 	}
 	
-	std::shared_ptr<AvfTextureCache>	GetTextureCache(size_t Index);
+	std::shared_ptr<AvfTextureCache>	GetTextureCache(size_t Index,Metal::TContext* MetalContext);
 	
 public:
 	Array<std::shared_ptr<AvfTextureCache>>	mTextureCaches;
@@ -76,42 +82,44 @@ public:
 
 
 
+
+
+
+
+
+
 #if defined(__OBJC__)
-class CFPixelBuffer : public TPixelBuffer
+class AvfPixelBuffer : public TPixelBuffer
 {
 public:
-	CFPixelBuffer(CMSampleBufferRef Buffer,bool DoRetain,SoyPixelsFormat::Type Format,std::shared_ptr<AvfDecoderRenderer>& Decoder) :
-		mFormat			( Format ),
-		mSample			( Buffer, DoRetain ),
+	AvfPixelBuffer(bool DoRetain,std::shared_ptr<AvfDecoderRenderer>& Decoder,const float3x3& Transform) :
 		mDecoder		( Decoder ),
 		mLockedPixels	( 2 ),
-		mReadOnlyLock	( true )
+		mReadOnlyLock	( true ),
+		mTransform		( Transform )
 	{
-		if ( !Soy::Assert( mSample, "Sample expected") )
-			return;
-		
-		//auto RetainCount = mSample.GetRetainCount();
-		//std::Debug << "CFPixelBuffer constructor; sample has " << RetainCount << " references in " << __func__ << std::endl;
 	}
-	~CFPixelBuffer();
-
-	virtual void			Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context) override		{}
-	virtual void			Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context) override;
-	virtual void			Lock(ArrayBridge<SoyPixelsImpl*>&& Textures) override;
+	~AvfPixelBuffer();
+	
+	virtual void			Lock(ArrayBridge<Directx::TTexture>&& Textures,Directx::TContext& Context,float3x3& Transform) override		{}
+	virtual void			Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context,float3x3& Transform) override;
+	virtual void			Lock(ArrayBridge<Metal::TTexture>&& Textures,Metal::TContext& Context,float3x3& Transform) override;
+	virtual void			Lock(ArrayBridge<SoyPixelsImpl*>&& Textures,float3x3& Transform) override;
 	virtual void			Unlock() override;
-
+	
 	void					WaitForUnlock();
 	
 private:
-	CVImageBufferRef		LockImageBuffer();
+	virtual CVImageBufferRef	LockImageBuffer()=0;
+	virtual void				UnlockImageBuffer()=0;
+	void						LockPixels(ArrayBridge<SoyPixelsImpl*>& Planes,void* _Data,size_t BytesPerRow,SoyPixelsMeta Meta,float3x3& Transform,ssize_t DataSize=-1);
 	
-private:
+protected:
 	bool						mReadOnlyLock;
-	SoyPixelsFormat::Type		mFormat;
+	//SoyPixelsFormat::Type		mFormat;
 	std::shared_ptr<AvfDecoderRenderer>		mDecoder;
-	CFPtr<CMSampleBufferRef>	mSample;
-
-	CFPtr<CVImageBufferRef>		mLockedImageBuffer;	//	this has been [retained] for safety
+	float3x3					mTransform;
+	
 	std::mutex					mLockLock;
 	
 	Array<std::shared_ptr<AvfTextureCache>>	mTextureCaches;
@@ -119,10 +127,62 @@ private:
 	//	ios has 2 texture caches for multiple planes. Just 0 is used for non-planar
 	CFPtr<CVOpenGLESTextureRef>			mLockedTexture0;
 	CFPtr<CVOpenGLESTextureRef>			mLockedTexture1;
+	CFPtr<CVMetalTextureRef>			mMetal_LockedTexture0;
+	CFPtr<CVMetalTextureRef>			mMetal_LockedTexture1;
 #elif defined(TARGET_OSX)
 	CFPtr<CVOpenGLTextureRef>			mLockedTexture;
 #endif
 	BufferArray<SoyPixelsRemote,2>		mLockedPixels;
 };
 #endif
+
+#if defined(__OBJC__)
+class CFPixelBuffer : public AvfPixelBuffer
+{
+public:
+	CFPixelBuffer(CMSampleBufferRef Buffer,bool DoRetain,std::shared_ptr<AvfDecoderRenderer>& Decoder,const float3x3& Transform) :
+	AvfPixelBuffer	( DoRetain, Decoder, Transform),
+	mSample			( Buffer, DoRetain )
+	{
+		if ( !Soy::Assert( mSample, "Sample expected") )
+			return;
+		//std::Debug << "CFPixelBuffer() retain count=" << mSample.GetRetainCount() << std::endl;
+	}
+	~CFPixelBuffer();
+	
+private:
+	virtual CVImageBufferRef	LockImageBuffer() override;
+	virtual void				UnlockImageBuffer() override;
+	
+private:
+	CFPtr<CVImageBufferRef>		mLockedImageBuffer;	//	this has been [retained] for safety
+	CFPtr<CMSampleBufferRef>	mSample;
+};
+#endif
+
+
+
+#if defined(__OBJC__)
+class CVPixelBuffer : public AvfPixelBuffer
+{
+public:
+	CVPixelBuffer(CVPixelBufferRef Buffer,bool DoRetain,std::shared_ptr<AvfDecoderRenderer>& Decoder,const float3x3& Transform) :
+	AvfPixelBuffer	( DoRetain, Decoder, Transform ),
+	mSample			( Buffer, DoRetain )
+	{
+		if ( !Soy::Assert( mSample, "Sample expected") )
+			return;
+	}
+	~CVPixelBuffer();
+	
+private:
+	virtual CVImageBufferRef	LockImageBuffer() override;
+	virtual void				UnlockImageBuffer() override;
+	
+private:
+	CFPtr<CVPixelBufferRef>	mSample;
+};
+#endif
+
+
 
