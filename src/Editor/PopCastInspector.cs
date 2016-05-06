@@ -13,27 +13,17 @@ public class PopCastInspector : Editor
 		GUILayout.Label("PopCast Version " + PopCast.GetVersion());
 		PopCast.mAllowBackgroundProcessing = GUILayout.Toggle(PopCast.mAllowBackgroundProcessing, "Allow background jobs");
 
-		string MetaString = "";
-		var Meta = (Instance != null) ? Instance.GetMeta() : null;
-		if (Meta != null)
+		string MetaString = (Instance != null) ? Instance.GetMetaJson() : null;
+		if (MetaString == null) 
 		{
-			MetaString += "BackgroundGpuJobCount: " + Meta.BackgroundGpuJobCount + "\n";
-			MetaString += "InstanceCount: " + Meta.InstanceCount + "\n";
-			MetaString += "MuxerInputQueueCount: " + Meta.MuxerInputQueueCount + "\n";
-			MetaString += "MuxerDefferedQueueCount: " + Meta.MuxerDefferedQueueCount + "\n";
-			MetaString += "MB's Written: " + (Meta.BytesWritten/(1024.0f * 1024.0f)) + "\n";
-			MetaString += "PendingWrites: " + Meta.PendingWrites + "\n";
-			MetaString += "PendingEncodedFrames: " + Meta.PendingEncodedFrames + "\n";
-			MetaString += "PushedFrameCount: " + Meta.PushedFrameCount + "\n";
-			MetaString += "PendingFrameCount: " + Meta.PendingFrameCount + "\n";
-		}
-		else if (Instance != null)
-		{
-			MetaString = "<no meta>";
-		}
-		else
-		{
-			MetaString = "<no instance>";
+			if (Instance != null) 
+			{
+				MetaString = "<no meta>";
+			} 
+			else if (Instance == null) 
+			{
+				MetaString = "<no instance>";
+			}
 		}
 
 
