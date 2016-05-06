@@ -31,5 +31,6 @@ public:
 	SoyTime			mLastTimecode;
 	SoyTime			mFirstTimecode;
 	std::function<void(bool&)>		mOnStreamFinished;
+	bool			mDebugWriting;
 };
 

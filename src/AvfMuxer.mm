@@ -206,7 +206,8 @@ void Avf::TAssetWriterInput::Finish()
 
 Avf::TFileMuxer::TFileMuxer(const std::string& Filename,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished) :
 	TMediaMuxer			( nullptr, Input ),
-	mOnStreamFinished	( OnStreamFinished )
+	mOnStreamFinished	( OnStreamFinished ),
+	mDebugWriting		( true )
 {
 	//	make asset writer
 	@try
@@ -235,8 +236,6 @@ void Avf::TFileMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 		}
 
 	}
-	
-	OnPreWrite( SoyTime(1ull) );
 }
 
 void Avf::TFileMuxer::OnPreWrite(SoyTime Timecode)
@@ -246,6 +245,10 @@ void Avf::TFileMuxer::OnPreWrite(SoyTime Timecode)
 		return;
 	
 	mFirstTimecode = Timecode;
+	//	allow zero, but storing 1
+	if ( !mFirstTimecode.IsValid() )
+		mFirstTimecode = SoyTime(1ull);
+	
 	@try
 	{
 		auto* Writer = mAssetWriter->mAsset.mObject;
@@ -255,8 +258,15 @@ void Avf::TFileMuxer::OnPreWrite(SoyTime Timecode)
 		}
 		
 		auto FirstTimecodeCm = Soy::Platform::GetTime( mFirstTimecode );
-		//[Writer startSessionAtSourceTime:FirstTimecodeCm];
-		[Writer startSessionAtSourceTime:kCMTimeZero];
+		static bool StartAtZero = true;
+		if ( StartAtZero )
+			[Writer startSessionAtSourceTime:kCMTimeZero];
+		else
+			[Writer startSessionAtSourceTime:FirstTimecodeCm];
+		
+		if ( mDebugWriting )
+			std::Debug << "Started session at " << (StartAtZero? SoyTime() : mFirstTimecode ) << std::endl;
+
 	}
 	@catch (NSException* e)
 	{
@@ -473,6 +483,9 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 		SampleBuffer = CreateSampleBufferFromCompressed( Packet, AvccData );
 	}
 
+	//	start if we haven't already
+	OnPreWrite( Packet.mTimecode );
+	
 	//	lock here?
 	while ( !Writer.isReadyForMoreMediaData )
 	{
@@ -500,6 +513,9 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 				throw Soy::AssertException( Error.str() );
 			}
 			mLastTimecode = std::max( mLastTimecode, Packet.mTimecode );
+			
+			if ( mDebugWriting )
+				std::Debug << "Wrote sample " << Packet.mTimecode << std::endl;
 		}
 	}
 	@catch(NSException* e)
@@ -539,12 +555,25 @@ void Avf::TFileMuxer::Finish()
 		throw Soy::AssertException( Soy::NSErrorToString( e ) );
 	}
 
-	FinishSemaphore.Wait();
-	std::Debug << "Writer finished..." << std::endl;
-	if ( mOnStreamFinished )
+	try
 	{
-		bool Dummy;
-		mOnStreamFinished(Dummy);
+		FinishSemaphore.Wait();
+		if ( mDebugWriting )
+			std::Debug << "Writer finished..." << std::endl;
+		if ( mOnStreamFinished )
+		{
+			bool Success = true;
+			mOnStreamFinished(Success);
+		}
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << "Failed to finish writing: " << e.what() << std::endl;
+		if ( mOnStreamFinished )
+		{
+			bool Success = false;
+			mOnStreamFinished(Success);
+		}
 	}
 }
 
