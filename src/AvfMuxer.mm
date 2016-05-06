@@ -19,6 +19,9 @@ class Avf::TAssetWriter
 public:
 	TAssetWriter(const std::string& Filename);
 	
+	void		IsOkay(const std::string& Context,bool UnknownStatusIsOkay);	//	throw if in an error state
+	std::string	GetError();
+	
 public:
 	ObjcPtr<AVAssetWriter>		mAsset;
 };
@@ -57,6 +60,69 @@ Avf::TAssetWriter::TAssetWriter(const std::string& Filename)
 	//	delete file before starting or startWriting will error
 	unlink( Filename.c_str() );
 
+}
+
+void Avf::TAssetWriter::IsOkay(const std::string& Context,bool UnknownStatusIsOkay)
+{
+	auto Asset = mAsset ? mAsset.mObject : nullptr;
+	if ( !Asset )
+	{
+		std::stringstream Error;
+		Error << __func__ << " (" << Context << ") No asset";
+		throw Soy::AssertException( Error.str() );
+	}
+
+	//	get current error
+	std::stringstream AssetError;
+	//	grab status & error
+	@try
+	{
+		auto* Error = Asset.error;
+		if ( Error )
+			AssetError << Soy::NSErrorToString( Error );
+	}
+	@catch (NSException *exception)
+	{
+		AssetError << "Exception getting error: " << Soy::NSErrorToString( exception );
+	}
+	
+	//	check status
+	@try
+	{
+		auto Status = Asset.status;
+		switch ( Status )
+		{
+			case AVAssetExportSessionStatusWaiting:
+			case AVAssetExportSessionStatusExporting:
+			case AVAssetExportSessionStatusCompleted:
+				break;
+				
+			case AVAssetExportSessionStatusUnknown:
+				if ( UnknownStatusIsOkay )
+					break;
+				AssetError << Status;
+				break;
+				
+			case AVAssetExportSessionStatusFailed:
+			case AVAssetExportSessionStatusCancelled:
+			default:
+				AssetError << Status;
+				break;
+		}
+	}
+	@catch (NSException *exception)
+	{
+		AssetError << "Exception getting status: " << Soy::NSErrorToString( exception );
+	}
+
+	//	see if we had any errors
+	auto AssetErrorStr = AssetError.str();
+	if ( AssetErrorStr.empty() )
+		return;
+	
+	std::stringstream Error;
+	Error << __func__ << " (" << Context << ") " << AssetErrorStr;
+	throw Soy::AssertException( Error.str() );
 }
 
 
@@ -124,6 +190,7 @@ Avf::TAssetWriterInput::TAssetWriterInput(const TStreamMeta& Stream,TAssetWriter
 
 	
 	[Writer addInput:mInput.mObject];
+	Parent.IsOkay("Writer add input",true);
 }
 
 void Avf::TAssetWriterInput::Finish()
@@ -169,7 +236,7 @@ void Avf::TFileMuxer::SetupStreams(const ArrayBridge<TStreamMeta>&& Streams)
 
 	}
 	
-	OnPreWrite( SoyTime() );
+	OnPreWrite( SoyTime(1ull) );
 }
 
 void Avf::TFileMuxer::OnPreWrite(SoyTime Timecode)
@@ -423,7 +490,15 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 		std::lock_guard<std::mutex> Lock(WriterWrapper.mLock);
 		if ( !WriterWrapper.mFinished )
 		{
-			[Writer appendSampleBuffer:SampleBuffer];
+			bool Success = [Writer appendSampleBuffer:SampleBuffer];
+			if ( !Success )
+			{
+				std::stringstream Error;
+				Error << "Failed to write sample: " << Packet;
+				//	this should throw, but throw anyway if it doesn't
+				mAssetWriter->IsOkay( Error.str(), false );
+				throw Soy::AssertException( Error.str() );
+			}
 			mLastTimecode = std::max( mLastTimecode, Packet.mTimecode );
 		}
 	}
@@ -466,5 +541,10 @@ void Avf::TFileMuxer::Finish()
 
 	FinishSemaphore.Wait();
 	std::Debug << "Writer finished..." << std::endl;
+	if ( mOnStreamFinished )
+	{
+		bool Dummy;
+		mOnStreamFinished(Dummy);
+	}
 }
 
