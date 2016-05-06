@@ -473,6 +473,12 @@ void Avf::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> pPacket,TStrea
 	
 	CMSampleBufferRef SampleBuffer = nullptr;
 	Array<uint8> AvccData;
+
+	//	if we have a time code of 1ms, correct to 0 so time starts at zero
+	if ( Packet.mTimecode.mTime == 1 )
+		Packet.mTimecode = SoyTime();
+	if ( Packet.mDecodeTimecode.mTime == 1 )
+		Packet.mDecodeTimecode = SoyTime();
 	
 	if ( SoyMediaFormat::IsPixels( Packet.mMeta.mCodec ) )
 	{
