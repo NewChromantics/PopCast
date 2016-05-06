@@ -31,46 +31,47 @@ public class PopCastCameraCapture : MonoBehaviour
 		}
 	}
 
+	void RenderAndWrite(Camera Cam)
+	{
+		if (Cam == null)
+			return;
+		if (mCast == null)
+			return;
+
+		//	if no texture provided, make one
+		if (mCaptureCameraTexture == null)
+			mCaptureCameraTexture = new RenderTexture(Cam.pixelWidth, Cam.pixelHeight, 16);
+		
+		//	save settings to restore
+		RenderTexture PreTarget = RenderTexture.active;
+		var PreCameraTarget = Cam.targetTexture;
+		
+		Cam.targetTexture = mCaptureCameraTexture;
+		RenderTexture.active = mCaptureCameraTexture;
+		Cam.Render();
+		
+		//	aaaand restore.
+		RenderTexture.active = PreTarget;
+		Cam.targetTexture = PreCameraTarget;
+	
+		mCast.UpdateTexture(mCaptureCameraTexture, 0);
+	}
+
+
 	void LateUpdate()
 	{
 		//	capture camera
 		if (mCaptureCamera != null)
-		{
+			RenderAndWrite (mCaptureCamera);
+		else if (Camera.main != null)
+			RenderAndWrite (Camera.main);
+		
 
-			//	if no texture provided, make one
-			if (mCaptureCameraTexture == null)
-				mCaptureCameraTexture = new RenderTexture(mCaptureCamera.pixelWidth, mCaptureCamera.pixelHeight, 16);
-
-			//	save settings to restore
-			RenderTexture PreTarget = RenderTexture.active;
-			var PreCameraTarget = mCaptureCamera.targetTexture;
-
-			mCaptureCamera.targetTexture = mCaptureCameraTexture;
-			RenderTexture.active = mCaptureCameraTexture;
-			mCaptureCamera.Render();
-
-			//	aaaand restore.
-			RenderTexture.active = PreTarget;
-			mCaptureCamera.targetTexture = PreCameraTarget;
-		}
 
 	}
 
 	void Update()
 	{
-
-		//	write latest stream data
-		if (mCast != null)
-		{
-			//	check where to output the camera, if we haven't already
-			bool CameraCaptureOutput = false;
-
-			//	if we want to write the capture texture, and we havent... do it now
-			if (!CameraCaptureOutput && mCaptureCameraTexture != null)
-			{
-				mCast.UpdateTexture(mCaptureCameraTexture, 0);
-			}
-		}
 
 	}
 }
