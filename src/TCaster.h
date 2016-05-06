@@ -81,9 +81,7 @@ public:
 	}
 	
 	//	throw if your caster can't support these
-	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& Frame,Opengl::TContext& Context)=0;
-	virtual void		Write(const Directx::TTexture& Image,const TCastFrameMeta& Frame,Directx::TContext& Context)=0;
-	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& Frame)=0;
+	virtual void		Write(std::shared_ptr<TPixelBuffer>& PixelBuffer,const TCastFrameMeta& Frame,std::shared_ptr<Opengl::TContext>& OpenglContext,std::shared_ptr<Directx::TContext>& DirectxContext)=0;
 	virtual void		GetMeta(TJsonWriter& Json) {}
 	virtual size_t		GetPendingPacketCount()	{	throw Soy::AssertException("Needs implementing");	}
 

@@ -43,13 +43,21 @@ TMemFileCaster::TMemFileCaster(const TCasterParams& Params) :
 {
 }
 
-void TMemFileCaster::Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context)
-{
-	throw Soy::AssertException("todo");
-}
 
-void TMemFileCaster::Write(std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
+void TMemFileCaster::Write(std::shared_ptr<TPixelBuffer>& PixelBuffer,const TCastFrameMeta& FrameMeta,std::shared_ptr<Opengl::TContext>& OpenglContext,std::shared_ptr<Directx::TContext>& DirectxContext)
 {
+	BufferArray<SoyPixelsImpl*,2> Pixels;
+	float3x3 Transform;
+	PixelBuffer->Lock( GetArrayBridge(Pixels), Transform );
+
+	try
+	{
+		
+	}
+	
+	void TMemFileCaster::Write(std::shared_ptr<SoyPixelsImpl> pImage,const TCastFrameMeta& FrameMeta)
+	{
+
 	Soy::Assert( pImage != nullptr, "Pixels expected");
 	auto& Image = *pImage;
 	

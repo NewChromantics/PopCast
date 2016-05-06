@@ -92,6 +92,7 @@ public:
 	void			WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex);
 	void			WriteFrame(Directx::TTexture& Texture,size_t StreamIndex);
 	void			WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex);
+	void			WriteFrame(std::shared_ptr<TPixelBuffer>& PixelBuffer,size_t StreamIndex);
 	
 	void			GetMeta(TJsonWriter& Json);
 	size_t			GetPendingPacketCount();
@@ -105,11 +106,32 @@ public:
 	std::shared_ptr<TCaster>			mCaster;
 	SoyTime								mBaseTimestamp;
 
+	std::shared_ptr<Opengl::TBlitter>				mOpenglBlitter;
+	std::shared_ptr<Directx::TBlitter>				mDrectxBlitter;
 	std::shared_ptr<TPool<Directx::TTexture>>		mDirectxTexturePool;
 	std::shared_ptr<TPool<Opengl::TTexture>>		mOpenglTexturePool;
 
 private:
 	TInstanceRef	mRef;
 };
+
+
+//	special pixel buffer which copies a reference to a texture, and does whatever blit we need on request by the encoder
+class TCastTextureBuffer : public TPixelBuffer
+{
+public:
+	TCastTextureBuffer(Opengl::TTexture& Texture,std::shared_ptr<Opengl::TBlitter>& Blitter);
+	TCastTextureBuffer(Directx::TTexture& Texture,std::shared_ptr<Directx::TBlitter>& Blitter);
+
+private:
+	std::shared_ptr<Opengl::TTexture>	mOpenglTexture;
+	std::shared_ptr<Opengl::TBlitter>	mOpenglBlitter;
+	std::shared_ptr<Opengl::TContext>	mOpenglContext;
+	
+	std::shared_ptr<Directx::TTexture>	mDirectxTexture;
+	std::shared_ptr<Directx::TBlitter>	mDirectxBlitter;
+	std::shared_ptr<Directx::TContext>	mDirectxContext;
+};
+
 
 
