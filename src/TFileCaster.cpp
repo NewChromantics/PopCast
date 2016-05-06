@@ -28,17 +28,21 @@
 std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMediaEncoderParams& EncoderParams,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>& EncoderFunc)
 {
 #if defined(TARGET_OSX)
-	if ( Soy::StringEndsWith( Filename, ".mp4", false ) )
+	const char* SupportedExtensions[] = {".mp4",".mov"};
+	if ( Soy::StringEndsWith( Filename, SupportedExtensions, false ) )
 	{
-		return std::make_shared<Avf::TFileMuxer>( Filename, Input, OnStreamFinished );
+		if ( Soy::StringTrimLeft( Filename, "file:", false ) )
+		{
+			return std::make_shared<Avf::TFileMuxer>( Filename, Input, OnStreamFinished );
+		}
 	}
 #endif
 #if defined(TARGET_WINDOWS)
-	if ( Soy::StringTrimLeft( Filename, "file:", false ) )
-	{
-		const char* SupportedExtensions[] = {".mp4"};
+	const char* SupportedExtensions[] = {".mp4"};
 
-		if ( Soy::StringEndsWith( Filename, SupportedExtensions, false ) )
+	if ( Soy::StringEndsWith( Filename, SupportedExtensions, false ) )
+	{
+		if ( Soy::StringTrimLeft( Filename, "file:", false ) )
 		{
 			EncoderFunc = [Input](size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 			{
