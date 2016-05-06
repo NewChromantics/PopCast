@@ -522,8 +522,7 @@ void PopCast::GetMeta(TJsonWriter& Json)
 PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams& _Params,std::shared_ptr<Opengl::TContext> OpenglContext,std::shared_ptr<Directx::TContext> DirectxContext) :
 	mRef			( Ref ),
 	mOpenglContext	( OpenglContext ),
-	mDirectxContext	( DirectxContext ),
-	mBaseTimestamp	( true )	//	timestamps based on now
+	mDirectxContext	( DirectxContext )
 {
 	if ( mOpenglContext )
 		mOpenglTexturePool.reset( new TPool<Opengl::TTexture>() );
@@ -563,6 +562,20 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams& _Params,std
 }
 
 
+void PopCast::TInstance::InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex)
+{
+	SoyTime Now(true);
+	if ( !mBaseTimestamp.IsValid() )
+	{
+		mBaseTimestamp = Now;
+	}
+
+	Frame.mStreamIndex = StreamIndex;
+	Frame.mTimecode = Now;
+	Frame.mTimecode -= mBaseTimestamp;
+}
+
+
 void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex)
 {
 	Soy::Assert( mOpenglContext!=nullptr, "Instance requires an opengl context" );
@@ -571,9 +584,7 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
-	Frame.mStreamIndex = StreamIndex;
-	Frame.mTimecode = SoyTime(true);
-	Frame.mTimecode -= mBaseTimestamp;
+	InitFrameMeta( Frame, StreamIndex );
 	
 	try
 	{
@@ -616,9 +627,7 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
-	Frame.mStreamIndex = StreamIndex;
-	Frame.mTimecode = SoyTime(true);
-	Frame.mTimecode -= mBaseTimestamp;
+	InitFrameMeta( Frame, StreamIndex );
 	
 	try
 	{
@@ -661,9 +670,7 @@ void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
-	Frame.mStreamIndex = StreamIndex;
-	Frame.mTimecode = SoyTime(true);
-	Frame.mTimecode -= mBaseTimestamp;
+	InitFrameMeta( Frame, StreamIndex );
 	
 	try
 	{

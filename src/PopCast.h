@@ -68,6 +68,7 @@ namespace PopCast
 	bool						Free(TInstanceRef Instance);
 };
 
+class TCastFrameMeta;
 
 
 class PopCast::TInstance
@@ -95,6 +96,9 @@ public:
 	void			GetMeta(TJsonWriter& Json);
 	size_t			GetPendingPacketCount();
 
+private:
+	void			InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex);
+	
 public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;
 	std::shared_ptr<Directx::TContext>	mDirectxContext;

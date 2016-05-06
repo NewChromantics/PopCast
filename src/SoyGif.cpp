@@ -458,7 +458,7 @@ void Gif::TMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Packet,TStreamWrit
 	if ( mPrevImageTimecode.IsValid() )
 	{
 		auto Diff = Packet->mTimecode.GetDiff(mPrevImageTimecode);
-		FinalDuration.mTime = abs(Diff);
+		FinalDuration.mTime = std::abs(Diff);
 	}
 	else
 	{
