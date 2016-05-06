@@ -346,6 +346,8 @@
 		BF7A8DF41B652DFB00A6C403 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk/System/Library/Frameworks/CoreVideo.framework; sourceTree = DEVELOPER_DIR; };
 		BF7A8DF61B652E0100A6C403 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk/System/Library/Frameworks/OpenGL.framework; sourceTree = DEVELOPER_DIR; };
 		BF80C3251C3EC03500EBE03E /* PopCastFramework.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopCastFramework.h; sourceTree = "<group>"; };
+		BF80FF371CDD0E22007408CD /* MfMuxer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MfMuxer.cpp; sourceTree = "<group>"; };
+		BF80FF381CDD0E22007408CD /* MfMuxer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MfMuxer.h; sourceTree = "<group>"; };
 		BF814D421CDCCBB600DE4ED2 /* SoyWave.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyWave.cpp; path = src/SoyWave.cpp; sourceTree = "<group>"; };
 		BF814D431CDCCBB600DE4ED2 /* SoyWave.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyWave.h; path = src/SoyWave.h; sourceTree = "<group>"; };
 		BF89908E1BDFE07900FF81FB /* Core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Core; path = "../../Bento4/Source/C++/Core"; sourceTree = "<group>"; };
@@ -635,12 +637,14 @@
 				BF50C3791BFA09D600A11609 /* LibavMuxer.h */,
 				BF50C3801BFA0D5200A11609 /* libavwrapper */,
 				BF50C37D1BFA0B0100A11609 /* libavwrapper */,
+				BF80FF371CDD0E22007408CD /* MfMuxer.cpp */,
+				BF80FF381CDD0E22007408CD /* MfMuxer.h */,
 				BF48FFA01B8E77D1004BCF63 /* OpenCast.framework */,
 				BF1499AD1B4D640D00DA2575 /* PopCast.cpp */,
 				BFAD33D51B624D4300D3E7A6 /* PopCast.cs */,
-				BFC4004A1C97085600E90ACD /* PopCastWindow.cs */,
 				BF1499AE1B4D640D00DA2575 /* PopCast.h */,
 				BF80C3251C3EC03500EBE03E /* PopCastFramework.h */,
+				BFC4004A1C97085600E90ACD /* PopCastWindow.cs */,
 				BF1499AF1B4D640D00DA2575 /* PopUnity.cpp */,
 				BF1499B01B4D640D00DA2575 /* PopUnity.h */,
 				BFAEE8991C2774A500E25C47 /* SoyGif.cpp */,
