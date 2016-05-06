@@ -7,15 +7,15 @@ using System;                               // requred for IntPtr
 [Serializable]
 public class PopCastMeta
 {
-	public int BackgroundGpuJobCount;
-	public int InstanceCount;
-	public int MuxerInputQueueCount;
-	public int MuxerDefferedQueueCount;
-	public int BytesWritten;
-	public int PendingWrites;
-	public int PendingEncodedFrames;
-	public int PushedFrameCount;
-	public int PendingFrameCount;
+	public int BackgroundGpuJobCount = 0;
+	public int InstanceCount = 0;
+	public int MuxerInputQueueCount = 0;
+	public int MuxerDefferedQueueCount = 0;
+	public int BytesWritten = 0;
+	public int PendingWrites = 0;
+	public int PendingEncodedFrames = 0;
+	public int PushedFrameCount = 0;
+	public int PendingFrameCount = 0;
 };
 
 
@@ -373,26 +373,41 @@ public class PopCast
 		return Filename;
 	}
 
-
-	public PopCastMeta GetMeta()
+	///	<summary>Get raw meta information in Json format (may contain more data than encapsulated with PopCastMeta. See GetMeta()
+	///	</summary>
+	public string GetMetaJson()
 	{
-		var JsonPtr = PopCast_GetMetaJson(mInstance);
-		if (JsonPtr == System.IntPtr.Zero)
-		{
-			Debug.LogError("PopCast_GetMetaJson returned null");
-			return new PopCastMeta();
-		}
+		System.IntPtr StringPtr = PopCast_GetMetaJson( mInstance );
+		//	internal error
+		if ( StringPtr == System.IntPtr.Zero )
+			return null;
+
 		try
 		{
-			var Json = Marshal.PtrToStringAnsi(JsonPtr);
-			PopCastMeta Meta = JsonUtility.FromJson<PopCastMeta>(Json);
-			PopCast_ReleaseString(JsonPtr);
+			string Str = Marshal.PtrToStringAnsi(StringPtr);
+			PopCast_ReleaseString( StringPtr );
+			return Str;
+		}
+		catch
+		{
+			PopCast_ReleaseString( StringPtr );
+			return null;
+		}
+	}
+
+	///		JsonUtility was introduced in 5.3. So for 5.2 this will just return a struct with no data in it.
+	public PopCastMeta GetMeta()
+	{
+#if UNITY_5_3
+		var Json = GetMetaJson();
+		try
+		{
+			var Meta = JsonUtility.FromJson<PopCastMeta>( Json );
 			return Meta;
 		}
-		catch (System.Exception e)
+		catch
+#endif
 		{
-			Debug.LogError("Error getting PopCast Meta JSON: " + e.Message);
-			PopCast_ReleaseString(JsonPtr);
 			return new PopCastMeta();
 		}
 	}
