@@ -150,8 +150,14 @@ std::shared_ptr<SoyPixelsImpl> Opengl::GifBlitter::IndexImageWithShader(std::sha
 			return std::make_shared<TTexture>( IndexMeta, GL_TEXTURE_2D );
 		};
 
+		//	been shutdown?
+		auto Pool = mTexturePool;
+		auto Blitter = mBlitter;
+		Soy::Assert( Pool!=nullptr, "Opengl::GifBlitter::Work texture pool missing" );
+		Soy::Assert( Blitter!=nullptr, "Opengl::GifBlitter::Work blitter missing" );
+		
 		//	pooled image
-		auto IndexTexture = mTexturePool->Alloc( TTextureMeta(IndexMeta,GL_TEXTURE_2D), Alloc );
+		auto IndexTexture = Pool->Alloc( TTextureMeta(IndexMeta,GL_TEXTURE_2D), Alloc );
 		
 		Array<const SoyPixelsImpl*> Sources;
 		Sources.PushBack( Source.get() );
@@ -160,12 +166,12 @@ std::shared_ptr<SoyPixelsImpl> Opengl::GifBlitter::IndexImageWithShader(std::sha
 		Opengl::TTextureUploadParams UploadParams;
 		{
 			Soy::TScopeTimerPrint Timer( "Palettising blit", Gif::TimerMinMs );
-			mBlitter->BlitTexture( IndexTexture, GetArrayBridge(Sources), *mContext, UploadParams, FragShader );
+			Blitter->BlitTexture( IndexTexture, GetArrayBridge(Sources), *mContext, UploadParams, FragShader );
 		}
 		{
 			Soy::TScopeTimerPrint Timer( "read back indexed image", Gif::TimerMinMs );
 			IndexTexture.Read( *pIndexedImage );
-			mTexturePool->Release( IndexTexture );
+			Pool->Release( IndexTexture );
 		}
 	};
 	
