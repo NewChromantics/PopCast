@@ -4,19 +4,26 @@ using System.Collections.Generic;
 
 public class PopCastCameraCapture : MonoBehaviour
 {
+	public enum PopCaptureMode
+	{
+		Camera,
+		Cubemap,
+		Equirect360
+	};
 
-	public PopCastParams CastParams;
-	public PopCast mCast = null;
-	public string mOutputTarget = "file:StreamingAssets/*.gif";
-	public Camera mCaptureCamera;
-	public RenderTexture mCaptureCameraTexture;
+	public PopCastParams Params;
+	public PopCast Cast = null;
+	public string OutputTarget = "file:StreamingAssets/*.gif";
+	public Camera CaptureCamera;
+	public PopCaptureMode CaptureMode;
+	public RenderTexture CaptureCameraTexture;
 	public bool EnableDebug = true;
 
 	void OnEnable()
 	{
-		if (mCast == null)
+		if (Cast == null)
 		{
-			mCast = new PopCast(mOutputTarget, CastParams);
+			Cast = new PopCast( OutputTarget, Params);
 			if (EnableDebug)
 				PopCast.EnableDebugLog = EnableDebug;
 		}
@@ -24,45 +31,93 @@ public class PopCastCameraCapture : MonoBehaviour
 
 	void OnDisable()
 	{
-		if ( mCast != null )
+		if ( Cast != null )
 		{
-			mCast.Free();
-			mCast = null;
+			Cast.Free();
+			Cast = null;
 		}
 	}
 
-	void RenderAndWrite(Camera Cam)
-	{
-		if (Cam == null)
-			return;
-		if (mCast == null)
-			return;
+void CorrectRenderTextureSizeForMp4(ref int Width,ref int Height)
+{
+//	must align, or something
+if (!Mathf.IsPowerOfTwo (Width))
+Width = Mathf.NextPowerOfTwo (Width);
+if (!Mathf.IsPowerOfTwo (Height))
+Height = Mathf.NextPowerOfTwo (Height);
+}
 
-		//	if no texture provided, make one
-		if (mCaptureCameraTexture == null)
-			mCaptureCameraTexture = new RenderTexture(Cam.pixelWidth, Cam.pixelHeight, 16);
-		
-		//	save settings to restore
-		RenderTexture PreTarget = RenderTexture.active;
-		var PreCameraTarget = Cam.targetTexture;
-		
-		Cam.targetTexture = mCaptureCameraTexture;
-		RenderTexture.active = mCaptureCameraTexture;
-		Cam.Render();
-		
-		//	aaaand restore.
-		RenderTexture.active = PreTarget;
-		Cam.targetTexture = PreCameraTarget;
-	
-		mCast.UpdateTexture(mCaptureCameraTexture, 0);
-	}
+void CorrectRenderTextureSizeForCubemap(ref int Width,ref int Height)
+{
+if (!Mathf.IsPowerOfTwo (Width))
+Width = Mathf.NextPowerOfTwo (Width);
+if (!Mathf.IsPowerOfTwo (Height))
+Height = Mathf.NextPowerOfTwo (Height);
 
+//	must be pow2 and same width/height
+Width = Mathf.Max( Width, Height );
+Height = Width;
+}
+
+
+void RenderAndWrite(Camera Cam)
+{
+if (Cam == null)
+return;
+if (Cast == null)
+return;
+
+//	if no texture provided, make one
+int Width = Cam.pixelWidth;
+int Height = Cam.pixelHeight;
+
+bool Success = false;
+
+if ( CaptureMode == PopCaptureMode.Camera )
+{
+//	mp4 needs this to be certain sizes
+CorrectRenderTextureSizeForMp4 (ref Width, ref Height);
+if (CaptureCameraTexture == null)
+CaptureCameraTexture = new RenderTexture( Width, Height, 16 );
+
+//	save settings to restore
+RenderTexture PreTarget = RenderTexture.active;
+var PreCameraTarget = Cam.targetTexture;
+
+Cam.targetTexture = CaptureCameraTexture;
+RenderTexture.active = CaptureCameraTexture;
+Cam.Render();
+
+//	aaaand restore.
+RenderTexture.active = PreTarget;
+Cam.targetTexture = PreCameraTarget;
+
+Success = true;
+}
+else if ( CaptureMode == PopCaptureMode.Cubemap )
+{
+//	mp4 needs this to be certain sizes
+CorrectRenderTextureSizeForMp4 (ref Width, ref Height);
+CorrectRenderTextureSizeForCubemap (ref Width, ref Height);
+if (CaptureCameraTexture == null)
+{
+	CaptureCameraTexture = new RenderTexture( Width, Height, 16 );
+	CaptureCameraTexture.isCubemap = true;
+}
+
+int FaceMask = 63;
+Success = Cam.RenderToCubemap( CaptureCameraTexture, FaceMask );
+}
+
+if ( Success )
+Cast.UpdateTexture( CaptureCameraTexture, 0);
+}
 
 	void LateUpdate()
 	{
 		//	capture camera
-		if (mCaptureCamera != null)
-			RenderAndWrite (mCaptureCamera);
+		if (CaptureCamera != null)
+			RenderAndWrite (CaptureCamera);
 		else if (Camera.main != null)
 			RenderAndWrite (Camera.main);
 		

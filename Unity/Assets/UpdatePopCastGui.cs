@@ -12,15 +12,15 @@ public class UpdatePopCastGui : MonoBehaviour {
 	void Start () {
 		if (mPopCast == null)
 			mPopCast = this.GetComponent<PopCastCameraCapture>();
-	
+
 	}
-	
+
 	// Update is called once per frame
 	void Update () {
 
 		int PendingFrameCount = 0;
-		if (mPopCast != null && mPopCast.mCast != null)
-			PendingFrameCount = mPopCast.mCast.GetPendingFrameCount();
+		if (mPopCast != null && mPopCast.Cast != null)
+			PendingFrameCount = mPopCast.Cast.GetPendingFrameCount();
 
 		if (mSlider != null)
 		{

@@ -357,6 +357,9 @@
 		BF8990B71BE654CB00FF81FB /* SoyMpeg2Ts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoyMpeg2Ts.h; sourceTree = "<group>"; };
 		BF8990C41BE7F2E700FF81FB /* array.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = array.hpp; path = src/array.hpp; sourceTree = "<group>"; };
 		BF8990C61BE7F31400FF81FB /* heaparray.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = heaparray.hpp; path = src/heaparray.hpp; sourceTree = "<group>"; };
+		BF9AE3181CE11582008074D3 /* PopCastCameraCapture.cs */ = {isa = PBXFileReference; lastKnownFileType = text; path = PopCastCameraCapture.cs; sourceTree = "<group>"; };
+		BF9AE3191CE119D2008074D3 /* PopCastInspector.cs */ = {isa = PBXFileReference; lastKnownFileType = text; name = PopCastInspector.cs; path = Editor/PopCastInspector.cs; sourceTree = "<group>"; };
+		BF9AE31A1CE119D2008074D3 /* PopCastWindow.cs */ = {isa = PBXFileReference; lastKnownFileType = text; name = PopCastWindow.cs; path = Editor/PopCastWindow.cs; sourceTree = "<group>"; };
 		BF9CCA941B6B8197000B19EA /* build.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		BF9CCA9C1B6BB5F1000B19EA /* RemoteArray.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RemoteArray.h; path = src/RemoteArray.h; sourceTree = "<group>"; };
 		BFA664711B5581A400C33A2A /* SoyEnum.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SoyEnum.h; path = src/SoyEnum.h; sourceTree = "<group>"; };
@@ -643,6 +646,9 @@
 				BF1499AD1B4D640D00DA2575 /* PopCast.cpp */,
 				BFAD33D51B624D4300D3E7A6 /* PopCast.cs */,
 				BF1499AE1B4D640D00DA2575 /* PopCast.h */,
+				BF9AE3191CE119D2008074D3 /* PopCastInspector.cs */,
+				BF9AE31A1CE119D2008074D3 /* PopCastWindow.cs */,
+				BF9AE3181CE11582008074D3 /* PopCastCameraCapture.cs */,
 				BF80C3251C3EC03500EBE03E /* PopCastFramework.h */,
 				BFC4004A1C97085600E90ACD /* PopCastWindow.cs */,
 				BF1499AF1B4D640D00DA2575 /* PopUnity.cpp */,

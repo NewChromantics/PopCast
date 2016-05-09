@@ -64,7 +64,7 @@ public class PopCastInspector : Editor
 	public override void OnInspectorGUI()
 	{
 		var This = target as PopCastCameraCapture;
-		ApplyInspector(This.mCast, target, this);
+		ApplyInspector(This.Cast, target, this);
 
 		DrawDefaultInspector();
 	}
