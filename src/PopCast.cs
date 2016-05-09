@@ -24,7 +24,7 @@ public class PopCastMeta
 public class  PopCastParams
 {
     [Tooltip("if we record to a local file, pop up explorer/finder with the file when its ready")]
-    public bool ShowFinishedFile = false;
+    public bool ShowFinishedFile = true;
 
     [Tooltip("Record smooth video, or skip for live casting")]
     public bool SkipFrames = false;
