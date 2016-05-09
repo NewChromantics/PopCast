@@ -151,6 +151,9 @@ public class PopCast
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern bool		PopCast_UpdateRenderTexture(uint Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat,int StreamIndex);
 
+	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
+	private static extern bool		PopCast_UpdateCubemapRenderTexture(uint Instance,System.IntPtr TextureId,int Width,int Height,RenderTextureFormat textureFormat,int StreamIndex);
+
 	[DllImport(PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern bool		PopCast_UpdateTextureDebug(uint Instance,int StreamIndex);
 
@@ -290,7 +293,10 @@ public class PopCast
 
 		if (Target is RenderTexture) {
 			RenderTexture Target_rt = Target as RenderTexture;
-			PopCast_UpdateRenderTexture (mInstance, PopTexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
+			if ( Target_rt.isCubemap )
+				PopCast_UpdateCubemapRenderTexture(mInstance, PopTexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
+			else
+				PopCast_UpdateRenderTexture(mInstance, PopTexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
 		}
 		if (Target is Texture2D) {
 			Texture2D Target_2d = Target as Texture2D;

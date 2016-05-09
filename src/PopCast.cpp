@@ -266,6 +266,48 @@ __export bool	PopCast_UpdateRenderTexture(Unity::uint Instance,Unity::NativeText
 		return false;
 	}
 }
+
+__export bool	PopCast_UpdateCubemapRenderTexture(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex)
+{
+	auto pInstance = PopCast::GetInstance( Instance );
+	if ( !pInstance )
+		return false;
+	
+	try
+	{
+		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
+		auto OpenglContext = Unity::GetOpenglContextPtr();
+#if defined(TARGET_WINDOWS)
+		auto DirectxContext = Unity::GetDirectxContextPtr();
+#endif
+		
+		if ( OpenglContext )
+		{
+			//	assuming type atm... maybe we can extract it via opengl?
+			GLenum Type = GL_TEXTURE_CUBE_MAP;
+			Opengl::TTexture Texture( TextureId, Meta, Type );
+			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
+			return true;
+		}
+		
+#if defined(TARGET_WINDOWS)
+		if ( DirectxContext )
+		{
+			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
+			pInstance->WriteFrame( Texture, size_cast<size_t>(StreamIndex) );
+			return true;
+		}
+#endif
+		
+		throw Soy::AssertException("Missing graphics device");
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << __func__ << " failed: " << e.what() << std::endl;
+		return false;
+	}
+}
+
 __export bool	PopCast_UpdateTexture2D(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex)
 {
 	auto pInstance = PopCast::GetInstance( Instance );

@@ -23,6 +23,7 @@ __export Unity::uint	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Un
 __export bool			PopCast_Free(Unity::uint Instance);
 __export void			PopCast_EnumDevices();
 __export bool			PopCast_UpdateRenderTexture(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
+__export bool			PopCast_UpdateCubemapRenderTexture(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::RenderTexturePixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 __export bool			PopCast_UpdateTexture2D(Unity::uint Instance,Unity::NativeTexturePtr TextureId,Unity::sint Width,Unity::sint Height,Unity::Texture2DPixelFormat::Type PixelFormat,Unity::sint StreamIndex);
 __export bool			PopCast_UpdateTextureDebug(Unity::uint Instance,Unity::sint StreamIndex);
 __export Unity::uint	PopCast_GetBackgroundGpuJobCount();
