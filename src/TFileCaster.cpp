@@ -221,19 +221,33 @@ TFileCaster::~TFileCaster()
 		auto& pEncoder = Encoder.second;
 		pEncoder.reset();
 	}
+	mEncoders.clear();
 	
 	if ( mMuxer )
 	{
-		mMuxer->Finish();
+		try
+		{
+			mMuxer->Finish();
+		}
+		catch(std::exception& e)
+		{
+			std::Debug << "Failed to finish muxer: " << e.what() << std::endl;
+		}
 		mMuxer.reset();
 	}
 
 	//	let the stream finish writing file
-	if ( mFileStream )
-		mFileStream->WaitForQueueToFinish();
+	try
+	{
+		if ( mFileStream )
+			mFileStream->WaitForQueueToFinish();
+	}
+	catch(std::exception& e)
+	{
+		std::Debug << "Failed to finish file stream: " << e.what() << std::endl;
+	}
 	
 	mFileStream.reset();
-	
 	mFrameBuffer.reset();
 }
 
