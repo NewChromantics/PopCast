@@ -79,6 +79,7 @@ public:
 		mParams		( Params )
 	{
 	}
+	virtual ~TCaster()	{}
 	
 	//	throw if your caster can't support these
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& Frame,Opengl::TContext& Context)=0;
