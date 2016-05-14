@@ -95,16 +95,19 @@ public:
 class TFileCaster : public TCaster
 {
 public:
-	TFileCaster(const TCasterParams& Params,std::shared_ptr<Opengl::TContext> OpenglContext);
+	TFileCaster(const TCasterParams& Params,TCasterDeviceParams& DeviceParams);
 	~TFileCaster();
 	
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
+	virtual void		Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context) override;
 	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
-	
+	virtual void		GetMeta(TJsonWriter& Json) override;
+	virtual size_t		GetPendingPacketCount() override;
+
 	static bool			HandlesFilename(const std::string& Filename);
 	
 private:
-	TMediaEncoder&		AllocEncoder(size_t StreamIndex);
+	TMediaEncoder&		AllocEncoder(size_t StreamIndex,const SoyPixelsMeta& InputMeta);
 
 protected:
 	std::map<size_t,std::shared_ptr<TMediaEncoder>>	mEncoders;
@@ -113,7 +116,7 @@ protected:
 	std::shared_ptr<TStreamWriter>		mFileStream;
 	
 	
-	std::function<std::shared_ptr<TMediaEncoder>(size_t)>	mAllocEncoder;
+	std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>	mAllocEncoder;
 };
 
 

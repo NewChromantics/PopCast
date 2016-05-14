@@ -59,6 +59,7 @@ class GoogleCast::TDevice : public TCaster
 public:
 	TDevice(void* GCKDevice);
 	
+	virtual void		Write(const Directx::TTexture& Image,const TCastFrameMeta& FrameMeta,Directx::TContext& Context) override;
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& FrameMeta,Opengl::TContext& Context) override;
 	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& FrameMeta) override;
 

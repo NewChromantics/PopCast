@@ -4,6 +4,22 @@
 #include <SoyThread.h>
 #include "PopUnity.h"
 #include "SoyGif.h"
+#include <SoyH264.h>
+
+
+
+class TCasterDeviceParams
+{
+public:
+	std::shared_ptr<Opengl::TContext>			OpenglContext;
+	std::shared_ptr<TPool<Opengl::TTexture>>	OpenglTexturePool;
+
+#if defined(ENABLE_DIRECTX)
+	std::shared_ptr<Directx::TContext>			DirectxContext;
+	std::shared_ptr<TPool<Directx::TTexture>>	DirectxTexturePool;
+#endif
+};
+
 
 
 class TCasterParams
@@ -20,6 +36,7 @@ public:
 	bool				mShowFinishedFile;
 	bool				mSkipFrames;
 	Gif::TEncodeParams	mGifParams;
+	TMediaEncoderParams	mMpegParams;
 };
 
 class TCastDeviceMeta
@@ -67,7 +84,10 @@ public:
 	
 	//	throw if your caster can't support these
 	virtual void		Write(const Opengl::TTexture& Image,const TCastFrameMeta& Frame,Opengl::TContext& Context)=0;
+	virtual void		Write(const Directx::TTexture& Image,const TCastFrameMeta& Frame,Directx::TContext& Context)=0;
 	virtual void		Write(std::shared_ptr<SoyPixelsImpl> Image,const TCastFrameMeta& Frame)=0;
+	virtual void		GetMeta(TJsonWriter& Json) {}
+	virtual size_t		GetPendingPacketCount()	{	throw Soy::AssertException("Needs implementing");	}
 
 protected:
 	TCasterParams	mParams;

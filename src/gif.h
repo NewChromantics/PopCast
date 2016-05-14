@@ -30,6 +30,7 @@
 #include <stdint.h>  // for integer typedefs
 
 typedef Soy::TRgb8 Rgb8;
+typedef Soy::TRgba8 Rgba8;
 
 // Define these macros to hook into a custom memory allocator.
 // TEMP_MALLOC and TEMP_FREE will only be called in stack fashion - frees in the reverse order of mallocs
@@ -120,7 +121,7 @@ inline size_t GetBitIndex(size_t Integer)
 class GifPalette
 {
 public:
-	GifPalette(size_t ColourCount)
+	GifPalette(size_t ColourCount,SoyPixelsFormat::Type PaletteFormat=SoyPixelsFormat::RGBA)
 	{
 		if ( !isPowerOfTwo(ColourCount) && ColourCount <= 256 )
 		{
@@ -130,7 +131,7 @@ public:
 		}
 		mPalette.reset( new SoyPixels );
 		auto& Pal = GetPalette();
-		Pal.Init( ColourCount, 1, SoyPixelsFormat::RGB );
+		Pal.Init( ColourCount, 1, PaletteFormat );
 	}
 	
 	GifPalette(std::shared_ptr<SoyPixelsImpl>& Palette) :
@@ -456,12 +457,12 @@ void GifMakeDiffPalette(const SoyPixelsImpl& PrevIndexes,const SoyPixelsImpl& Pr
 
 void GifDebugPalette(SoyPixelsImpl& Palette)
 {
-	Array<Rgb8> NewColours;
+	Array<Rgba8> NewColours;
 	static int DebugPaletteSize = 256;
 	
 	for ( int i=0;	i<DebugPaletteSize;	i++ )
 	{
-		Rgb8 ThisRgb( 255, i, 0 );
+		Rgba8 ThisRgb( 255, i, 0, 255 );
 		NewColours.PushBack( ThisRgb );
 	}
 	/*
@@ -472,8 +473,8 @@ void GifDebugPalette(SoyPixelsImpl& Palette)
 	}
 	 */
 	
-	//	make a palette image
-	Palette.Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGB );
+	//	make a palette image (dx requires RGBA, not RGB)
+	Palette.Init( NewColours.GetSize(), 1, SoyPixelsFormat::RGBA );
 	auto NewColoursPixels = GetRemoteArray( reinterpret_cast<uint8*>( NewColours.GetArray() ), NewColours.GetDataSize() );
 	Palette.GetPixelsArray().Copy( NewColoursPixels );
 }
@@ -483,7 +484,8 @@ void GifDebugPalette(SoyPixelsImpl& Palette)
 // This is known as the "modified median split" technique
 void GifMakePalette(const SoyPixelsImpl& BigPalette,bool buildForDither,std::shared_ptr<GifPalette>& pPalette,size_t PaletteSize)
 {
-	Soy::Assert( BigPalette.GetFormat()==SoyPixelsFormat::RGB, "Expecting palette in RGB");
+	//	gr: this is flexible now?
+	Soy::Assert( BigPalette.GetFormat()==SoyPixelsFormat::RGBA, "Expecting palette in RGBA");
 
 	pPalette.reset( new GifPalette(PaletteSize) );
 	auto& SmallPalette = *pPalette;
@@ -751,10 +753,9 @@ void GifWritePalette( const SoyPixelsImpl& Palette,size_t PaddedPaletteSize,GifW
 }
 
 // write the image header, LZW-compress and write out the image
-void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette,uint8 TransparentIndex)
+void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left, uint16 top,uint16 delay,const SoyPixelsImpl& Palette,uint8 TransparentIndex,bool Compress)
 {
 	Soy::Assert( Image.GetFormat()==SoyPixelsFormat::Greyscale, "Expecting palette-index iamge format");
-	Soy::Assert( Palette.GetFormat()==SoyPixelsFormat::RGB, "Expecting palette to be RGB");
 	auto width = size_cast<uint16>( Image.GetWidth() );
 	auto height = size_cast<uint16>( Image.GetHeight() );
 	
@@ -817,9 +818,16 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
         {
             uint8_t nextValue = Indexes[yy*width+xx];
             
-            // "loser mode" - no compression, every single code is followed immediately by a clear
-            //WriteCode( f, stat, nextValue, codeSize );
-            //WriteCode( f, stat, 256, codeSize );
+			// "loser mode" - no compression, every single code is followed immediately by a clear
+			if ( !Compress )
+			{
+				GifWriteCode( Writer, stat, nextValue, codeSize );
+				GifWriteCode( Writer, stat, 256, codeSize );
+				//WriteCode(f, stat, nextValue, codeSize);
+				//WriteCode(f, stat, 256, codeSize);
+				continue;
+			}
+				
             
             if( curCode < 0 )
             {
@@ -867,8 +875,10 @@ void GifWriteLzwImage(GifWriter& Writer,const SoyPixelsImpl& Image, uint16 left,
     GifWriteCode( Writer, stat, clearCode+1, minCodeSize+1 );
     
     // write out the last partial chunk
-    while( stat.bitIndex ) GifWriteBit(stat, 0);
-    if( stat.chunkIndex ) GifWriteChunk(Writer, stat);
+    while( stat.bitIndex ) 
+		GifWriteBit(stat, 0);
+    if( stat.chunkIndex ) 
+		GifWriteChunk(Writer, stat);
     
 	Writer.fputc(0); // image block terminator
     

@@ -42,12 +42,41 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="..\src\Blit.glsl.vert" />
+    <None Include="..\src\Blit.hlsl.vert" />
+    <None Include="..\src\Blit2D.glsl.frag" />
+    <None Include="..\src\BlitAudioGraph.glsl.frag" />
+    <None Include="..\src\BlitAudioGraph.hlsl.frag" />
+    <None Include="..\src\BlitBarGraph.glsl.frag" />
+    <None Include="..\src\BlitBarGraph.hlsl.frag" />
+    <None Include="..\src\BlitError.glsl.frag" />
+    <None Include="..\src\BlitError.hlsl.frag" />
+    <None Include="..\src\BlitFreenectDepth10mm.glsl.frag" />
+    <None Include="..\src\BlitOesExternal.glsl.frag" />
+    <None Include="..\src\BlitRectangle.glsl.frag" />
+    <None Include="..\src\BlitRgba.hlsl.frag" />
+    <None Include="..\src\BlitRgbaFlip.hlsl.frag" />
+    <None Include="..\src\BlitTest.glsl.frag" />
+    <None Include="..\src\BlitTest.hlsl.frag" />
+    <None Include="..\src\BlitWatermark.glsl.frag" />
+    <None Include="..\src\BlitWatermark.hlsl.frag" />
+    <None Include="..\src\BlitYuv.glsl.frag" />
+    <None Include="..\src\BlitYuv.hlsl.frag" />
+    <None Include="..\src\BlitYuv_8_88_Full.glsl.frag" />
+    <None Include="..\src\BlitYuv_8_88_Full.hlsl.frag" />
+    <None Include="..\src\BlitYuv_8_88_Video.glsl.frag" />
+    <None Include="..\src\BlitYuv_8_88_Video.hlsl.frag" />
+    <None Include="..\src\BlitYuv_8_8_8_Full.glsl.frag" />
+    <None Include="..\src\BlitYuv_8_8_8_Full.hlsl.frag" />
+    <None Include="..\src\BlitYuv_8_8_8_Video.glsl.frag" />
+    <None Include="..\src\BlitYuv_8_8_8_Video.hlsl.frag" />
     <None Include="..\src\BundleInfo.plist">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="..\src\Editor\PopCastInspector.cs" />
     <None Include="..\src\Editor\PopCastWindow.cs" />
     <None Include="..\src\FrameworkInfo.plist">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -55,9 +84,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="..\src\GifDebug.frag" />
-    <None Include="..\src\GifNearest.frag" />
+    <None Include="..\src\GifDebug.hlsl.frag" />
+    <None Include="..\src\GifDebug.glsl.frag" />
+    <None Include="..\src\GifNearest.glsl.frag" />
+    <None Include="..\src\GifNearest.hlsl.frag" />
     <None Include="..\src\PopCast.cs" />
+    <None Include="..\src\PopCastCameraCapture.cs" />
+    <None Include="..\src\PopTexturePtrCache.cs" />
     <None Include="..\src\TAirplayCaster.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">true</ExcludedFromBuild>
@@ -98,6 +131,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="..\src\MfMuxer.h" />
     <ClInclude Include="..\src\PopCast.h" />
     <ClInclude Include="..\src\PopCastFramework.h" />
     <ClInclude Include="..\src\PopUnity.h" />
@@ -131,6 +165,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\MfMuxer.cpp" />
     <ClCompile Include="..\src\PopCast.cpp" />
     <ClCompile Include="..\src\PopUnity.cpp" />
     <ClCompile Include="..\src\SoyGif.cpp" />
@@ -217,6 +252,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />
@@ -235,6 +271,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />
@@ -253,6 +290,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />
@@ -260,6 +298,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
       <Command>SET SRCROOT=$(ProjectDir)..
 SET PROJECT=$(ProjectName)
 SET BUILD_DLL=$(TargetPath)
+SET UNITY_EXE=$(UNITY_EXE)
 
 $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     </PostBuildEvent>
@@ -268,6 +307,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />

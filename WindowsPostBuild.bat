@@ -38,7 +38,7 @@ copy /Y "%BUILD_DLL%" "%TARGET_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1008	)
 
 REM for windows, in case the scripts below don't work, force an early C# copy
-set BUILD_CSHARP=%SRCROOT%\src\%PROJECT%.cs
+set BUILD_CSHARP=%SRCROOT%\src\*.cs
 set TARGET_CSHARP_PATH=%TARGET_PATH%"..\
 echo "Copying %BUILD_CSHARP% to Unity dir %TARGET_CSHARP_PATH%"
 copy /Y "%BUILD_CSHARP%" "%TARGET_CSHARP_PATH%"
@@ -81,6 +81,13 @@ if not defined BASH_EXE (
 	exit /b 1012
 )
 echo using bash at %BASH_EXE%
+
+REM extract path from bash exe and add to the env path, so calls to mkdir, cp etc work as they're alongside bash.exe
+for %%a in (%BASH_EXE%) do (
+	set BASH_PATH=%%~dpa
+)
+echo Adding %BASH_PATH% to path env
+set PATH=%PATH%;%BASH_PATH%
 
 REM Normal post build
 %BASH_EXE% %SRCROOT%/CopyCSharpFiles.sh

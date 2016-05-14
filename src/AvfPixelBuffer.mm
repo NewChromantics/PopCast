@@ -1,10 +1,11 @@
 #import "AvfPixelBuffer.h"
 #include <SoyOpengl.h>
+#include <SoyAvf.h>
 
 
 
 
-std::string Soy::Platform::GetExtensions(CMFormatDescriptionRef FormatDescription)
+std::string Platform::GetExtensions(CMFormatDescriptionRef FormatDescription)
 {
 	auto Extensions = (NSDictionary*)CMFormatDescriptionGetExtensions( FormatDescription );
 	
@@ -190,7 +191,7 @@ void ExtractAppleEmbeddedData(std::string Atoms,const std::string& Key,ArrayBrid
 
 
 
-std::string Soy::Platform::GetCodec(CMFormatDescriptionRef FormatDescription)
+std::string Platform::GetCodec(CMFormatDescriptionRef FormatDescription)
 {
 	//	gr: use Soy::FourCCToString
 	// Get the codec and correct endianness
@@ -243,7 +244,7 @@ std::string Soy::Platform::GetCodec(CMFormatDescriptionRef FormatDescription)
 }
 
 
-std::string Soy::Platform::GetCVReturnString(CVReturn Error)
+std::string Platform::GetCVReturnString(CVReturn Error)
 {
 #define CASE(e)	case (e): return #e
 	switch ( Error )
@@ -277,7 +278,7 @@ std::string Soy::Platform::GetCVReturnString(CVReturn Error)
 
 
 #if defined(TARGET_IOS)
-Opengl::TTexture ExtractPlaneTexture(AvfTextureCache& TextureCache,CFPtr<CVImageBufferRef>& ImageBuffer,CFPtr<CVOpenGLESTextureRef>& TextureRef,CFAllocatorRef& Allocator,size_t PlaneIndex,SoyPixelsFormat::Type Format)
+Opengl::TTexture ExtractPlaneTexture(AvfTextureCache& TextureCache,CVImageBufferRef ImageBuffer,CFPtr<CVOpenGLESTextureRef>& TextureRef,CFAllocatorRef& Allocator,size_t PlaneIndex,SoyPixelsFormat::Type PlaneFormat)
 {
 	GLenum TextureType = GL_TEXTURE_2D;
 	GLenum PixelComponentType = GL_UNSIGNED_BYTE;
@@ -287,20 +288,23 @@ Opengl::TTexture ExtractPlaneTexture(AvfTextureCache& TextureCache,CFPtr<CVImage
 	GLenum PixelFormat = GL_INVALID_VALUE;			//	todo: fetch this from image buffer
 	size_t Width = 0;
 	size_t Height = 0;
+
+	//	gr: as far as I can tell, we can't get the pixel format for a plane, so we've pre-empted it
+	auto Format = PlaneFormat;
 	
-	if ( Format == SoyPixelsFormat::LumaFull || Format == SoyPixelsFormat::LumaVideo )
+	if ( Format == SoyPixelsFormat::Luma_Full || Format == SoyPixelsFormat::Luma_Ntsc || Format == SoyPixelsFormat::Luma_Smptec )
 	{
 		TextureType = GL_LUMINANCE;
 		PixelFormat = GL_LUMINANCE;
-		Width = CVPixelBufferGetWidthOfPlane( ImageBuffer.mObject, PlaneIndex );
-		Height = CVPixelBufferGetHeightOfPlane( ImageBuffer.mObject, PlaneIndex );
+		Width = CVPixelBufferGetWidthOfPlane( ImageBuffer, PlaneIndex );
+		Height = CVPixelBufferGetHeightOfPlane( ImageBuffer, PlaneIndex );
 	}
 	else if ( Format == SoyPixelsFormat::GreyscaleAlpha )
 	{
 		TextureType = GL_LUMINANCE_ALPHA;
 		PixelFormat = GL_LUMINANCE_ALPHA;
-		Width = CVPixelBufferGetWidthOfPlane( ImageBuffer.mObject, PlaneIndex );
-		Height = CVPixelBufferGetHeightOfPlane( ImageBuffer.mObject, PlaneIndex );
+		Width = CVPixelBufferGetWidthOfPlane( ImageBuffer, PlaneIndex );
+		Height = CVPixelBufferGetHeightOfPlane( ImageBuffer, PlaneIndex );
 	}
 	else
 	{
@@ -308,13 +312,13 @@ Opengl::TTexture ExtractPlaneTexture(AvfTextureCache& TextureCache,CFPtr<CVImage
 		//	todo: fetch this from image buffer
 		InternalFormat = GL_RGBA;
 		PixelFormat = GL_BGRA;
-		Width = CVPixelBufferGetWidth( ImageBuffer.mObject );
-		Height = CVPixelBufferGetHeight( ImageBuffer.mObject );
+		Width = CVPixelBufferGetWidth( ImageBuffer );
+		Height = CVPixelBufferGetHeight( ImageBuffer );
 	}
 	
 	auto Result = CVOpenGLESTextureCacheCreateTextureFromImage(	Allocator,
-															   TextureCache.mTextureCache.mObject,
-															   ImageBuffer.mObject,
+															   TextureCache.mOpenglTextureCache.mObject,
+															   ImageBuffer,
 															   nullptr,
 															   TextureType,
 															   InternalFormat,
@@ -328,9 +332,9 @@ Opengl::TTexture ExtractPlaneTexture(AvfTextureCache& TextureCache,CFPtr<CVImage
 	
 	if ( Result != kCVReturnSuccess || !TextureRef.mObject )
 	{
-		auto BytesPerRow = CVPixelBufferGetBytesPerRowOfPlane( ImageBuffer.mObject, PlaneIndex );
+		auto BytesPerRow = CVPixelBufferGetBytesPerRowOfPlane( ImageBuffer, PlaneIndex );
 		Opengl::IsOkay("Failed to CVOpenGLTextureCacheCreateTextureFromImage",false);
-		std::Debug << "Failed to create texture from image " << Soy::Platform::GetCVReturnString(Result) << " bytes per row: " << BytesPerRow << "plane #" << PlaneIndex << " as " << Format << std::endl;
+		std::Debug << "Failed to create texture from image " << Platform::GetCVReturnString(Result) << " bytes per row: " << BytesPerRow << "plane #" << PlaneIndex << " as " << Format << std::endl;
 		return Opengl::TTexture();
 	}
 	
@@ -343,24 +347,80 @@ Opengl::TTexture ExtractPlaneTexture(AvfTextureCache& TextureCache,CFPtr<CVImage
 }
 #endif
 
+#if defined(TARGET_IOS) && defined(ENABLE_METAL)
+Metal::TTexture ExtractPlaneTexture_Metal(AvfTextureCache& TextureCache,CVImageBufferRef ImageBuffer,CFPtr<CVMetalTextureRef>& TextureRef,CFAllocatorRef& Allocator,size_t PlaneIndex,SoyPixelsFormat::Type PlaneFormat)
+{
+	MTLPixelFormat PixelFormat = MTLPixelFormatInvalid;
+	size_t Width = 0;
+	size_t Height = 0;
+	
+	//	gr: as far as I can tell, we can't get the pixel format for a plane, so we've pre-empted it
+	auto Format = PlaneFormat;
+	
+	if ( Format == SoyPixelsFormat::Luma_Full || Format == SoyPixelsFormat::Luma_Ntsc || Format == SoyPixelsFormat::Luma_Smptec )
+	{
+		PixelFormat = MTLPixelFormatR8Uint;
+		Width = CVPixelBufferGetWidthOfPlane( ImageBuffer, PlaneIndex );
+		Height = CVPixelBufferGetHeightOfPlane( ImageBuffer, PlaneIndex );
+	}
+	else if ( Format == SoyPixelsFormat::GreyscaleAlpha )
+	{
+		PixelFormat = MTLPixelFormatRG8Uint;
+		Width = CVPixelBufferGetWidthOfPlane( ImageBuffer, PlaneIndex );
+		Height = CVPixelBufferGetHeightOfPlane( ImageBuffer, PlaneIndex );
+	}
+	else
+	{
+		PixelFormat = MTLPixelFormatBGRA8Unorm;
+		Width = CVPixelBufferGetWidth( ImageBuffer );
+		Height = CVPixelBufferGetHeight( ImageBuffer );
+	}
+	
+	
+	auto Result = CVMetalTextureCacheCreateTextureFromImage(	Allocator,
+															   TextureCache.mMetalTextureCache.mObject,
+															   ImageBuffer,
+															   nullptr,
+															   PixelFormat,
+															   size_cast<GLsizei>(Width),
+															   size_cast<GLsizei>(Height),
+															   PlaneIndex,
+															   &TextureRef.mObject
+															   );
+	
+	if ( Result != kCVReturnSuccess || !TextureRef.mObject )
+	{
+		auto BytesPerRow = CVPixelBufferGetBytesPerRowOfPlane( ImageBuffer, PlaneIndex );
+		Opengl::IsOkay("Failed to CVMetalTextureCacheCreateTextureFromImage",false);
+		std::Debug << "Failed to create texture from image " << Platform::GetCVReturnString(Result) << " bytes per row: " << BytesPerRow << "plane #" << PlaneIndex << " as " << Format << std::endl;
+		return Metal::TTexture();
+	}
+	
+	id<MTLTexture> MetalTexture = CVMetalTextureGetTexture( TextureRef.mObject );
+	Metal::TTexture Texture( MetalTexture );
+	return Texture;
+}
+#endif
 
 #if defined(TARGET_IOS)
-Opengl::TTexture ExtractNonPlanarTexture(AvfTextureCache& TextureCache,CFPtr<CVImageBufferRef>& ImageBuffer,CFPtr<CVOpenGLESTextureRef>& TextureRef,CFAllocatorRef& Allocator,SoyPixelsFormat::Type ExpectedFormat)
+Opengl::TTexture ExtractNonPlanarTexture(AvfTextureCache& TextureCache,CVImageBufferRef ImageBuffer,CFPtr<CVOpenGLESTextureRef>& TextureRef,CFAllocatorRef& Allocator)
 #elif defined(TARGET_OSX)
-Opengl::TTexture ExtractNonPlanarTexture(AvfTextureCache& TextureCache,CFPtr<CVImageBufferRef>& ImageBuffer,CFPtr<CVOpenGLTextureRef>& TextureRef,CFAllocatorRef& Allocator)
+Opengl::TTexture ExtractNonPlanarTexture(AvfTextureCache& TextureCache,CVImageBufferRef ImageBuffer,CFPtr<CVOpenGLTextureRef>& TextureRef,CFAllocatorRef& Allocator)
 #endif
 {
 #if defined(TARGET_IOS)
 	
 	//	ios can just grab plane 0
-	return ExtractPlaneTexture( TextureCache, ImageBuffer, TextureRef, Allocator, 0, ExpectedFormat );
+	auto FormatCv = CVPixelBufferGetPixelFormatType( ImageBuffer );
+	auto Format = Avf::GetPixelFormat( FormatCv );
+	return ExtractPlaneTexture( TextureCache, ImageBuffer, TextureRef, Allocator, 0, Format );
 	
 #elif defined(TARGET_OSX)
 	
 	//	http://stackoverflow.com/questions/13933503/core-video-pixel-buffers-as-gl-texture-2d
 	auto Result = CVOpenGLTextureCacheCreateTextureFromImage(Allocator,
-															 TextureCache.mTextureCache.mObject,
-															 ImageBuffer.mObject,
+															 TextureCache.mOpenglTextureCache.mObject,
+															 ImageBuffer,
 															 nullptr,
 															 &TextureRef.mObject);
 	
@@ -368,17 +428,18 @@ Opengl::TTexture ExtractNonPlanarTexture(AvfTextureCache& TextureCache,CFPtr<CVI
 	if ( Result != kCVReturnSuccess || !TextureRef.mObject )
 	{
 		Opengl::IsOkay("Failed to CVOpenGLTextureCacheCreateTextureFromImage",false);
-		std::Debug << "Failed to create texture from image " << Soy::Platform::GetCVReturnString(Result) << std::endl;
+		std::Debug << "Failed to create texture from image " << Platform::GetCVReturnString(Result) << std::endl;
 		return Opengl::TTexture();
 	}
 	
-	auto Width = CVPixelBufferGetWidth( ImageBuffer.mObject );
-	auto Height = CVPixelBufferGetHeight( ImageBuffer.mObject );
+	auto Width = CVPixelBufferGetWidth( ImageBuffer );
+	auto Height = CVPixelBufferGetHeight( ImageBuffer );
 	auto RealTextureType = CVOpenGLTextureGetTarget( TextureRef.mObject );
 	auto RealTextureName = CVOpenGLTextureGetName( TextureRef.mObject );
 	
 	//	we dont KNOW the internal format, so create a temp texture, then
 	//	use it to pull out the real pixel format
+	//	gr: get format from ImageBuffer!
 	SoyPixelsMeta TmpMeta( Width, Height, SoyPixelsFormat::RGBA );
 	Opengl::TTexture TmpTexture( RealTextureName, TmpMeta, RealTextureType );
 	GLenum AutoRealTextureType = RealTextureType;
@@ -390,31 +451,80 @@ Opengl::TTexture ExtractNonPlanarTexture(AvfTextureCache& TextureCache,CFPtr<CVI
 }
 
 
-
-
-
-
-void CFPixelBuffer::Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context)
+#if defined(ENABLE_METAL)
+#if defined(TARGET_IOS)
+Metal::TTexture ExtractNonPlanarTexture_Metal(AvfTextureCache& TextureCache,CVImageBufferRef ImageBuffer,CFPtr<CVMetalTextureRef>& TextureRef,CFAllocatorRef& Allocator)
+#elif defined(TARGET_OSX)&&defined(ENABLE_METAL)
+Metal::TTexture ExtractNonPlanarTexture_Metal(AvfTextureCache& TextureCache,CVImageBufferRef ImageBuffer,CFPtr<CVMetalTextureRef>& TextureRef,CFAllocatorRef& Allocator)
+#endif
 {
-	Opengl::IsOkay("LockTexture flush", false);
+#if defined(TARGET_IOS)
 	
+	//	ios can just grab plane 0
+	auto FormatCv = CVPixelBufferGetPixelFormatType( ImageBuffer );
+	auto Format = Avf::GetPixelFormat( FormatCv );
+	return ExtractPlaneTexture_Metal( TextureCache, ImageBuffer, TextureRef, Allocator, 0, Format );
+	
+#elif defined(TARGET_OSX)
+	throw Soy::AssertException("ExtractNonPlanarTexture_Metal on osx not supported yet");
+	/*
+	//	http://stackoverflow.com/questions/13933503/core-video-pixel-buffers-as-gl-texture-2d
+	auto Result = CVOpenGLTextureCacheCreateTextureFromImage(Allocator,
+															 TextureCache.mTextureCache.mObject,
+															 ImageBuffer,
+															 nullptr,
+															 &TextureRef.mObject);
+	
+	
+	if ( Result != kCVReturnSuccess || !TextureRef.mObject )
+	{
+		Opengl::IsOkay("Failed to CVOpenGLTextureCacheCreateTextureFromImage",false);
+		std::Debug << "Failed to create texture from image " << Platform::GetCVReturnString(Result) << std::endl;
+		return Opengl::TTexture();
+	}
+	
+	auto Width = CVPixelBufferGetWidth( ImageBuffer );
+	auto Height = CVPixelBufferGetHeight( ImageBuffer );
+	auto RealTextureType = CVOpenGLTextureGetTarget( TextureRef.mObject );
+	auto RealTextureName = CVOpenGLTextureGetName( TextureRef.mObject );
+	
+	//	we dont KNOW the internal format, so create a temp texture, then
+	//	use it to pull out the real pixel format
+	//	gr: get format from ImageBuffer!
+	SoyPixelsMeta TmpMeta( Width, Height, SoyPixelsFormat::RGBA );
+	Opengl::TTexture TmpTexture( RealTextureName, TmpMeta, RealTextureType );
+	GLenum AutoRealTextureType = RealTextureType;
+	SoyPixelsMeta Meta = TmpTexture.GetInternalMeta(AutoRealTextureType);
+	Opengl::TTexture Texture( RealTextureName, Meta, RealTextureType );
+	
+	return Texture;
+	 */
+#endif
+}
+#endif//ENABLE_METAL
+
+
+
+
+
+void AvfPixelBuffer::Lock(ArrayBridge<Metal::TTexture>&& Textures,Metal::TContext& Context,float3x3& Transform)
+{
+#if defined(ENABLE_METAL)
 	Soy::Assert( mDecoder!=nullptr, "Decoder expected" );
 	
-	auto& Buffer = mSample.mObject;
-	mLockedImageBuffer.Retain( CMSampleBufferGetImageBuffer(Buffer) );
-	if ( !mLockedImageBuffer )
+	auto ImageBuffer = LockImageBuffer();
+	if ( !ImageBuffer )
 	{
 		std::Debug << "Failed to get ImageBuffer from CMSampleBuffer" << std::endl;
 		Unlock();
 		return;
 	}
 	
-	auto& ImageBuffer = mLockedImageBuffer.mObject;
 	CVReturn Result = CVPixelBufferLockBaseAddress( ImageBuffer, mReadOnlyLock ? kCVPixelBufferLock_ReadOnly : 0 );
 	if ( Result != kCVReturnSuccess  )
 	{
 		Opengl::IsOkay("Failed to lock address",false);
-		std::Debug << "Error locking base address of image: " << Soy::Platform::GetCVReturnString(Result) << std::endl;
+		std::Debug << "Error locking base address of image: " << Platform::GetCVReturnString(Result) << std::endl;
 		Unlock();
 		return;
 	}
@@ -428,18 +538,20 @@ void CFPixelBuffer::Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TConte
 	if ( PlaneCount > 0 )
 	{
 		BufferArray<SoyPixelsFormat::Type,2> PlaneFormats;
-		SoyPixelsFormat::GetFormatPlanes( mFormat, GetArrayBridge(PlaneFormats) );
+		auto Format = CVPixelBufferGetPixelFormatType( ImageBuffer );
+		auto SoyFormat = Avf::GetPixelFormat( Format );
+		SoyPixelsFormat::GetFormatPlanes( SoyFormat, GetArrayBridge(PlaneFormats) );
 		for ( int i=0;	i<PlaneCount;	i++ )
 		{
-			auto TextureCache = mDecoder->GetTextureCache(i);
+			auto TextureCache = mDecoder->GetTextureCache( i, &Context );
 			if ( !TextureCache )
 				throw Soy::AssertException("Failed to get texture cache");
 			
 			//	hacky
-			auto& TextureRef = (i==0) ? mLockedTexture0 : mLockedTexture1;
+			auto& TextureRef = (i==0) ? mMetal_LockedTexture0 : mMetal_LockedTexture1;
 			
 			mTextureCaches.PushBack( TextureCache );
-			auto Texture = ExtractPlaneTexture( *TextureCache, mLockedImageBuffer, TextureRef, Allocator, i, PlaneFormats[i] );
+			auto Texture = ExtractPlaneTexture_Metal( *TextureCache, ImageBuffer, TextureRef, Allocator, i, PlaneFormats[i] );
 			if ( !Texture.IsValid() )
 				continue;
 			
@@ -448,13 +560,13 @@ void CFPixelBuffer::Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TConte
 	}
 	else
 	{
-		auto& TextureRef = mLockedTexture0;
-		auto TextureCache = mDecoder->GetTextureCache(0);
+		auto& TextureRef = mMetal_LockedTexture0;
+		auto TextureCache = mDecoder->GetTextureCache( 0, &Context );
 		if ( !TextureCache )
 			throw Soy::AssertException("Failed to get texture cache");
 		
 		mTextureCaches.PushBack( TextureCache );
-		auto Texture = ExtractNonPlanarTexture( *TextureCache, mLockedImageBuffer, TextureRef, Allocator, mFormat );
+		auto Texture = ExtractNonPlanarTexture_Metal( *TextureCache, ImageBuffer, TextureRef, Allocator );
 		
 		if ( Texture.IsValid() )
 			Textures.PushBack( Texture );
@@ -475,13 +587,115 @@ void CFPixelBuffer::Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TConte
 		throw Soy::AssertException("Failed to get texture cache");
 	
 	mTextureCaches.PushBack( TextureCache );
-	auto Texture = ExtractNonPlanarTexture( *TextureCache, mLockedImageBuffer, mLockedTexture, Allocator );
+	auto Texture = ExtractNonPlanarTexture( *TextureCache, ImageBuffer, mLockedTexture, Allocator );
+	
+	if ( Texture.IsValid() )
+		Textures.PushBack( Texture );
+#endif
+#endif//ENABLE_METAL
+}
+
+
+
+void AvfPixelBuffer::Lock(ArrayBridge<Opengl::TTexture>&& Textures,Opengl::TContext& Context,float3x3& Transform)
+{
+	Opengl::IsOkay("LockTexture flush", false);
+	
+	Soy::Assert( mDecoder!=nullptr, "Decoder expected" );
+	
+	auto ImageBuffer = LockImageBuffer();
+	/*
+	 auto& Buffer = mSample.mObject;
+	 mLockedImageBuffer.Retain( CMSampleBufferGetImageBuffer(Buffer) );
+	 */
+	if ( !ImageBuffer )
+	{
+		std::Debug << "Failed to get ImageBuffer from CMSampleBuffer" << std::endl;
+		Unlock();
+		return;
+	}
+	
+	CVReturn Result = CVPixelBufferLockBaseAddress( ImageBuffer, mReadOnlyLock ? kCVPixelBufferLock_ReadOnly : 0 );
+	if ( Result != kCVReturnSuccess  )
+	{
+		Opengl::IsOkay("Failed to lock address",false);
+		std::Debug << "Error locking base address of image: " << Platform::GetCVReturnString(Result) << std::endl;
+		Unlock();
+		return;
+	}
+	
+	CFAllocatorRef Allocator = kCFAllocatorDefault;
+	
+	
+#if defined(TARGET_IOS)
+	
+	auto PlaneCount = CVPixelBufferGetPlaneCount( ImageBuffer );
+	if ( PlaneCount > 0 )
+	{
+		BufferArray<SoyPixelsFormat::Type,2> PlaneFormats;
+		auto Format = CVPixelBufferGetPixelFormatType( ImageBuffer );
+		auto SoyFormat = Avf::GetPixelFormat( Format );
+		SoyPixelsFormat::GetFormatPlanes( SoyFormat, GetArrayBridge(PlaneFormats) );
+		for ( int i=0;	i<PlaneCount;	i++ )
+		{
+			auto TextureCache = mDecoder->GetTextureCache( i, nullptr );
+			if ( !TextureCache )
+				throw Soy::AssertException("Failed to get texture cache");
+			
+			//	hacky
+			auto& TextureRef = (i==0) ? mLockedTexture0 : mLockedTexture1;
+			
+			mTextureCaches.PushBack( TextureCache );
+			auto Texture = ExtractPlaneTexture( *TextureCache, ImageBuffer, TextureRef, Allocator, i, PlaneFormats[i] );
+			if ( !Texture.IsValid() )
+				continue;
+			
+			Textures.PushBack( Texture );
+		}
+	}
+	else
+	{
+		auto& TextureRef = mLockedTexture0;
+		auto TextureCache = mDecoder->GetTextureCache( 0, nullptr );
+		if ( !TextureCache )
+			throw Soy::AssertException("Failed to get texture cache");
+		
+		mTextureCaches.PushBack( TextureCache );
+		auto Texture = ExtractNonPlanarTexture( *TextureCache, ImageBuffer, TextureRef, Allocator );
+		
+		if ( Texture.IsValid() )
+			Textures.PushBack( Texture );
+	}
+#elif defined(TARGET_OSX)
+	
+	//	on OSX, we can't pull multiple planes into opengl textures (get the "incompatible with opengl error")
+	//	so we don't return anything. Caller has to use pixels -> texture instead
+	auto PlaneCount = CVPixelBufferGetPlaneCount( ImageBuffer );
+	if ( PlaneCount > 0 )
+	{
+		Unlock();
+		return;
+	}
+	
+	auto TextureCache = mDecoder->GetTextureCache(0, nullptr);
+	if ( !TextureCache )
+		throw Soy::AssertException("Failed to get texture cache");
+	
+	mTextureCaches.PushBack( TextureCache );
+	auto Texture = ExtractNonPlanarTexture( *TextureCache, ImageBuffer, mLockedTexture, Allocator );
 	
 	if ( Texture.IsValid() )
 		Textures.PushBack( Texture );
 #endif
 }
 
+
+
+AvfPixelBuffer::~AvfPixelBuffer()
+{
+	//	gotta WAIT for this to unlock from the other thread! NOT unlock it ourselves
+	WaitForUnlock();
+}
 
 
 
@@ -526,12 +740,61 @@ CVImageBufferRef CFPixelBuffer::LockImageBuffer()
 	return mLockedImageBuffer.mObject;
 }
 
-void CFPixelBuffer::Lock(ArrayBridge<SoyPixelsImpl*>&& Planes)
+
+void AvfPixelBuffer::LockPixels(ArrayBridge<SoyPixelsImpl*>& Planes,void* _Data,size_t BytesPerRow,SoyPixelsMeta Meta,float3x3& Transform,ssize_t DataSize)
+{
+	//	check for mis-alignment
+	//	todo: allocate and manually clip rows... or change the meta and crop in shader? (assuming the bytes align to the same pixel bit depth)
+
+	//	gr: 427 × 240 quicktime movie results in this
+	//		Expected 427 is 448
+	if ( Meta.GetRowDataSize() != BytesPerRow )
+	{
+		//	gr: if the data aligns to the pixelformat, then pad the image to fit the buffer and clip later in the shader(todo)
+		auto Channels = Meta.GetChannels();
+		if ( Channels > 0 && BytesPerRow % Channels == 0 )
+		{
+			//	realign image and clip with transform
+			auto NewWidth = BytesPerRow / Channels;
+			Transform(0,0) *= Meta.GetWidth() / static_cast<float>( NewWidth );
+			//std::Debug << "Padding mis-aligned image " << Meta << " width to " << NewWidth << std::endl;
+			Meta.DumbSetWidth( NewWidth );
+		}
+		else
+		{
+			std::stringstream Error;
+			Error << "CVPixelBuffer for plane " << mLockedPixels.GetSize() << " (" << Meta << ") row mis-aligned, handle this. Expected " << Meta.GetRowDataSize() << " is " << BytesPerRow;
+			throw Soy::AssertException( Error.str() );
+		}
+	}
+	
+	//	now apply the parent(stream) transform
+	{
+		auto TransformMtx = Soy::VectorToMatrix( Transform );
+		auto ParentTransformMtx = Soy::VectorToMatrix( mTransform );
+		TransformMtx *= ParentTransformMtx;
+		Transform = Soy::MatrixToVector( TransformMtx );
+	}
+	
+	auto* Pixels = reinterpret_cast<uint8*>(_Data);
+	
+	//	auto calc data size if not provided by caller
+	if ( DataSize < 0 )
+		DataSize = Meta.GetDataSize();
+	
+	SoyPixelsRemote Temp( Pixels, DataSize, Meta );
+	mLockedPixels.PushBack( Temp );
+	Planes.PushBack( &mLockedPixels.GetBack() );
+}
+
+
+void AvfPixelBuffer::Lock(ArrayBridge<SoyPixelsImpl*>&& Planes,float3x3& Transform)
 {
 	mLockLock.lock();
 	
 	//	reset
 	mLockedPixels.SetAll( SoyPixelsRemote() );
+	mLockedPixels.SetSize(0);
 	
 	auto PixelBuffer = LockImageBuffer();
 	if ( !PixelBuffer )
@@ -543,7 +806,7 @@ void CFPixelBuffer::Lock(ArrayBridge<SoyPixelsImpl*>&& Planes)
 	auto Error = CVPixelBufferLockBaseAddress( PixelBuffer, mReadOnlyLock ? kCVPixelBufferLock_ReadOnly : 0 );
 	if ( Error != kCVReturnSuccess )
 	{
-		std::Debug << "Failed to lock CVPixelBuffer address " << Soy::Platform::GetCVReturnString( Error ) << std::endl;
+		std::Debug << "Failed to lock CVPixelBuffer address " << Platform::GetCVReturnString( Error ) << std::endl;
 		Unlock();
 		return;
 	}
@@ -553,26 +816,35 @@ void CFPixelBuffer::Lock(ArrayBridge<SoyPixelsImpl*>&& Planes)
 	if ( PlaneCount >= 1 )
 	{
 		BufferArray<SoyPixelsFormat::Type,2> PlaneFormats;
-		SoyPixelsFormat::GetFormatPlanes( mFormat, GetArrayBridge(PlaneFormats) );
+		auto Format = CVPixelBufferGetPixelFormatType( PixelBuffer );
+		auto SoyFormat = Avf::GetPixelFormat( Format );
+		SoyPixelsFormat::GetFormatPlanes( SoyFormat, GetArrayBridge(PlaneFormats) );
+		auto PixelBufferDataSize = CVPixelBufferGetDataSize(PixelBuffer);
 		for ( size_t PlaneIndex=0;	PlaneIndex<PlaneCount;	PlaneIndex++ )
 		{
+			//	gr: although the blitter can split this for us, I assume there MAY be a case where planes are not contiguous, so for this platform handle it explicitly
 			auto Width = CVPixelBufferGetWidthOfPlane( PixelBuffer, PlaneIndex );
 			auto Height = CVPixelBufferGetHeightOfPlane( PixelBuffer, PlaneIndex );
 			auto* Pixels = CVPixelBufferGetBaseAddressOfPlane( PixelBuffer, PlaneIndex );
+			auto BytesPerRow = CVPixelBufferGetBytesPerRowOfPlane( PixelBuffer, PlaneIndex );
+			auto PlaneFormat = PlaneFormats[PlaneIndex];
 			if ( !Pixels )
 			{
 				std::Debug << "Image plane #" << PlaneIndex << "/" << PlaneCount << " " << Width << "x" << Height << " return null" << std::endl;
 				continue;
 			}
 			
-			auto PlaneFormat = PlaneFormats[PlaneIndex];
-			std::Debug << "Image plane #" << PlaneIndex << "/" << PlaneCount << " " << Width << "x" << Height << std::endl;
+			//	data size here is for the whole image, so we need to calculate (ie. ASSUME) it ourselves.
+			SoyPixelsMeta PlaneMeta( Width, Height, PlaneFormat );
+
+			//	should be LESS as there are multiple plaens in the total buffer, but we'll do = just for the sake of the safety
+			Soy::Assert( PlaneMeta.GetDataSize() <= PixelBufferDataSize, "Plane's calcualted data size exceeds the total buffer size" );
+
+			//	gr: currently we only have one transform... so... only apply to main plane (and hope they're the same)
+			float3x3 DummyTransform;
+			float3x3& PlaneTransform = (PlaneIndex == 0) ? Transform : DummyTransform;
 			
-			//	data size here is for the whole image...
-			auto DataSize = CVPixelBufferGetDataSize(PixelBuffer);
-			SoyPixelsRemote Temp( reinterpret_cast<uint8*>(Pixels), Width, Height, DataSize, PlaneFormat );
-			mLockedPixels[PlaneIndex] = Temp;
-			Planes.PushBack( &mLockedPixels[PlaneIndex] );
+			LockPixels( Planes, Pixels, BytesPerRow, PlaneMeta, PlaneTransform );
 		}
 	}
 	else
@@ -581,21 +853,46 @@ void CFPixelBuffer::Lock(ArrayBridge<SoyPixelsImpl*>&& Planes)
 		auto Height = CVPixelBufferGetHeight( PixelBuffer );
 		auto Width = CVPixelBufferGetWidth( PixelBuffer );
 		auto* Pixels = CVPixelBufferGetBaseAddress(PixelBuffer);
+		auto Format = CVPixelBufferGetPixelFormatType( PixelBuffer );
+		auto DataSize = CVPixelBufferGetDataSize(PixelBuffer);
+		auto SoyFormat = Avf::GetPixelFormat( Format );
+		auto BytesPerRow = CVPixelBufferGetBytesPerRow( PixelBuffer );
+		
 		if ( !Pixels )
 		{
 			Unlock();
 			return;
 		}
 		
-		auto DataSize = CVPixelBufferGetDataSize(PixelBuffer);
-		SoyPixelsRemote Temp( reinterpret_cast<uint8*>(Pixels), Width, Height, DataSize, mFormat );
+		SoyPixelsMeta Meta( Width, Height, SoyFormat );
+		LockPixels( Planes, Pixels, BytesPerRow, Meta, Transform, DataSize );
+
+		/*
+		if ( Meta.GetRowDataSize() != BytesPerRow )
+		{
+			std::stringstream Error;
+			Error << "CVPixelBuffer (" << Meta << ") row mis-aligned, handle this. Expected " << Meta.GetRowDataSize() << " is " << BytesPerRow;
+			throw Soy::AssertException( Error.str() );
+		}
+		 */
+		
+		//	gr: wierdly... with bjork, RGB data, 2048x2048... there are an extra 32 bytes... the plane split will throw an error on this, so just trim it...
+		if ( DataSize > Meta.GetDataSize() )
+		{
+			//auto Diff = DataSize - Meta.GetDataSize();
+			//std::Debug << "Warning: CVPixelBuffer data has an extra " << Diff << " bytes. Trimming..." << std::endl;
+			DataSize = Meta.GetDataSize();
+		}
+		
+		SoyPixelsRemote Temp( reinterpret_cast<uint8*>(Pixels), Width, Height, DataSize, SoyFormat );
 		mLockedPixels[0] = Temp;
 		Planes.PushBack( &mLockedPixels[0] );
 	}
 }
 
 
-void CFPixelBuffer::Unlock()
+
+void AvfPixelBuffer::Unlock()
 {
 	//	release our use of the texture cache
 	auto ClearTextureCache = [](std::shared_ptr<AvfTextureCache>& Cache)
@@ -618,7 +915,16 @@ void CFPixelBuffer::Unlock()
 		mLockedTexture.Release();
 #endif
 	mLockedPixels.SetAll( SoyPixelsRemote() );
+	mLockedPixels.SetSize(0);
 	
+	UnlockImageBuffer();
+	mLockLock.unlock();
+}
+
+
+
+void CFPixelBuffer::UnlockImageBuffer()
+{
 	if ( mLockedImageBuffer )
 	{
 		//	must make sure nothing is using texture before releasing it
@@ -628,10 +934,9 @@ void CFPixelBuffer::Unlock()
 		//std::Debug << "[c] Locked image buffer refcount before release: " << mLockedImageBuffer.GetRetainCount() << std::endl;
 		mLockedImageBuffer.Release();
 	}
-	mLockLock.unlock();
 }
 
-void CFPixelBuffer::WaitForUnlock()
+void AvfPixelBuffer::WaitForUnlock()
 {
 	while ( !mLockLock.try_lock() )
 	{
@@ -641,13 +946,25 @@ void CFPixelBuffer::WaitForUnlock()
 }
 
 
-
 #if defined(TARGET_IOS)
 __export EAGLContext*	UnityGetMainScreenContextGLES();
 //extern EAGLContext*	UnityGetContextEAGL();
 #endif
 
-AvfTextureCache::AvfTextureCache()
+
+AvfTextureCache::AvfTextureCache(Metal::TContext* MetalContext)
+{
+	if ( MetalContext )
+	{
+		AllocMetal(*MetalContext);
+	}
+	else
+	{
+		AllocOpengl();
+	}
+}
+
+void AvfTextureCache::AllocOpengl()
 {
 	CFAllocatorRef Allocator = kCFAllocatorDefault;
 	
@@ -671,9 +988,9 @@ AvfTextureCache::AvfTextureCache()
 	//	gr: unnecessary additional retain?
 	static bool AdditionalRetain = false;
 	if ( AdditionalRetain )
-		mTextureCache.Retain( Cache );
+		mOpenglTextureCache.Retain( Cache );
 	else
-		mTextureCache.SetNoRetain( Cache );
+		mOpenglTextureCache.SetNoRetain( Cache );
 	
 	
 	Opengl::IsOkay("Create texture cache flush", false);
@@ -681,39 +998,67 @@ AvfTextureCache::AvfTextureCache()
 	if ( Result != kCVReturnSuccess )
 	{
 		std::stringstream Error;
-		Error << "Failed to allocate texture cache " << Soy::Platform::GetCVReturnString(Result);
+		Error << "Failed to allocate texture cache " << Platform::GetCVReturnString(Result);
 		throw Soy::AssertException( Error.str() );
 	}
+}
+
+
+void AvfTextureCache::AllocMetal(Metal::TContext& Context)
+{
+#if defined(ENABLE_METAL)
+	CFAllocatorRef Allocator = kCFAllocatorDefault;
+	
+	CVMetalTextureCacheRef Cache;
+	auto Result = CVMetalTextureCacheCreate( Allocator, nullptr, Context.GetDevice(), nullptr, &Cache );
+	
+	mMetalTextureCache.SetNoRetain( Cache );
+	
+	if ( Result != kCVReturnSuccess )
+	{
+		std::stringstream Error;
+		Error << "Failed to allocate texture cache " << Platform::GetCVReturnString(Result);
+		throw Soy::AssertException( Error.str() );
+	}
+#endif
+	
 }
 
 
 AvfTextureCache::~AvfTextureCache()
 {
 	Flush();
-	mTextureCache.Release();
+	mOpenglTextureCache.Release();
+#if defined(ENABLE_METAL)
+	mMetalTextureCache.Release();
+#endif
 }
 
 
 void AvfTextureCache::Flush()
 {
-	//	shouldn't really occur
-	if ( !mTextureCache )
-		return;
-	
 	//	gotta make sure all uses of texture are done before flushing
 	//	gr: might not have an opengl context! must move this to the last-texture use!
 	//glFlush();
-#if defined(TARGET_IOS)
-	CVOpenGLESTextureCacheFlush( mTextureCache.mObject, 0 );
-#elif defined(TARGET_OSX)
-	CVOpenGLTextureCacheFlush( mTextureCache.mObject, 0 );
+#if defined(ENABLE_METAL)
+	if ( mMetalTextureCache )
+		CVMetalTextureCacheFlush( mMetalTextureCache.mObject, 0 );
 #endif
-	
+
+#if defined(TARGET_IOS)
+	if ( mOpenglTextureCache )
+		CVOpenGLESTextureCacheFlush( mOpenglTextureCache.mObject, 0 );
+#endif
+
+#if defined(TARGET_OSX)
+	if ( mOpenglTextureCache )
+		CVOpenGLTextureCacheFlush( mOpenglTextureCache.mObject, 0 );
+#endif
 }
 
 
 
-std::shared_ptr<AvfTextureCache> AvfDecoderRenderer::GetTextureCache(size_t Index)
+std::shared_ptr<AvfTextureCache> AvfDecoderRenderer::GetTextureCache(size_t Index,Metal::TContext* MetalContext)
 {
 	if ( Index >= mTextureCaches.GetSize() )
 		mTextureCaches.SetSize( Index+1 );
@@ -724,7 +1069,7 @@ std::shared_ptr<AvfTextureCache> AvfDecoderRenderer::GetTextureCache(size_t Inde
 	
 	try
 	{
-		TextureCache.reset( new AvfTextureCache );
+		TextureCache.reset( new AvfTextureCache(MetalContext) );
 	}
 	catch (std::exception& e)
 	{
