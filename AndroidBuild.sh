@@ -29,7 +29,7 @@ cd ..
 
 # copy lib
 echo "Copying .lib to plugins dir"
-UNITY_PLUGINS_PATH="$SRCROOT/Unity/Assets/$PROJECT"
+UNITY_PLUGINS_PATH=$SRCROOT/Unity/Assets/$PROJECT/
 mkdir -p $UNITY_PLUGINS_PATH/Android
 cp Android/libs/armeabi-v7a/* $UNITY_PLUGINS_PATH/Android
 if [ $? -ne 0 ]; then { echo "copy lib Failed." ; exit 1; } fi

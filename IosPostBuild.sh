@@ -3,8 +3,7 @@
 # see posts on xcode beta forums (cant find url atm)
 
 echo "Copying $CODESIGNING_FOLDER_PATH to Unity dir"
-UNITY_PLUGINS_PATH="$SRCROOT/Unity/Assets/$PROJECT"
-TARGET_PATH="$UNITY_PLUGINS_PATH/Ios"
+TARGET_PATH="$SRCROOT/Unity/Assets/$PROJECT/Ios"
 mkdir -p $TARGET_PATH
 cp -a "$CODESIGNING_FOLDER_PATH" $TARGET_PATH
 if [ $? -ne 0 ]; then { echo "Copy binary failed." ; exit 1; } fi

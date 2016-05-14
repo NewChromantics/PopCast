@@ -7,9 +7,11 @@ REM set SRCROOT=$(ProjectDir)\..\
 REM set PROJECT=PopMovieTexture
 REM set UNITY_EXE=$(UnityExe)
 REM set BUILD_DLL=$(TargetPath)
- 
+REM SET ASSETS_PATH=Windows/$(Platform)/
+
 REM Setup some other vars we don't need to put in VS
-set TARGET_PATH=%SRCROOT%\Unity\Assets\%PROJECT%\Windows\
+set PROJECT_ASSETS_PATH=%SRCROOT%\Unity\Assets\%PROJECT%
+set TARGET_PATH=%PROJECT_ASSETS_PATH%\%ASSETS_PATH%
 set TARGET_WINDOWS=true
 
 REM todo: check these vars are set
@@ -23,6 +25,7 @@ if not defined PROJECT			(	echo PROJECT env var not defined.		& exit /b 1002	)
 if not defined UNITY_EXE		(	echo UNITY_EXE env var not defined.		& exit /b 1003	)
 if not defined BUILD_DLL		(	echo BUILD_DLL env var not defined.		& exit /b 1004	)
 if not defined TARGET_PATH		(	echo TARGET_PATH env var not defined.	& exit /b 1005	)
+if not defined ASSETS_PATH		(	echo ASSETS_PATH env var not defined.	& exit /b 1005	)
 
 if not exist "%BUILD_DLL%"		(	echo Output binary doesn't exist; %BUILD_DLL%.	& exit /b 1006	)
 
@@ -33,19 +36,19 @@ if not exist "%TARGET_PATH%" (
 	if %ERRORLEVEL% NEQ 0	(	EXIT /b 1007	)
 )
 
-echo "Copying %BUILD_DLL% to Unity dir %TARGET_PATH%"
+echo "Copying %BUILD_DLL% to Unity dir... %TARGET_PATH%"
 copy /Y "%BUILD_DLL%" "%TARGET_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1008	)
 
 REM for windows, in case the scripts below don't work, force an early C# copy
 set BUILD_CSHARP=%SRCROOT%\src\*.cs
-set TARGET_CSHARP_PATH=%TARGET_PATH%"..\
+set TARGET_CSHARP_PATH=%PROJECT_ASSETS_PATH%\
 echo "Copying %BUILD_CSHARP% to Unity dir %TARGET_CSHARP_PATH%"
 copy /Y "%BUILD_CSHARP%" "%TARGET_CSHARP_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1013	)
 
 set BUILD_CSHARPEDITOR=%SRCROOT%\src\Editor
-set TARGET_CSHARPEDITOR_PATH=%TARGET_PATH%..\Editor\*
+set TARGET_CSHARPEDITOR_PATH=%PROJECT_ASSETS_PATH%\Editor\*
 echo "Copying %BUILD_CSHARPEDITOR% to Unity dir %TARGET_CSHARPEDITOR_PATH%"
 xcopy /E /Y "%BUILD_CSHARPEDITOR%" "%TARGET_CSHARPEDITOR_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1014	)
@@ -88,6 +91,7 @@ for %%a in (%BASH_EXE%) do (
 )
 echo Adding %BASH_PATH% to path env
 set PATH=%PATH%;%BASH_PATH%
+
 
 REM Normal post build
 %BASH_EXE% %SRCROOT%/CopyCSharpFiles.sh
