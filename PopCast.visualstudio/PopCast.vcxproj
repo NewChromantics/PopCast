@@ -258,10 +258,16 @@
     <Link />
     <PostBuildEvent>
       <Command>SET SRCROOT=$(ProjectDir)..
+
 SET PROJECT=$(ProjectName)
+
 SET BUILD_DLL=$(TargetPath)
 
-$(ProjectDir)\..\WindowsPostBuild.bat</Command>
+
+SET UNITY_EXE=$(UNITY_EXE)
+SET ASSETS_PATH=Windows/$(Platform)/
+$(ProjectDir)\..\WindowsPostBuild.bat
+</Command>
     </PostBuildEvent>
     <Link>
       <Profile>true</Profile>
@@ -277,10 +283,16 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <Link />
     <PostBuildEvent>
       <Command>SET SRCROOT=$(ProjectDir)..
+
 SET PROJECT=$(ProjectName)
+
 SET BUILD_DLL=$(TargetPath)
 
-$(ProjectDir)\..\WindowsPostBuild.bat</Command>
+
+SET UNITY_EXE=$(UNITY_EXE)
+SET ASSETS_PATH=Windows/$(Platform)/
+$(ProjectDir)\..\WindowsPostBuild.bat
+</Command>
     </PostBuildEvent>
     <Link>
       <Profile>true</Profile>
@@ -296,11 +308,16 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <Link />
     <PostBuildEvent>
       <Command>SET SRCROOT=$(ProjectDir)..
-SET PROJECT=$(ProjectName)
-SET BUILD_DLL=$(TargetPath)
-SET UNITY_EXE=$(UNITY_EXE)
 
-$(ProjectDir)\..\WindowsPostBuild.bat</Command>
+SET PROJECT=$(ProjectName)
+
+SET BUILD_DLL=$(TargetPath)
+
+
+SET UNITY_EXE=$(UNITY_EXE)
+SET ASSETS_PATH=Windows/$(Platform)/
+$(ProjectDir)\..\WindowsPostBuild.bat
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">
@@ -313,10 +330,16 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <Link />
     <PostBuildEvent>
       <Command>SET SRCROOT=$(ProjectDir)..
+
 SET PROJECT=$(ProjectName)
+
 SET BUILD_DLL=$(TargetPath)
 
-$(ProjectDir)\..\WindowsPostBuild.bat</Command>
+
+SET UNITY_EXE=$(UNITY_EXE)
+SET ASSETS_PATH=Windows/$(Platform)/
+$(ProjectDir)\..\WindowsPostBuild.bat
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
