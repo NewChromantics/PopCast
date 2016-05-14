@@ -25,7 +25,7 @@ RenderSettings:
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
   m_AmbientMode: 0
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: b34713447f1c0ac4392b7c55ba846a35, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -548,14 +548,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 843894331}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 56624fc75ba71f242934b1bc7efccb3b, type: 3}
+  m_Script: {fileID: 11500000, guid: 6c09428a2a3544c15a0398dd2e097a4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   CastParams:
     ShowFinishedFile: 1
     SkipFrames: 0
     PushDebugFrames: 0
+    MaxSeconds: 0
+    MaxKb: 0
     BitRateMegaBytesPerSec: 32
+    FrameRate: 30
     Gif_AllowIntraFrames: 1
     Gif_DebugPalette: 0
     Gif_DebugIndexes: 0
