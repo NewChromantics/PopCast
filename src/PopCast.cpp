@@ -561,8 +561,10 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams& _Params,std
 }
 
 
-void PopCast::TInstance::InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex)
+void PopCast::TInstance::InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex,const TCaster& Caster)
 {
+	auto& Params = Caster.GetParams();
+
 	SoyTime Now(true);
 	if ( !mBaseTimestamp.IsValid() )
 	{
@@ -572,22 +574,36 @@ void PopCast::TInstance::InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex)
 	Frame.mStreamIndex = StreamIndex;
 	Frame.mTimecode = Now;
 	Frame.mTimecode -= mBaseTimestamp;
+
+	//	reject if timecode is past max duration
+	auto MaxMs = Params.mMaxSeconds * 1000;
+	if ( MaxMs > 0 )
+	{
+		if ( Frame.mTimecode.GetMilliSeconds() > MaxMs )
+		{
+			std::stringstream Error;
+			Error << "Frame time (" << Frame.mTimecode << "ms) past max (" << MaxMs << "ms). Frame skipped";
+			throw Soy::AssertException( Error.str() );
+		}
+	}
 }
 
 
 void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex)
 {
 	Soy::Assert( mOpenglContext!=nullptr, "Instance requires an opengl context" );
-	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	auto pCaster = mCaster;
+	Soy::Assert( pCaster != nullptr, "Expected Caster" );
+	auto& Caster = *pCaster;
 	auto& Context = *mOpenglContext;
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
-	InitFrameMeta( Frame, StreamIndex );
+	InitFrameMeta( Frame, StreamIndex, Caster );		
 	
 	try
 	{
-		mCaster->Write( Texture, Frame, Context );
+		Caster.Write( Texture, Frame, Context );
 		return;
 	}
 	catch(std::exception& e)
@@ -621,16 +637,18 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 {
 #if defined(ENABLE_DIRECTX)
 	Soy::Assert( mDirectxContext!=nullptr, "Instance requires an directx context" );
-	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	auto pCaster = mCaster;
+	Soy::Assert( pCaster != nullptr, "Expected Caster" );
+	auto& Caster = *pCaster;
 	auto& Context = *mDirectxContext;
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
-	InitFrameMeta( Frame, StreamIndex );
+	InitFrameMeta( Frame, StreamIndex, Caster );
 	
 	try
 	{
-		mCaster->Write( Texture, Frame, Context );
+		Caster.Write( Texture, Frame, Context );
 		return;
 	}
 	catch(std::exception& e)
@@ -641,14 +659,13 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 	
 	try
 	{
-		std::shared_ptr<TCaster> Caster = mCaster;
 		auto ContextCopy = mDirectxContext;
-		auto ReadPixels = [Texture,Caster,Frame,ContextCopy,this]
+		auto ReadPixels = [Texture,pCaster,Frame,ContextCopy,this]
 		{
 			std::shared_ptr<SoyPixels> Pixels( new SoyPixels );
 			auto& TextureMutable = const_cast<Directx::TTexture&>(Texture);
 			TextureMutable.Read( *Pixels, *ContextCopy, mDirectxTexturePool.get() );
-			Caster->Write( Pixels, Frame );
+			pCaster->Write( Pixels, Frame );
 		};
 		Context.PushJob( ReadPixels );
 		return;
@@ -665,15 +682,17 @@ void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamInde
 
 void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_t StreamIndex)
 {
-	Soy::Assert( mCaster != nullptr, "Expected Caster" );
+	auto pCaster = mCaster;
+	Soy::Assert( pCaster != nullptr, "Expected Caster" );
+	auto& Caster = *pCaster;
 	
 	//	make relative timestamp
 	TCastFrameMeta Frame;
-	InitFrameMeta( Frame, StreamIndex );
+	InitFrameMeta( Frame, StreamIndex, Caster );
 	
 	try
 	{
-		mCaster->Write( Texture, Frame );
+		Caster.Write( Texture, Frame );
 		return;
 	}
 	catch(std::exception& e)
@@ -686,16 +705,18 @@ void PopCast::TInstance::WriteFrame(std::shared_ptr<SoyPixelsImpl> Texture,size_
 
 void PopCast::TInstance::GetMeta(TJsonWriter& Json)
 {
-	if ( mCaster )
+	auto pCaster = mCaster;
+	if ( pCaster )
 	{
-		mCaster->GetMeta( Json );
+		pCaster->GetMeta( Json );
 	}
 }
 
 
 size_t PopCast::TInstance::GetPendingPacketCount()
 {
-	Soy::Assert(mCaster != nullptr, "Caster expected");
+	auto pCaster = mCaster;
+	Soy::Assert(pCaster != nullptr, "Caster expected");
 	
-	return mCaster->GetPendingPacketCount();
+	return pCaster->GetPendingPacketCount();
 }

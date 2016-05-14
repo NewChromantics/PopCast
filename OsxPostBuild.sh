@@ -1,8 +1,7 @@
 
 # Xcode seems to run this script BEFORE copying output files to /Unity... whch means the package is done without the latest binary... do it here (like IOS)
 echo "Copying $CODESIGNING_FOLDER_PATH to Unity dir"
-UNITY_PLUGINS_PATH="$SRCROOT/Unity/Assets/$PROJECT"
-TARGET_PATH="$UNITY_PLUGINS_PATH/Osx"
+TARGET_PATH="$SRCROOT/Unity/Assets/$PROJECT/Osx"
 mkdir -p $TARGET_PATH
 cp -a "$CODESIGNING_FOLDER_PATH" $TARGET_PATH
 if [ $? -ne 0 ]; then { echo "Copy binary failed." ; exit 1; } fi
