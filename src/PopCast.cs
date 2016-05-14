@@ -31,7 +31,13 @@ public class  PopCastParams
 
 	[Tooltip("Debug writer by drawing plain blocks of colour")]
 	public bool PushDebugFrames = false;
-	
+
+	[Tooltip("Limit output to X seconds")]
+	public uint MaxSeconds;
+
+	[Tooltip("Limit output to X kilobytes")]
+	public uint MaxKb;
+
 
 	[Header("Mpeg/video Parameters")]
 
@@ -39,7 +45,9 @@ public class  PopCastParams
 	[Range(0, 32)]
 	public float BitRateMegaBytesPerSec = 32.0f;
 
-	
+	[Tooltip("Set video output frames per second")]
+	public uint FrameRate = 30;
+
 	[Header("Gif Parameters")]
 
 	[Tooltip("Use transparency between frames to reduce file size")]
@@ -134,7 +142,7 @@ public class PopCast
 	
 
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
-	private static extern uint		PopCast_Alloc(String Filename,uint Params,float RateMegaBytesPerSec);
+	private static extern uint		PopCast_Alloc(String Filename,uint Params,float RateMegaBytesPerSec,uint FrameRate,uint MaxSeconds,uint MaxKb);
 	
 	[DllImport (PluginName, CallingConvention = CallingConvention.Cdecl)]
 	private static extern bool		PopCast_Free(uint Instance);
@@ -195,7 +203,7 @@ public class PopCast
 
 		Filename = ResolveFilename (Filename);
 		Debug.LogWarning ("resolved filename: " + Filename);
-		mInstance = PopCast_Alloc ( Filename, ParamFlags32, Params.BitRateMegaBytesPerSec);
+		mInstance = PopCast_Alloc ( Filename, ParamFlags32, Params.BitRateMegaBytesPerSec, Params.FrameRate, Params.MaxSeconds, Params.MaxKb );
 
 		//	if this fails, capture the flush and throw an exception
 		if (mInstance == 0) {

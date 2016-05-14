@@ -63,12 +63,14 @@ bool HasBit(Unity::uint ParamBits,TPluginParams::PopCastFlags Param)
 	return Masked != 0;
 }
 
-TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float RateMegaBytesPerSec)
+TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float RateMegaBytesPerSec,size_t FrameRate,size_t MaxSeconds,size_t MaxKiloBytes)
 {
 	//	decoder params
 	TCasterParams Params;
 	
 	Params.mName = Filename;
+	Params.mMaxKiloBytes = MaxKiloBytes;
+	Params.mMaxSeconds = MaxSeconds;
 
 	Params.mShowFinishedFile = HasBit( ParamBits, TPluginParams::ShowFinishedFile );
 	Params.mSkipFrames = HasBit( ParamBits, TPluginParams::SkipFrames );
@@ -94,20 +96,15 @@ TCasterParams MakeCasterParams(Unity::uint ParamBits,const char* Filename,float 
 		Params.mGifParams.mForcedPaletteColours.PushBack( HighlightColour );
 	}
 
-
-
 	Params.mMpegParams.mCodec = SoyMediaFormat::H264_ES;
-	
-	//	60fps is just black on mediafoundation...
 	Params.mMpegParams.SetBitRateMegaBytesPerSecond( RateMegaBytesPerSec );
-	static int fps = 30;
-	Params.mMpegParams.mFrameRate = fps;
+	Params.mMpegParams.mFrameRate = FrameRate;
 
 	return Params;
 }
 
 
-__export Unity::uint	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec)
+__export Unity::uint	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Unity::Float RateMegaBytesPerSec,Unity::uint FrameRate,Unity::uint MaxSeconds,Unity::uint MaxKiloBytes)
 {
 	ofScopeTimerWarning Timer(__func__, Unity::mMinTimerMs );
 	if ( Filename == nullptr )
@@ -116,7 +113,7 @@ __export Unity::uint	PopCast_Alloc(const char* Filename,Unity::uint ParamBits,Un
 		return 0;
 	}
 	
-	auto Params = MakeCasterParams( ParamBits, Filename, RateMegaBytesPerSec );
+	auto Params = MakeCasterParams( ParamBits, Filename, RateMegaBytesPerSec, FrameRate, MaxSeconds, MaxKiloBytes );
 
 	try
 	{

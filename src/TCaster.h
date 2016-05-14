@@ -37,6 +37,8 @@ public:
 	bool				mSkipFrames;
 	Gif::TEncodeParams	mGifParams;
 	TMediaEncoderParams	mMpegParams;
+	size_t				mMaxSeconds;
+	size_t				mMaxKiloBytes;
 };
 
 class TCastDeviceMeta
