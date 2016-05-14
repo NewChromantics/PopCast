@@ -127,6 +127,13 @@ void MediaFoundation::TFileMuxer::ProcessPacket(std::shared_ptr<TMediaPacket> Pa
 		mStarted = true;
 	}
 
+	if ( mFinished )
+	{
+		std::stringstream Error;
+		Error << "Skipped writing frame " << Packet->mTimecode << "(dt=" << Packet->mTimecode << ") as we've already finished.";
+		throw Soy::AssertException( Error.str() );
+	}
+
 	auto OutputStreamIndex = GetOutputStream( Packet->mMeta.mStreamIndex );
 	auto Buffer = MediaFoundation::CreatePixelBuffer( *Packet );
 	auto Result = mSinkWriter->mSinkWriter->WriteSample( size_cast<DWORD>( OutputStreamIndex ), Buffer.mObject );
