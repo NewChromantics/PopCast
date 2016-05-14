@@ -98,7 +98,7 @@ public:
 	size_t			GetPendingPacketCount();
 
 private:
-	void			InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex);
+	void			InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex,const TCaster& Caster);
 	
 public:
 	std::shared_ptr<Opengl::TContext>	mOpenglContext;
