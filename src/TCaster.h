@@ -91,6 +91,8 @@ public:
 	virtual void		GetMeta(TJsonWriter& Json) {}
 	virtual size_t		GetPendingPacketCount()	{	throw Soy::AssertException("Needs implementing");	}
 
+	const TCasterParams&	GetParams() const	{	return mParams;	}
+
 protected:
 	TCasterParams	mParams;
 };
