@@ -104,9 +104,15 @@ std::shared_ptr<TMediaMuxer> AllocMuxer(const TCasterParams& Params,std::string 
 		auto AllocGifEncoder = [Input,DeviceParams,Params](size_t StreamIndex,const SoyPixelsMeta& InputMeta)
 		{
 			if ( DeviceParams.OpenglContext )
+			{
 				return Gif::AllocEncoder( Input, StreamIndex, DeviceParams.OpenglContext, DeviceParams.OpenglTexturePool, Params.mGifParams, Params.mSkipFrames );
+			}
+#if defined(ENABLE_DIRECTX)
 			else if ( DeviceParams.DirectxContext )
+			{
 				return Gif::AllocEncoder( Input, StreamIndex, DeviceParams.DirectxContext, DeviceParams.DirectxTexturePool, Params.mGifParams, Params.mSkipFrames );
+			}
+#endif
 
 			throw Soy::AssertException("Missing graphics context");
 		};
