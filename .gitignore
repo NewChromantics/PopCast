@@ -1,8 +1,13 @@
-# Everything in plugins is generated at compile time
-Unity/Assets/Plugins
-Unity/Assets/Plugins.meta
-Unity/Assets/PopCast
-Unity/Assets/PopCast.meta
+# compiled stuff
+Unity/Assets/PopCast/Editor/PopCastInspector.cs
+Unity/Assets/PopCast/Editor/PopCastWindow.cs
+Unity/Assets/PopCast/Osx/PopCastOsx.bundle/Contents/Info.plist
+Unity/Assets/PopCast/Osx/PopCastOsx.bundle/Contents/MacOS/PopCastOsx
+Unity/Assets/PopCast/PopCast.cs
+Unity/Assets/PopCast/PopCastCameraCapture.cs
+Unity/Assets/PopCast/PopTexturePtrCache.cs
+Unity/Assets/PopCast/Windows/x64/PopCast.dll
+
 
 MakePackage.log
 *.unitypackage
