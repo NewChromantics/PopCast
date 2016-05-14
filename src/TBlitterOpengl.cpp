@@ -337,16 +337,6 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 	//	do bindings
 	RenderTarget->Bind();
 
-	//	for debugging
-#if defined(TARGET_WINDOWS)
-	static bool SkipRender = false;
-	if (SkipRender)
-	{
-		RenderTarget->Unbind();
-		return;
-	}
-#endif
-
 	//	clear FBO
 	static bool ClearDepth = false;
 	static bool ClearColour = false;

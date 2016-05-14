@@ -176,7 +176,7 @@ __export Unity::uint	PopCast_GetBackgroundGpuJobCount()
 		if ( OpenglContext )
 			JobCount += OpenglContext->GetJobCount();
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 		auto DirectxContext = Unity::GetDirectxContextPtr();
 		if ( DirectxContext )
 			JobCount += DirectxContext->GetJobCount();
@@ -236,7 +236,7 @@ __export bool	PopCast_UpdateRenderTexture(Unity::uint Instance,Unity::NativeText
 	{
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		auto OpenglContext = Unity::GetOpenglContextPtr();
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 		auto DirectxContext = Unity::GetDirectxContextPtr();
 #endif
 		
@@ -249,7 +249,7 @@ __export bool	PopCast_UpdateRenderTexture(Unity::uint Instance,Unity::NativeText
 			return true;
 		}
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 		if ( DirectxContext )
 		{
 			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
@@ -276,7 +276,7 @@ __export bool	PopCast_UpdateTexture2D(Unity::uint Instance,Unity::NativeTextureP
 	{
 		SoyPixelsMeta Meta( Width, Height, Unity::GetPixelFormat( PixelFormat ) );
 		auto OpenglContext = Unity::GetOpenglContextPtr();
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 		auto DirectxContext = Unity::GetDirectxContextPtr();
 #endif
 
@@ -289,7 +289,7 @@ __export bool	PopCast_UpdateTexture2D(Unity::uint Instance,Unity::NativeTextureP
 			return true;
 		}
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 		if ( DirectxContext )
 		{
 			Directx::TTexture Texture( static_cast<ID3D11Texture2D*>(TextureId) );
@@ -461,7 +461,7 @@ std::shared_ptr<PopCast::TInstance> PopCast::Alloc(TCasterParams Params,std::sha
 	if ( !OpenglContext )
 		OpenglContext = Unity::GetOpenglContextPtr();
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	if ( !DirectxContext )
 		DirectxContext = Unity::GetDirectxContextPtr();
 #endif
@@ -620,7 +620,7 @@ void PopCast::TInstance::WriteFrame(Opengl::TTexture& Texture,size_t StreamIndex
 
 void PopCast::TInstance::WriteFrame(Directx::TTexture& Texture,size_t StreamIndex)
 {
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	Soy::Assert( mDirectxContext!=nullptr, "Instance requires an directx context" );
 	Soy::Assert( mCaster != nullptr, "Expected Caster" );
 	auto& Context = *mDirectxContext;

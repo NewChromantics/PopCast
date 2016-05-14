@@ -252,6 +252,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />
@@ -270,6 +271,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />
@@ -288,6 +290,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />
@@ -304,6 +307,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat</Command>
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <PreprocessorDefinitions>ENABLE_DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
     <Link />

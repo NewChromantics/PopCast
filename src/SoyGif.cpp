@@ -2,7 +2,7 @@
 #include "TFileCaster.h"
 #include "TBlitterOpengl.h"
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 #include "TBlitterDirectx.h"
 #endif
 #include <SoyJson.h>
@@ -198,7 +198,7 @@ std::shared_ptr<TTextureBuffer> Opengl::GifBlitter::CopyImmediate(const Opengl::
 
 
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context,std::shared_ptr<TPool<TTexture>> TexturePool) :
 	mContext		( Context ),
 	mTexturePool	( TexturePool )
@@ -212,7 +212,7 @@ Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context,std::shared_pt
 }
 #endif
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 Directx::GifBlitter::~GifBlitter()
 {
 	//	deffered delete of stuff
@@ -223,7 +223,7 @@ Directx::GifBlitter::~GifBlitter()
 }
 #endif
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 std::shared_ptr<SoyPixelsImpl> Directx::GifBlitter::IndexImageWithShader(std::shared_ptr<SoyPixelsImpl> Palette,std::shared_ptr<SoyPixelsImpl> Source,const char* FragShader,std::shared_ptr<Soy::TSemaphore> JobSemaphore)
 {
 	Soy::Assert(Palette != nullptr, "Expected palette");
@@ -276,7 +276,7 @@ std::shared_ptr<SoyPixelsImpl> Directx::GifBlitter::IndexImageWithShader(std::sh
 }
 #endif
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 std::shared_ptr<TTextureBuffer> Directx::GifBlitter::CopyImmediate(const Directx::TTexture& Image)
 {
 	auto& Context = *mContext;
@@ -547,7 +547,7 @@ Gif::TEncoder::TEncoder(std::shared_ptr<TMediaPacketBuffer>& OutputBuffer,size_t
 	SoyWorkerThread		( "Gif::TEncoder", SoyWorkerWaitMode::Wake ),
 	TMediaEncoder		( OutputBuffer ),
 	mStreamIndex		( StreamIndex ),
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	mDirectxGifBlitter	( new Directx::GifBlitter(Context,TexturePool) ),
 #endif
 	mParams				( Params ),
@@ -642,7 +642,7 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 
 void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::TContext& Context)
 {
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	if ( mParams.mCpuOnly )
 		throw Soy::AssertException("GPU mode disabled");
 
@@ -735,7 +735,7 @@ bool Gif::TEncoder::Iteration()
 				Context.PushJob( Read, *Semaphore );
 				Semaphore->Wait();
 			}
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 			else if ( mDirectxGifBlitter && Texture.mDirectxTexture )
 			{
 				auto Semaphore = AllocJobSempahore();
@@ -796,7 +796,7 @@ bool Gif::TEncoder::Iteration()
 		{
 			Shader = GifFragShaderDebugPalette_Opengl;
 		}
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 		else if ( mDirectxGifBlitter && !mParams.mDebugIndexes )
 		{
 			Shader = GifFragShaderSimpleNearest_Directx;
@@ -879,7 +879,7 @@ Opengl::TContext& Gif::TEncoder::GetOpenglContext()
 
 Directx::TContext& Gif::TEncoder::GetDirectxContext()
 {
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	auto& Blitter = mDirectxGifBlitter;
 	Soy::Assert( Blitter != nullptr, std::string(__func__) + " missing directx gif blitter");
 	auto Context = Blitter->mContext;
@@ -998,7 +998,7 @@ std::shared_ptr<SoyPixelsImpl> Gif::TEncoder::IndexImageWithShader(std::shared_p
 	{
 		return mOpenglGifBlitter->IndexImageWithShader( Palette, Source, FragShader, Semaphore );
 	}
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	else if ( mDirectxGifBlitter && !mParams.mCpuOnly )
 	{
 		return mDirectxGifBlitter->IndexImageWithShader( Palette, Source, FragShader, Semaphore );
@@ -1114,7 +1114,7 @@ bool Gif::TEncoder::CanPushFrame(SoyTime Timecode)
 			return false;
 	}
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	//	pool is full (and other OOM checks)
 	if ( mDirectxGifBlitter )
 	{

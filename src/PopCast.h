@@ -1,9 +1,10 @@
 #pragma once
 
 #include "PopUnity.h"
+#include "TCaster.h"
 
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 //	needed for the pool
 #include <SoyDirectx.h>	
 #endif

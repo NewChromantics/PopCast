@@ -14,8 +14,10 @@ public:
 	std::shared_ptr<Opengl::TContext>			OpenglContext;
 	std::shared_ptr<TPool<Opengl::TTexture>>	OpenglTexturePool;
 
+#if defined(ENABLE_DIRECTX)
 	std::shared_ptr<Directx::TContext>			DirectxContext;
 	std::shared_ptr<TPool<Directx::TTexture>>	DirectxTexturePool;
+#endif
 };
 
 

@@ -129,7 +129,7 @@ public:
 };
 
 
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 class Directx::GifBlitter : public TGifBlitter
 {
 public:
@@ -194,7 +194,7 @@ public:
 
 	std::shared_ptr<Opengl::GifBlitter>		mOpenglGifBlitter;
 	std::shared_ptr<TGifBlitter>			mCpuGifBlitter;
-#if defined(TARGET_WINDOWS)
+#if defined(ENABLE_DIRECTX)
 	std::shared_ptr<Directx::GifBlitter>	mDirectxGifBlitter;
 #endif
 
