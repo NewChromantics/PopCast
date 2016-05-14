@@ -532,8 +532,10 @@ PopCast::TInstance::TInstance(const TInstanceRef& Ref,TCasterParams& _Params,std
 		TCasterDeviceParams DeviceParams;
 		DeviceParams.OpenglContext = mOpenglContext;
 		DeviceParams.OpenglTexturePool = mOpenglTexturePool;
+#if defined(ENABLE_DIRECTX)
 		DeviceParams.DirectxContext = mDirectxContext;
 		DeviceParams.DirectxTexturePool = mDirectxTexturePool;
+#endif
 		mCaster.reset( new TFileCaster( Params, DeviceParams ) );
 	}
 #if defined(ENABLE_AIRPLAY)
