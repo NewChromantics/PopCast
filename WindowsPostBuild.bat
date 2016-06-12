@@ -91,8 +91,10 @@ REM windows version which doesn't require bash
 
 REM disable with an env var
 if defined DISABLE_MAKEPACKAGE (
-	echo DISABLE_MAKEPACKAGE is defined, skipping
-	EXIT /B 0
+	if %DISABLE_MAKEPACKAGE% NEQ 0	(
+		echo DISABLE_MAKEPACKAGE is defined, skipping
+		EXIT /B 0
+	)
 )
 
 call %SRCROOT%/MakePackage.bat
@@ -111,8 +113,10 @@ REM run normal scripts
 
 REM disable with an env var
 if defined DISABLE_MAKEPACKAGE (
-	echo DISABLE_MAKEPACKAGE is defined, skipping
-	EXIT /B 0
+	if %DISABLE_MAKEPACKAGE% NEQ 0	(
+		echo DISABLE_MAKEPACKAGE is defined, skipping
+		EXIT /B 0
+	)
 )
 
 set BASH_FILENAME=bash.exe
