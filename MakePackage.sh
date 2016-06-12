@@ -8,6 +8,7 @@ export PROJECT_PATH="$SRCROOT/Unity"
 # windows build already exports UNITY_EXE specifically
 if [ -z "$UNITY_EXE" ]; then
 {
+	# todo:error if UNITY_APP_PATH isn't set
 	export UNITY_EXE="${UNITY_APP_PATH}/Unity.app/Contents/MacOS/Unity"
 } fi
 

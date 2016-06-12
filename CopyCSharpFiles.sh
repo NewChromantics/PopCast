@@ -6,16 +6,25 @@ mkdir -p $UNITY_PLUGINS_PATH
 
 # gr: using quotes with *.cs fails - file not found...
 cp $SRCROOT/src/*.cs $UNITY_PLUGINS_PATH
-if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1; } fi
+if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1001; } fi
 cp -r "$SRCROOT/src/Editor" $UNITY_PLUGINS_PATH
-if [ $? -ne 0 ]; then { echo "copy c# Failed." ; exit 1; } fi
+if [ $? -ne 0 ]; then { echo "copy c#/Editor Failed." ; exit 1002; } fi
 
 # replace GIT_REVISION(the string) with the git revision in the copied file(GIT_REV, the variable)
 # can't seem to catch when this fails (ie, cant find git.exe)
-export GIT_REV=`git rev-parse --verify --short HEAD`
 if [ -z "${GIT_REV+1}"  ]; then
 {
-	export GIT_REV=GIT_NOT_FOUND
+	echo "no GIT_REV (${GIT_REV}), generating..."
+	export GIT_REV=`git rev-parse --verify --short HEAD`
+} 
+else
+{
+	echo "Using ENV var GIT_REV: $GIT_REV"
+} fi
+
+if [ -z "${GIT_REV+1}"  ]; then
+{
+	export GIT_REV="git not found"
 } fi
 
 # this is the string we're going to match
