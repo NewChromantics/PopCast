@@ -1,6 +1,7 @@
 REM Assuming we have git installed, we can just use the shell scripts!
 
 @echo Windows post build
+echo on
 
 REM Set up env in the batch file, copy & paste this.
 REM set SRCROOT=$(ProjectDir)\..\
@@ -29,8 +30,25 @@ if not defined ASSETS_PATH		(	echo ASSETS_PATH env var not defined.	& exit /b 10
 
 if not exist "%BUILD_DLL%"		(	echo Output binary doesn't exist; %BUILD_DLL%.	& exit /b 1006	)
 
+
+CALL :CopyBinaries
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 9990	)
+
+CALL :CopyFilesSimple
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 9991	)
+
+CALL :MakePackage
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 9992	)
+
+REM success
+exit 0
+
+
+
+
+
 REM Copy binaries
-echo on
+:CopyBinaries
 if not exist "%TARGET_PATH%" (
 	mkdir "%TARGET_PATH%"
 	if %ERRORLEVEL% NEQ 0	(	EXIT /b 1007	)
@@ -39,6 +57,14 @@ if not exist "%TARGET_PATH%" (
 echo "Copying %BUILD_DLL% to Unity dir... %TARGET_PATH%"
 copy /Y "%BUILD_DLL%" "%TARGET_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1008	)
+EXIT /B 0
+
+
+
+
+
+REM Copy files simple
+:CopyFilesSimple
 
 REM for windows, in case the scripts below don't work, force an early C# copy
 set BUILD_CSHARP=%SRCROOT%\src\*.cs
@@ -52,6 +78,17 @@ set TARGET_CSHARPEDITOR_PATH=%PROJECT_ASSETS_PATH%\Editor\*
 echo "Copying %BUILD_CSHARPEDITOR% to Unity dir %TARGET_CSHARPEDITOR_PATH%"
 xcopy /E /Y "%BUILD_CSHARPEDITOR%" "%TARGET_CSHARPEDITOR_PATH%"
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 1014	)
+EXIT /B 0
+
+
+REM run normal scripts
+:MakePackage
+
+REM disable with an env var
+if defined DISABLE_MAKEPACKAGE (
+	echo DISABLE_MAKEPACKAGE is defined, skipping
+	EXIT /B 0`
+)
 
 set BASH_FILENAME=bash.exe
 
@@ -96,7 +133,7 @@ set PATH=%PATH%;%BASH_PATH%
 REM Normal post build
 %BASH_EXE% %SRCROOT%/CopyCSharpFiles.sh
 if %ERRORLEVEL% NEQ 0	(
-	echo Warning: makepackage.sh failed
+	echo Warning: CopyCSharpFiles.sh failed
 	REM exit /b 1009	
 )
 
@@ -105,7 +142,5 @@ if %ERRORLEVEL% NEQ 0	(
 	echo Warning: makepackage.sh failed
 	REM exit /b 1010	
 )
-
-REM success
-exit 0
+EXIT /B 0
 

@@ -87,3 +87,5 @@ Unity/**/*.sln
 Icon?
 ehthumbs.db
 Thumbs.db
+
+Unity/Assets/PopCast/Windows/Win32/PopCast.dll
