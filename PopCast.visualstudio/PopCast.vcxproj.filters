@@ -266,5 +266,8 @@
     <None Include="..\src\BlitRgbaFlip.hlsl.frag">
       <Filter>src</Filter>
     </None>
+    <None Include="..\MakePackage.bat">
+      <Filter>Scripts</Filter>
+    </None>
   </ItemGroup>
 </Project>

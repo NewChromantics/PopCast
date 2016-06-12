@@ -37,8 +37,12 @@ if %ERRORLEVEL% NEQ 0	(	EXIT /b 9990	)
 CALL :CopyFilesSimple
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 9991	)
 
-CALL :MakePackage
-if %ERRORLEVEL% NEQ 0	(	EXIT /b 9992	)
+REM CALL :MakePackage
+REM if %ERRORLEVEL% NEQ 0	(	EXIT /b 9992	)
+
+CALL :MakePackageBat
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 9993	)
+
 
 REM success
 exit 0
@@ -81,13 +85,34 @@ if %ERRORLEVEL% NEQ 0	(	EXIT /b 1014	)
 EXIT /B 0
 
 
+
+REM windows version which doesn't require bash
+:MakePackageBat
+
+REM disable with an env var
+if defined DISABLE_MAKEPACKAGE (
+	echo DISABLE_MAKEPACKAGE is defined, skipping
+	EXIT /B 0
+)
+
+call %SRCROOT%/MakePackage.bat
+if %ERRORLEVEL% NEQ 0	(
+	echo Warning: makepackage.bat failed
+	REM exit /b 1015	
+)
+EXIT /B 0
+
+
+
+
+
 REM run normal scripts
 :MakePackage
 
 REM disable with an env var
 if defined DISABLE_MAKEPACKAGE (
 	echo DISABLE_MAKEPACKAGE is defined, skipping
-	EXIT /B 0`
+	EXIT /B 0
 )
 
 set BASH_FILENAME=bash.exe

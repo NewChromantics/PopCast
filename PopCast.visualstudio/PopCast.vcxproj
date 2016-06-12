@@ -22,6 +22,7 @@
     <None Include="..\AndroidBuild.sh" />
     <None Include="..\CopyCSharpFiles.sh" />
     <None Include="..\IosPostBuild.sh" />
+    <None Include="..\MakePackage.bat" />
     <None Include="..\MakePackage.sh" />
     <None Include="..\OsxPostBuild.sh" />
     <None Include="..\src\AvfCompressor.mm">
@@ -236,18 +237,10 @@
     <Import Project="Watermarked.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>$(ProjectName)</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>$(ProjectName)</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'">
-    <TargetName>$(ProjectName)</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">
-    <TargetName>$(ProjectName)</TargetName>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>
