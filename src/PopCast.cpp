@@ -24,6 +24,10 @@
 #include "AvfCompressor.h"
 #endif
 
+#if defined(ENABLE_OPENGL)
+#include <SoyOpenglContext.h>
+#endif
+
 
 namespace PopCast
 {
@@ -169,10 +173,11 @@ __export Unity::uint	PopCast_GetBackgroundGpuJobCount()
 
 	try
 	{
+#if defined(ENABLE_OPENGL)
 		auto OpenglContext = Unity::GetOpenglContextPtr();
 		if ( OpenglContext )
 			JobCount += OpenglContext->GetJobCount();
-
+#endif
 #if defined(ENABLE_DIRECTX)
 		auto DirectxContext = Unity::GetDirectxContextPtr();
 		if ( DirectxContext )

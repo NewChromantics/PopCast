@@ -163,7 +163,7 @@ std::shared_ptr<SoyPixelsImpl> Opengl::GifBlitter::IndexImageWithShader(std::sha
 		Sources.PushBack( Source.get() );
 		Sources.PushBack( Palette.get() );
 		
-		Opengl::TTextureUploadParams UploadParams;
+		SoyGraphics::TTextureUploadParams UploadParams;
 		{
 			Soy::TScopeTimerPrint Timer( "Palettising blit", Gif::TimerMinMs );
 			Blitter->BlitTexture( IndexTexture, GetArrayBridge(Sources), *mContext, UploadParams, FragShader );
@@ -190,7 +190,7 @@ std::shared_ptr<TTextureBuffer> Opengl::GifBlitter::CopyImmediate(const Opengl::
 
 	BufferArray<TTexture,1> ImageAsArray;
 	ImageAsArray.PushBack( Image );
-	Opengl::TTextureUploadParams Params;
+	SoyGraphics::TTextureUploadParams Params;
 	mBlitter->BlitTexture( *Buffer->mOpenglTexture, GetArrayBridge(ImageAsArray), *mContext, Params );
 
 	return Buffer;
@@ -216,8 +216,8 @@ Directx::GifBlitter::GifBlitter(std::shared_ptr<TContext> Context,std::shared_pt
 Directx::GifBlitter::~GifBlitter()
 {
 	//	deffered delete of stuff
-	Opengl::DeferDelete( mContext, mTexturePool );
-	Opengl::DeferDelete( mContext, mBlitter );
+	PopWorker::DeferDelete( mContext, mTexturePool );
+	PopWorker::DeferDelete( mContext, mBlitter );
 	
 	mContext.reset();
 }
@@ -258,7 +258,7 @@ std::shared_ptr<SoyPixelsImpl> Directx::GifBlitter::IndexImageWithShader(std::sh
 		Sources.PushBack( Source.get() );
 		Sources.PushBack( Palette.get() );
 		
-		Opengl::TTextureUploadParams UploadParams;
+		SoyGraphics::TTextureUploadParams UploadParams;
 		{
 			Soy::TScopeTimerPrint Timer( "Palettising blit", Gif::TimerMinMs );
 			mBlitter->BlitTexture( IndexTexture, GetArrayBridge(Sources), Context, FragShader );	
@@ -629,7 +629,7 @@ void Gif::TEncoder::Write(const Opengl::TTexture& Image,SoyTime Timecode,Opengl:
 		auto& Packet = *pPacket;
 		Packet.mPixelBuffer = mOpenglGifBlitter->CopyImmediate( Image );
 		Packet.mTimecode = Timecode;
-		Packet.mDuration = SoyTime( 16ull );
+		Packet.mDuration = SoyTime( std::chrono::milliseconds(16) );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 		
 		PushFrame( pPacket );
@@ -663,7 +663,7 @@ void Gif::TEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Direct
 		auto& Packet = *pPacket;
 		Packet.mPixelBuffer = mDirectxGifBlitter->CopyImmediate( Image );
 		Packet.mTimecode = Timecode;
-		Packet.mDuration = SoyTime( 16ull );
+		Packet.mDuration = SoyTime( std::chrono::milliseconds(16) );
 		Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 		
 		PushFrame( pPacket );
@@ -684,7 +684,7 @@ void Gif::TEncoder::Write(std::shared_ptr<SoyPixelsImpl> Image,SoyTime Timecode)
 	auto& Packet = *pPacket;
 	Packet.mPixelBuffer = std::make_shared<TTextureBuffer>( Image );
 	Packet.mTimecode = Timecode;
-	Packet.mDuration = SoyTime( 16ull );
+	Packet.mDuration = SoyTime( std::chrono::milliseconds(16) );
 	Packet.mMeta.mCodec = SoyMediaFormat::FromPixelFormat( Packet.mMeta.mPixelMeta.GetFormat() );
 	PushFrame( pPacket );
 }

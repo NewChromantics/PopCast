@@ -14,4 +14,7 @@ int Unity::GetPluginEventId()
 	return mEventId;
 }
 
-
+bool Unity::IsDebugPluginEventEnabled()
+{
+	return mDebugPluginEvent;
+}
