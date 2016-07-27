@@ -10,6 +10,8 @@ REM set UNITY_EXE=$(UnityExe)
 REM set BUILD_DLL=$(TargetPath)
 REM SET ASSETS_PATH=Windows/$(Platform)/
 
+SET ASSETS_PATH=%PLATFORM_NAME%/
+
 REM Setup some other vars we don't need to put in VS
 set PROJECT_ASSETS_PATH=%SRCROOT%\Unity\Assets\%PROJECT%
 set TARGET_PATH=%PROJECT_ASSETS_PATH%\%ASSETS_PATH%
@@ -26,6 +28,7 @@ if not defined PROJECT			(	echo PROJECT env var not defined.		& exit /b 1002	)
 if not defined UNITY_EXE		(	echo UNITY_EXE env var not defined.		& exit /b 1003	)
 if not defined BUILD_DLL		(	echo BUILD_DLL env var not defined.		& exit /b 1004	)
 if not defined TARGET_PATH		(	echo TARGET_PATH env var not defined.	& exit /b 1005	)
+if not defined PLATFORM_NAME	(	echo PLATFORM_NAME env var not defined.	& exit /b 1019	)
 if not defined ASSETS_PATH		(	echo ASSETS_PATH env var not defined.	& exit /b 1005	)
 
 if not exist "%BUILD_DLL%"		(	echo Output binary doesn't exist; %BUILD_DLL%.	& exit /b 1006	)
@@ -37,12 +40,8 @@ if %ERRORLEVEL% NEQ 0	(	EXIT /b 9990	)
 CALL :CopyFilesSimple
 if %ERRORLEVEL% NEQ 0	(	EXIT /b 9991	)
 
-REM CALL :MakePackage
-REM if %ERRORLEVEL% NEQ 0	(	EXIT /b 9992	)
-
-CALL :MakePackageBat
-if %ERRORLEVEL% NEQ 0	(	EXIT /b 9993	)
-
+CALL :MakePackage
+if %ERRORLEVEL% NEQ 0	(	EXIT /b 9992	)
 
 REM success
 exit 0
@@ -85,38 +84,13 @@ if %ERRORLEVEL% NEQ 0	(	EXIT /b 1014	)
 EXIT /B 0
 
 
-
-REM windows version which doesn't require bash
-:MakePackageBat
-
-REM disable with an env var
-if defined DISABLE_MAKEPACKAGE (
-	if %DISABLE_MAKEPACKAGE% NEQ 0	(
-		echo DISABLE_MAKEPACKAGE is defined, skipping
-		EXIT /B 0
-	)
-)
-
-call %SRCROOT%/MakePackage.bat
-if %ERRORLEVEL% NEQ 0	(
-	echo Warning: makepackage.bat failed
-	REM exit /b 1015	
-)
-EXIT /B 0
-
-
-
-
-
 REM run normal scripts
 :MakePackage
 
 REM disable with an env var
 if defined DISABLE_MAKEPACKAGE (
-	if %DISABLE_MAKEPACKAGE% NEQ 0	(
-		echo DISABLE_MAKEPACKAGE is defined, skipping
-		EXIT /B 0
-	)
+	echo DISABLE_MAKEPACKAGE is defined, skipping
+	EXIT /B 0
 )
 
 set BASH_FILENAME=bash.exe

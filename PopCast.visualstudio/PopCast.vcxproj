@@ -217,24 +217,28 @@
     <Import Project="..\..\SoyLib\Soy_Windows.props" />
     <Import Project="..\..\SoyLib\SoyApp_Windows.props" />
     <Import Project="NoWatermark.props" />
+    <Import Project="WindowsPostBuild.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\SoyLib\Soy_Windows.props" />
     <Import Project="..\..\SoyLib\SoyApp_Windows.props" />
     <Import Project="NoWatermark.props" />
+    <Import Project="WindowsPostBuild.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\SoyLib\Soy_Windows.props" />
     <Import Project="..\..\SoyLib\SoyApp_Windows.props" />
     <Import Project="Watermarked.props" />
+    <Import Project="WindowsPostBuild.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\SoyLib\Soy_Windows.props" />
     <Import Project="..\..\SoyLib\SoyApp_Windows.props" />
     <Import Project="Watermarked.props" />
+    <Import Project="WindowsPostBuild.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
@@ -249,19 +253,7 @@
     </ClCompile>
     <Link />
     <Link />
-    <PostBuildEvent>
-      <Command>SET SRCROOT=$(ProjectDir)..
-
-SET PROJECT=$(ProjectName)
-
-SET BUILD_DLL=$(TargetPath)
-
-
-SET UNITY_EXE=$(UNITY_EXE)
-SET ASSETS_PATH=Windows/$(Platform)/
-$(ProjectDir)\..\WindowsPostBuild.bat
-</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <Link>
       <Profile>true</Profile>
     </Link>
@@ -274,19 +266,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat
     </ClCompile>
     <Link />
     <Link />
-    <PostBuildEvent>
-      <Command>SET SRCROOT=$(ProjectDir)..
-
-SET PROJECT=$(ProjectName)
-
-SET BUILD_DLL=$(TargetPath)
-
-
-SET UNITY_EXE=$(UNITY_EXE)
-SET ASSETS_PATH=Windows/$(Platform)/
-$(ProjectDir)\..\WindowsPostBuild.bat
-</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <Link>
       <Profile>true</Profile>
     </Link>
@@ -299,19 +279,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat
     </ClCompile>
     <Link />
     <Link />
-    <PostBuildEvent>
-      <Command>SET SRCROOT=$(ProjectDir)..
-
-SET PROJECT=$(ProjectName)
-
-SET BUILD_DLL=$(TargetPath)
-
-
-SET UNITY_EXE=$(UNITY_EXE)
-SET ASSETS_PATH=Windows/$(Platform)/
-$(ProjectDir)\..\WindowsPostBuild.bat
-</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Watermarked|Win32'">
     <ClCompile>
@@ -321,19 +289,7 @@ $(ProjectDir)\..\WindowsPostBuild.bat
     </ClCompile>
     <Link />
     <Link />
-    <PostBuildEvent>
-      <Command>SET SRCROOT=$(ProjectDir)..
-
-SET PROJECT=$(ProjectName)
-
-SET BUILD_DLL=$(TargetPath)
-
-
-SET UNITY_EXE=$(UNITY_EXE)
-SET ASSETS_PATH=Windows/$(Platform)/
-$(ProjectDir)\..\WindowsPostBuild.bat
-</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
