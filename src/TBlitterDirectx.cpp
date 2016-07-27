@@ -252,15 +252,14 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<const 
 		OverrideShader = GetBackupShader( Context );
 
 	BufferArray<std::shared_ptr<Directx::TTexture>,4> SourceTextures;
-	std::shared_ptr<Directx::TTexture> RenderTexture;
 	
-	auto DeallocTempTextures = [this,&SourceTextures,&RenderTexture]
+	auto DeallocTempTextures = [this,&SourceTextures]
 	{
 		auto& Pool = GetTexturePool();
 		for ( int t=0;	t<SourceTextures.GetSize();	t++ )
 			Pool.Release( SourceTextures[t] );
-		Pool.Release( RenderTexture );
 	};
+
 
 	try
 	{
@@ -311,54 +310,67 @@ void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<TTextu
 
 void Directx::TBlitter::BlitTexture(Directx::TTexture& Target,ArrayBridge<TTexture>& SourceTextures,TContext& Context,TShader& BlitShader)
 {
-	std::shared_ptr<Directx::TTexture> RenderTexture;
-
 	//	now create a rendertarget texture we can blit that texture[s] to the final target
 	//	todo: if target is a render texture, blit directly into that instead of an intermediate temp texture
-	RenderTexture = GetTempTexturePtr( Target.mMeta, Context, TTextureMode::RenderTarget );
-
-	//	blit pixels into it
-	auto& RenderTarget = GetRenderTarget( RenderTexture, Context );
-	RenderTarget.Bind( Context );
-	if ( mClearBeforeBlit )
-		RenderTarget.ClearColour( Context, mClearBeforeBlitColour );
-
-	auto BlitGeo = GetGeo( Context );
-
-	Soy::Assert( BlitGeo!=nullptr, "Failed to get geo for blit");
-
+	auto RenderTexture = GetTempTexturePtr( Target.mMeta, Context, TTextureMode::RenderTarget );
+	
+	auto DeallocTempTextures = [this,&RenderTexture]
 	{
-		auto Shader = BlitShader.Bind( Context );
-		try
-		{
-			static bool setuniforms = true;
-			if (setuniforms)
-			{
-				Shader.SetUniform("Transform", mTransform );
-				//	try to set all the uniforms
-				//	assume pixel size might fail, not all shaders need it
-				const char* TextureUniforms[] = { "Texture0", "Texture1" };
-				//const char* TextureSizeUniforms[] = { "Texture0_PixelSize", "Texture1_PixelSize" };
-				for (int t = 0; t < SourceTextures.GetSize(); t++)
-				{
-					Shader.SetUniform(TextureUniforms[t], SourceTextures[t] );
-					//vec2f PixelSize(Sources[t].GetWidth(), Sources[t].GetHeight());
-					//Shader.SetUniform(TextureSizeUniforms[t], PixelSize);
-				}
-			}
-			Shader.Bake();
-			BlitGeo->Draw( Context );
-		}
-		catch(std::exception& e)
-		{
-			std::Debug << "Geo blit error: " << e.what() << std::endl;
-			RenderTarget.ClearColour( Context, Soy::TRgb(1,0,0) );
-		}
-	}
-	RenderTarget.Unbind(Context);
+		auto& Pool = GetTexturePool();
+		Pool.Release( RenderTexture );
+	};
+	
+	try
+	{
+		//	blit pixels into it
+		auto& RenderTarget = GetRenderTarget( RenderTexture, Context );
+		RenderTarget.Bind( Context );
+		if ( mClearBeforeBlit )
+			RenderTarget.ClearColour( Context, mClearBeforeBlitColour );
 
-	//	now copy that render target to texture target
-	Target.Write( *RenderTexture, Context );
+		auto BlitGeo = GetGeo( Context );
+
+		Soy::Assert( BlitGeo!=nullptr, "Failed to get geo for blit");
+
+		{
+			auto Shader = BlitShader.Bind( Context );
+			try
+			{
+				static bool setuniforms = true;
+				if (setuniforms)
+				{
+					Shader.SetUniform("Transform", mTransform );
+					//	try to set all the uniforms
+					//	assume pixel size might fail, not all shaders need it
+					const char* TextureUniforms[] = { "Texture0", "Texture1" };
+					//const char* TextureSizeUniforms[] = { "Texture0_PixelSize", "Texture1_PixelSize" };
+					for (int t = 0; t < SourceTextures.GetSize(); t++)
+					{
+						Shader.SetUniform(TextureUniforms[t], SourceTextures[t] );
+						//vec2f PixelSize(Sources[t].GetWidth(), Sources[t].GetHeight());
+						//Shader.SetUniform(TextureSizeUniforms[t], PixelSize);
+					}
+				}
+				Shader.Bake();
+				BlitGeo->Draw( Context );
+			}
+			catch(std::exception& e)
+			{
+				std::Debug << "Geo blit error: " << e.what() << std::endl;
+				RenderTarget.ClearColour( Context, Soy::TRgb(1,0,0) );
+			}
+		}
+		RenderTarget.Unbind(Context);
+
+		//	now copy that render target to texture target
+		Target.Write( *RenderTexture, Context );
+		DeallocTempTextures();
+	}
+	catch(...)
+	{
+		DeallocTempTextures();
+		throw;
+	}
 }
 
 
