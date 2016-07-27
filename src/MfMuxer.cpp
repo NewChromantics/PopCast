@@ -209,7 +209,7 @@ void MfEncoder::Write(const Directx::TTexture& Image,SoyTime Timecode,Directx::T
 			auto ImageMode = Image.GetMode();
 			Sources.PushBack( Image );
 
-			Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, BlitFragShader_RgbaToBgraAndFlip );
+			Blitter.BlitTexture( *CopyTarget, GetArrayBridge(Sources), *ContextCopy, "BlitFragShader_RgbaToBgraAndFlip", BlitFragShader_RgbaToBgraAndFlip );
 
 			std::shared_ptr<TPixelBuffer> PixelBuffer;
 

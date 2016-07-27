@@ -1,20 +1,18 @@
 #pragma once
 
-#if defined(ENABLE_OPENGL)
-#include <SoyOpenglContext.h>
-#endif
+#include <SoyMetal.h>
 #include "TBlitter.h"
 #include <SoyPool.h>
 
 
-namespace Opengl
+namespace Metal
 {
 	class TBlitter;
 }
 
 
 
-class Opengl::TBlitter : public Soy::TBlitter
+class Metal::TBlitter : public Soy::TBlitter
 {
 public:
 	TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool);
@@ -35,15 +33,17 @@ public:
 	std::shared_ptr<TShader>				GetBackupShader(TContext& Context);		//	shader for when a shader doesn't compile
 	std::shared_ptr<TShader>				GetErrorShader(TContext& Context);
 
-	std::shared_ptr<TTexture>				GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Mode);
-	TTexture&								GetTempTexture(SoyPixelsMeta Meta,TContext& Context,GLenum Mode);
+	std::shared_ptr<TTexture>				GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context);
+	TTexture&								GetTempTexture(SoyPixelsMeta Meta,TContext& Context);
 
 protected:
 	TPool<TTexture>&						GetTexturePool();
+	TPool<SoyPixelsImpl>&					GetPixelPool();
 
 public:
-	std::shared_ptr<TPool<TTexture>>		mTempTextures;	
-	std::shared_ptr<TRenderTargetFbo>		mRenderTarget;
+	std::shared_ptr<TPool<TTexture>>		mTempTextures;
+	std::shared_ptr<TPool<SoyPixelsImpl>>	mTempPixels;
+	std::shared_ptr<TRenderTarget>			mRenderTarget;
 	std::shared_ptr<TGeometry>				mBlitQuad;
 	std::map<const char*,std::shared_ptr<TShader>>	mBlitShaders;	//	shader mapped to it's literal content address
 };

@@ -1,31 +1,26 @@
-#include "TBlitterOpengl.h"
+#include "TBlitterMetal.h"
 #include "TBlitter.h"
 #include <SoyMedia.h>
 #include <SoyJson.h>
 
-#if !defined(ENABLE_OPENGL)
-#error opengl not enabled
+#include <SoyGraphics.h>
+
+
+#if !defined(ENABLE_METAL)
+#error metal not enabled
 #endif
-namespace Renderer = Opengl;
+
+namespace Renderer = Metal;
 
 
 namespace PopMovie
 {
 	Soy::TRgb	AllocClearColour = Soy::TRgb(1,0,1);
+	Soy::TRgb	BlitClearColour = Soy::TRgb(1,1,0);
 }
 
-//	gl es 2 requires precision specification. todo; add this to the shader upgrader if it's the first thing on the line
-//	or a varying
 
-//	ES2 (what glsl?) requires precision, but not on mat?
-//	ES3 glsl 100 (android s6) requires precision on vec's and mat
-//	gr: changed to highprecision to fix sampling aliasing with the bjork video
-//	gr: pretty much unused now (easier to put highp in the code), but left for for the comments
-#define PREC	"highp "
-
-
-
-const char* Opengl::BlitVertShader =
+const char* BlitVertShader =
 #include "Blit.glsl.vert"
 ;
 
@@ -100,28 +95,38 @@ static auto BlitFragShaderFreenectDepth10mm =
 
 
 
-Opengl::TBlitter::TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool) :
+Renderer::TBlitter::TBlitter(std::shared_ptr<TPool<TTexture>> TexturePool) :
 	mTempTextures	( TexturePool )
 {
 	if ( !mTempTextures )
 		mTempTextures.reset( new TPool<TTexture> );
 }
 
-Opengl::TBlitter::~TBlitter()
+Renderer::TBlitter::~TBlitter()
 {
 	mBlitShaders.clear();
 	mBlitQuad.reset();
 	mRenderTarget.reset();
 }
 
-TPool<Opengl::TTexture>& Opengl::TBlitter::GetTexturePool()
+TPool<Renderer::TTexture>& Renderer::TBlitter::GetTexturePool()
 {
 	return *mTempTextures;
 }
 
-
-std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(const std::string& Name,const char* Source,Opengl::TContext& Context)
+TPool<SoyPixelsImpl>& Renderer::TBlitter::GetPixelPool()
 {
+	if ( !mTempPixels )
+		mTempPixels.reset( new TPool<SoyPixelsImpl> );
+	
+	return *mTempPixels;
+}
+
+
+std::shared_ptr<Renderer::TShader> Renderer::TBlitter::GetShader(const std::string& Name,const char* Source,Renderer::TContext& Context)
+{
+	return nullptr;
+	/*
 	//	see if it's already allocated
 	{
 		auto ShaderIt = mBlitShaders.find( Source );
@@ -143,7 +148,7 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(const std::string& 
 
 	try
 	{
-		auto pShader = std::make_shared<Opengl::TShader>( BlitVertShader, Source, VertexDesc, Name, Context );
+		auto pShader = std::make_shared<Renderer::TShader>( BlitVertShader, Source, VertexDesc, Name, Context );
 		mBlitShaders[Source] = pShader;
 		return pShader;
 	}
@@ -159,22 +164,23 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(const std::string& 
 		std::Debug << "Failed to allocate shader " << Name << ", reverting to test shader... Exception: " << e.what()  << std::endl;
 		return GetBackupShader( Context );
 	}
+	 */
 }
 
 
 
-std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetBackupShader(TContext& Context)
+std::shared_ptr<Renderer::TShader> Renderer::TBlitter::GetBackupShader(TContext& Context)
 {
 	return GetShader("Backup", BlitFragShaderTest, Context );
 }
 
-std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetErrorShader(TContext& Context)
+std::shared_ptr<Renderer::TShader> Renderer::TBlitter::GetErrorShader(TContext& Context)
 {
 	return GetShader("Error", BlitFragShaderError, Context );
 }
 
 
-std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl::TTexture>& Sources,Opengl::TContext& Context)
+std::shared_ptr<Renderer::TShader> Renderer::TBlitter::GetShader(ArrayBridge<Renderer::TTexture>& Sources,Renderer::TContext& Context)
 {
 	if ( Sources.GetSize() == 0 )
 		return GetBackupShader(Context);
@@ -182,10 +188,10 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl:
 	auto& Texture0 = Sources[0];
 	
 	//	alloc and return the shader we need
-	if ( Sources.GetSize() > 1 && mBlitMergeYuv )
+	if ( Sources.GetSize() > 1 && mMergeYuv )
 	{
 		auto& Texture1 = Sources[1];
-		auto MergedFormat = SoyPixelsFormat::GetMergedFormat( Texture0.mMeta.GetFormat(), Texture1.mMeta.GetFormat() );
+		auto MergedFormat = SoyPixelsFormat::GetMergedFormat( Texture0.GetMeta().GetFormat(), Texture1.GetMeta().GetFormat() );
 
 		switch ( MergedFormat )
 		{
@@ -204,36 +210,21 @@ std::shared_ptr<Opengl::TShader> Opengl::TBlitter::GetShader(ArrayBridge<Opengl:
 			default:break;
 		}
 
-		std::Debug << "Warning: No frag shader specified for merged format " << MergedFormat << " (" << Texture0.mMeta.GetFormat() << " + " << Texture1.mMeta.GetFormat() << ")" << std::endl;
+		std::Debug << "Warning: No frag shader specified for merged format " << MergedFormat << " (" << Texture0.GetMeta().GetFormat() << " + " << Texture1.GetMeta().GetFormat() << ")" << std::endl;
 	}
 
-	if ( Texture0.mMeta.GetFormat() == SoyPixelsFormat::FreenectDepthmm )
+	if ( Texture0.GetMeta().GetFormat() == SoyPixelsFormat::FreenectDepthmm )
 		return GetShader( SoyPixelsFormat::ToString(SoyPixelsFormat::FreenectDepthmm), BlitFragShaderFreenectDepth10mm, Context );
-	
-	//	gr: note; these are all for rgba, don't we ever need to merge?
-	if ( Texture0.mType == GL_TEXTURE_2D )
-		return GetShader( "2D", BlitFragShader2D, Context  );
-	
-#if defined(GL_TEXTURE_RECTANGLE)
-	if ( Texture0.mType == GL_TEXTURE_RECTANGLE )
-		return GetShader( "Rectangle", BlitFragShaderRectangle, Context  );
-#endif
-	
-#if defined(GL_TEXTURE_EXTERNAL_OES)
-	if ( Texture0.mType == GL_TEXTURE_EXTERNAL_OES )
-		return GetShader( "OesExternal", BlitFragShaderOesExternal, Context );
-#endif
-	
-	//	don't know which shader to use!
-	std::Debug << "Don't know what blit shader to use for texture " << Opengl::GetEnumString(Texture0.mType) << '/' << Texture0.mMeta << std::endl;
-	return GetBackupShader(Context);
+
+	return GetShader( "2D", BlitFragShader2D, Context  );
 }
 
 
 
 
-std::shared_ptr<Opengl::TRenderTarget> Opengl::TBlitter::GetRenderTarget(Opengl::TTexture& Target,Opengl::TContext& Context)
+std::shared_ptr<Renderer::TRenderTarget> Renderer::TBlitter::GetRenderTarget(Renderer::TTexture& Target,Renderer::TContext& Context)
 {
+	/*
 	if ( mRenderTarget )
 	{
 		if ( mRenderTarget->mTexture.mTexture.mName == Target.mTexture.mName )
@@ -242,17 +233,17 @@ std::shared_ptr<Opengl::TRenderTarget> Opengl::TBlitter::GetRenderTarget(Opengl:
 		mRenderTarget.reset();
 	}
 	
-	Opengl::TFboMeta FboMeta(__func__, Target.GetWidth(), Target.GetHeight() );
+	Renderer::TFboMeta FboMeta(__func__, Target.GetWidth(), Target.GetHeight() );
 	//	create immediately
-	mRenderTarget.reset( new Opengl::TRenderTargetFbo(FboMeta,Target) );
+	mRenderTarget.reset( new Renderer::TRenderTargetFbo(FboMeta,Target) );
 
 	//	turn off auto mip map generation and do it manually later
-	auto& TargetFbo = dynamic_cast<Opengl::TRenderTargetFbo&>( *mRenderTarget );
+	auto& TargetFbo = dynamic_cast<Renderer::TRenderTargetFbo&>( *mRenderTarget );
 	TargetFbo.mGenerateMipMaps = false;
 	
 	//	clear for debugging
 	mRenderTarget->Bind();
-	Opengl::ClearColour( PopMovie::AllocClearColour );
+	Renderer::ClearColour( PopMovie::AllocClearColour );
 	mRenderTarget->Unbind();
 
 	//	option to recreate every use
@@ -265,31 +256,35 @@ std::shared_ptr<Opengl::TRenderTarget> Opengl::TBlitter::GetRenderTarget(Opengl:
 
 	if ( !Store )
 	{
-		std::shared_ptr<Opengl::TRenderTarget> Target = mRenderTarget;
+		std::shared_ptr<Renderer::TRenderTarget> Target = mRenderTarget;
 		mRenderTarget.reset();
 		return Target;
 	}
+	 */
 	return mRenderTarget;
 }
 
 
 
-std::shared_ptr<Opengl::TGeometry> Opengl::TBlitter::GetGeo(Opengl::TContext& Context)
+std::shared_ptr<Renderer::TGeometry> Renderer::TBlitter::GetGeo(Renderer::TContext& Context)
 {
+	return nullptr;
+	/*
 	if ( mBlitQuad )
 		return mBlitQuad;
 	
 	//	for each part of the vertex, add an attribute to describe the overall vertex
-	SoyGraphics::TGeometryVertex Vertex;
+	Opengl::TGeometryVertex Vertex;
 	Array<uint8> MeshData;
 	Array<size_t> Indexes;
 	Soy::TBlitter::GetGeo( Vertex, GetArrayBridge(MeshData), GetArrayBridge(Indexes), false );
 
-	mBlitQuad.reset( new Opengl::TGeometry( GetArrayBridge(MeshData), GetArrayBridge(Indexes), Vertex ) );
+	mBlitQuad.reset( new Renderer::TGeometry( GetArrayBridge(MeshData), GetArrayBridge(Indexes), Vertex ) );
 	return mBlitQuad;
+	 */
 }
 
-void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Error,Opengl::TContext& Context)
+void Renderer::TBlitter::BlitError(Renderer::TTexture& Target,const std::string& Error,Renderer::TContext& Context)
 {
 	//	gr: until we have text blitting, we need to at least print out the error
 	std::Debug << "BlitError(" << Error << ")" << std::endl;
@@ -303,7 +298,7 @@ void Opengl::TBlitter::BlitError(Opengl::TTexture& Target,const std::string& Err
 }
 
 
-void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::TTexture>&& Sources,Opengl::TContext& Context,const SoyGraphics::TTextureUploadParams& UploadParams,const char* OverrideShader)
+void Renderer::TBlitter::BlitTexture(Renderer::TTexture& Target,ArrayBridge<Renderer::TTexture>&& Sources,Renderer::TContext& Context,const SoyGraphics::TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	//	grab provided shader if it's already compiled
 	std::shared_ptr<TShader> OverrideShaderPtr;
@@ -315,10 +310,18 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 	BlitTexture( Target, GetArrayBridge(Sources), Context, UploadParams, OverrideShaderPtr );
 }
 
-void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::TTexture>&& Sources,Opengl::TContext& Context,const SoyGraphics::TTextureUploadParams& UploadParams,std::shared_ptr<Opengl::TShader> OverrideShader)
+void Renderer::TBlitter::BlitTexture(Renderer::TTexture& Target,ArrayBridge<Renderer::TTexture>&& Sources,Renderer::TContext& Context,const SoyGraphics::TTextureUploadParams& UploadParams,std::shared_ptr<Renderer::TShader> OverrideShader)
 {
-	ofScopeTimerWarning Timer("Blit opengl Texture[s]",4);
+	ofScopeTimerWarning Timer("Blit Renderer Texture[s]",4);
 	
+	//	first implementation, just copy
+	if ( Sources.IsEmpty() )
+		throw Soy::AssertException("expected some textures for Blit");
+	
+	auto& Texture0 = Sources[0];
+	Target.Write( Texture0, UploadParams, Context );
+	
+	/*
 	//	gr: pre-empt this!
 	//		or use blit error?
 	if ( !Context.IsSupported( OpenglExtensions::VertexArrayObjects ) )
@@ -352,13 +355,11 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 
 	//	clear FBO
 	static bool ClearDepth = false;
+	static bool ClearColour = false;
 	static bool ClearStencil = false;
-	if ( ClearDepth )	
-		Opengl::ClearDepth();
-	if ( mClearBeforeBlit )
-		Opengl::ClearColour( mClearBeforeBlitColour );
-	if ( ClearStencil )	
-		Opengl::ClearStencil();
+	if ( ClearDepth )	Renderer::ClearDepth();
+	if ( ClearColour )	Renderer::ClearColour( PopMovie::BlitClearColour );
+	if ( ClearStencil )	Renderer::ClearStencil();
 
 	{
 		auto Shader = BlitShader->Bind();
@@ -409,9 +410,10 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<Opengl::
 	{
 		Target.GenerateMipMaps();
 	}
+	 */
 }
 
-void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& OrigSources,Opengl::TContext& Context,const SoyGraphics::TTextureUploadParams& UploadParams,const char* OverrideShader)
+void Renderer::TBlitter::BlitTexture(Renderer::TTexture& Target,ArrayBridge<const SoyPixelsImpl*>&& OrigSources,Renderer::TContext& Context,const SoyGraphics::TTextureUploadParams& UploadParams,const char* OverrideShader)
 {
 	ofScopeTimerWarning Timer("Blit SoyPixel Texture[s]",2);
 	
@@ -456,30 +458,56 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const So
 
 	if ( Sources.GetSize() == 1 && !ForceBlit )
 	{
-		Target.Write( *Sources[0], UploadParams );
+		Target.Write( *Sources[0], UploadParams, Context );
 		return;
 	}
 	
 	//	copy each to it's own texture, then do a blit
 	BufferArray<Renderer::TTexture,4> SourceTextures;
-	auto DeallocTempTextures = [this,&SourceTextures]
+	BufferArray<std::shared_ptr<SoyPixelsImpl>,4> PaddedSourcePixels;
+	
+	auto DeallocTempTextures = [this,&SourceTextures,&PaddedSourcePixels]
 	{
-		auto& Pool = GetTexturePool();
+		auto& TexturePool = GetTexturePool();
 		for ( int t=0;	t<SourceTextures.GetSize();	t++ )
-			Pool.Release( SourceTextures[t] );
+			TexturePool.Release( SourceTextures[t] );
+		
+		auto& PixelPool = GetPixelPool();
+		for ( int t=0;	t<PaddedSourcePixels.GetSize();	t++ )
+			PixelPool.Release( PaddedSourcePixels[t] );
 	};
-
+	
 	try
 	{
 		for ( int i=0;	i<Sources.GetSize();	i++ )
 		{
-			auto& Source = *Sources[i];
+			auto& UnpaddedSource = *Sources[i];
+			std::shared_ptr<SoyPixelsImpl> PaddedSource;
+			
+			//	metal may need to pad pixels
+			SoyPixelsMeta PaddedMeta = Metal::TTexture::CorrectPixelsForUpload( UnpaddedSource.GetMeta() );
+			if ( PaddedMeta != UnpaddedSource.GetMeta() )
+			{
+				std::stringstream TimerName;
+				TimerName << "Warning: padding pixels for meta (" << UnpaddedSource.GetMeta() << " -> " << PaddedMeta << ")";
+				ofScopeTimerWarning PadTimer( TimerName.str().c_str(), 2 );
+
+				auto& PixelPool = GetPixelPool();
+				auto AllocPaddedPixels = [&PaddedMeta]
+				{
+					return std::shared_ptr<SoyPixelsImpl>( new SoyPixels(PaddedMeta) );
+				};
+				PaddedSource = PixelPool.AllocPtr( PaddedMeta, AllocPaddedPixels );
+				PaddedSourcePixels.PushBack( PaddedSource );
+				PaddedSource->Copy( UnpaddedSource, TSoyPixelsCopyParams(true,true,true,false,false) );
+			}
 			
 			//	allocate a dynamic texture to put pixels into
-			auto& PixelTexture = GetTempTexture( Source.GetMeta(), Context, GL_TEXTURE_2D );
+			auto& Source = PaddedSource ? *PaddedSource : UnpaddedSource;
+			auto& PixelTexture = GetTempTexture( Source.GetMeta(), Context );
 			SourceTextures.PushBack( PixelTexture );
 
-			PixelTexture.Write( Source, UploadParams );
+			PixelTexture.Write( Source, UploadParams, Context );
 		}
 		
 		//	do normal blit
@@ -491,33 +519,32 @@ void Opengl::TBlitter::BlitTexture(Opengl::TTexture& Target,ArrayBridge<const So
 		DeallocTempTextures();
 		throw;
 	}
-
 }
 
 
 
-std::shared_ptr<Opengl::TTexture> Opengl::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context,GLenum Type)
+std::shared_ptr<Renderer::TTexture> Renderer::TBlitter::GetTempTexturePtr(SoyPixelsMeta Meta,TContext& Context)
 {
-	auto RealAlloc = [&Meta,&Type,&Context]()
+	auto RealAlloc = [&Meta,&Context]()
 	{
-		return std::make_shared<TTexture>( Meta, Type );
+		return std::shared_ptr<TTexture>( new TTexture(Meta,Context) );
 	};
 	
 	auto& Pool = GetTexturePool();
-	auto Texture = Pool.AllocPtr( TTextureMeta(Meta,Type), RealAlloc );
+	auto Texture = Pool.AllocPtr( Meta, RealAlloc );
 	return Texture;
 }
 
 
-Opengl::TTexture& Opengl::TBlitter::GetTempTexture(SoyPixelsMeta Meta,TContext& Context,GLenum Mode)
+Renderer::TTexture& Renderer::TBlitter::GetTempTexture(SoyPixelsMeta Meta,TContext& Context)
 {
-	auto pTexture = GetTempTexturePtr( Meta, Context, Mode );
+	auto pTexture = GetTempTexturePtr( Meta, Context );
 	Soy::Assert( pTexture!=nullptr, "Failed to alloc temp texture");
 	return *pTexture;
 }
 
 
-void Opengl::TBlitter::GetMeta(TJsonWriter& Json)
+void Renderer::TBlitter::GetMeta(TJsonWriter& Json)
 {
 	Soy::TBlitter::GetMeta( Json );
 
