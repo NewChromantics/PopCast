@@ -9,6 +9,9 @@ Unity/Assets/PopCast/PopTexturePtrCache.cs
 Unity/Assets/PopCast/Windows/x64/PopCast.dll
 Unity/Assets/PopCast/Windows/Win32/PopCast.dll
 
+# ignore popmovie
+Unity/Assets/PopMovieTexture
+Unity/Assets/PopMovieTexture.meta
 
 MakePackage.log
 *.unitypackage

@@ -20,32 +20,35 @@ public class PopTexturePtrCache<TEXTURE> where TEXTURE : Texture
 
 public class PopTexturePtrCache
 {
-	static public System.IntPtr GetCache<T>(ref PopTexturePtrCache<T> Cache,T texture) where T : Texture
-	{
-		if (Cache==null)
-			return texture.GetNativeTexturePtr();
+	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, (edit: definitely does in VR mode) BUT we want to avoid setting the active render texture anyway
+	static Dictionary<Texture,System.IntPtr>	mCache;
 
-		if ( texture.Equals(Cache.mTexture) )
-			return Cache.mPtr;
-		Cache.mPtr = texture.GetNativeTexturePtr();
-		if ( Cache.mPtr != System.IntPtr.Zero )
-			Cache.mTexture = texture;
-		return Cache.mPtr;
+	static Dictionary<Texture,System.IntPtr>	GetCache()
+	{
+		if (mCache == null)
+			mCache = new Dictionary<Texture,System.IntPtr> ();
+		return mCache;
 	}
 
-	static public System.IntPtr GetCache(ref PopTexturePtrCache<RenderTexture> Cache,RenderTexture texture)
+	static public System.IntPtr GetNativeTexturePtr<T>(T texture) where T : Texture
 	{
-		if (Cache==null)
-			return texture.GetNativeTexturePtr();
+		var Cache = GetCache ();
+		if ( !Cache.ContainsKey( texture ) )
+			Cache [texture] = texture.GetNativeTexturePtr ();
+		return Cache [texture];
+	}
 
-		if ( texture.Equals(Cache.mTexture) )
-			return Cache.mPtr;
-		var Prev = RenderTexture.active;
-		RenderTexture.active = texture;
-		Cache.mPtr = texture.GetNativeTexturePtr();
-		RenderTexture.active = Prev;
-		if ( Cache.mPtr != System.IntPtr.Zero )
-			Cache.mTexture = texture;
-		return Cache.mPtr;
+	//	render texture overload
+	static public System.IntPtr GetNativeTexturePtr(RenderTexture texture)
+	{
+		var Cache = GetCache ();
+		if ( !Cache.ContainsKey( texture ) )
+		{
+			var Prev = RenderTexture.active;
+			RenderTexture.active = texture;
+			Cache [texture] = texture.GetNativeTexturePtr ();
+			RenderTexture.active = Prev;
+		}
+		return Cache [texture];
 	}
 };
