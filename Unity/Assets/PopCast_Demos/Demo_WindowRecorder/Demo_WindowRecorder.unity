@@ -271,9 +271,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9516f02fa419b064a870bef9a496ed7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TemplateThumbnail: {fileID: 1308869156}
+  TemplateThumbnail: {fileID: 1308869160}
+  MaxWindows: 3
   WindowPrefix: 'window:'
-  WindowFilter: 
+  WindowFilter: notepad
+  InitThumbnailShader: {fileID: 0}
 --- !u!4 &867989121
 Transform:
   m_ObjectHideFlags: 0
@@ -429,6 +431,7 @@ GameObject:
   - 224: {fileID: 1308869157}
   - 222: {fileID: 1308869159}
   - 114: {fileID: 1308869158}
+  - 114: {fileID: 1308869160}
   m_Layer: 5
   m_Name: Source_Template
   m_TagString: Untagged
@@ -485,6 +488,59 @@ CanvasRenderer:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1308869156}
+--- !u!114 &1308869160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1308869156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e3e4c2d62157bb438c09a580656ca66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Params:
+    SkipPushFrames: 1
+    SkipPopFrames: 1
+    AllowGpuColourConversion: 1
+    AllowCpuColourConversion: 0
+    AllowSlowCopy: 1
+    AllowFastCopy: 1
+    PixelClientStorage: 0
+    StretchImage: 1
+    DebugFrameSkipping: 0
+    PeekBeforeDefferedCopy: 1
+    DebugNoNewPixelBuffer: 0
+    DebugRenderThreadCallback: 0
+    ResetInternalTimestamp: 1
+    DebugBlit: 0
+    ApplyVideoTransform: 1
+    GenerateMipMaps: 0
+    PopNearestFrame: 0
+    DebugTimers: 0
+    DecoderUseHardwareBuffer: 1
+    BlitFatalErrors: 1
+    ForceNonPlanarOutput: 0
+    MergeYuv: 1
+    ClearBeforeBlit: 1
+    EnableAudioStreams: 1
+    EnableVideoStreams: 1
+    EnableDepthStreams: 1
+    EnableSkeletonStreams: 1
+    EnableAlpha: 1
+    CopyFrameAtUpdateTime: 0
+    OnlyExtractKeyframes: 0
+    ApplyHeightPadding: 1
+    ApplyWidthPadding: 1
+    WindowIncludeBorders: 1
+    VerboseDebug: 0
+    Windows7Emulation: 0
+    SplitAudioChannelsIntoStreams: 0
+    SplitVideoPlanesIntoStreams: 0
+    EnableDecoderThreading: 1
+    UseLiveTimestampsForStreaming: 1
+    CopyBuffersInExtraction: 0
+    ExtractorPreDecodeSkip: 0
 --- !u!1 &1448376204
 GameObject:
   m_ObjectHideFlags: 0

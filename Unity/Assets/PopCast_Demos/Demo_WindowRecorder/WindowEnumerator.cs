@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-
+[System.Serializable]
 public class WindowEnum 
 {
 	public RenderTexture			Texture; 
@@ -34,10 +34,11 @@ public class WindowEnumerator : MonoBehaviour {
 		if (ClearTextureCache == null)
 		{ 
 			ClearTextureCache = new Texture2D(1,1);
-			ClearTextureCache.SetPixel( 0, 0, new Color(0,0,0) );
+			ClearTextureCache.SetPixel( 0, 0, new Color(1,0,0,1) );
+			ClearTextureCache.Apply();
 		}
 
-		Graphics.Blit( Tex, ClearTextureCache );
+		Graphics.Blit( ClearTextureCache, Tex );
 	}
 
 	void FindNewSource()
@@ -82,6 +83,10 @@ public class WindowEnumerator : MonoBehaviour {
 		Windows.Add( Enum );
 	}
 
+	void Start()
+	{ 
+		PopMovie.PopMovie_EnumSourcesClear ();
+	}
 
 	void Update () {
 		FindNewSource();
