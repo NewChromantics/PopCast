@@ -223,6 +223,9 @@
 		BFEF570A1B613B0800340796 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0F1B5526D300CBD1AC /* CoreVideo.framework */; };
 		BFEF570B1B613B1200340796 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B0B1B5526B800CBD1AC /* CoreMedia.framework */; };
 		BFEF570C1B613B2300340796 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF2E8B051B55268F00CBD1AC /* AVFoundation.framework */; };
+		BFFC1D571D65D87B005557A8 /* SoyGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFFC1D551D65D87B005557A8 /* SoyGraphics.cpp */; };
+		BFFC1D581D65D87B005557A8 /* SoyGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFFC1D551D65D87B005557A8 /* SoyGraphics.cpp */; };
+		BFFC1D591D65D87B005557A8 /* SoyGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFFC1D551D65D87B005557A8 /* SoyGraphics.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -400,6 +403,8 @@
 		BFEBD65C1C7106DE00539560 /* THttpCaster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THttpCaster.h; sourceTree = "<group>"; };
 		BFEEDD6D1B46A7E5002F9CFA /* libPopCastIos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPopCastIos.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFEF57071B6139DE00340796 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
+		BFFC1D551D65D87B005557A8 /* SoyGraphics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoyGraphics.cpp; path = src/SoyGraphics.cpp; sourceTree = "<group>"; };
+		BFFC1D561D65D87B005557A8 /* SoyGraphics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SoyGraphics.h; path = src/SoyGraphics.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -522,6 +527,8 @@
 				BF627D921C622EF900BB840B /* SoyFilesystem.cpp */,
 				BF627D931C622EF900BB840B /* SoyFilesystem.h */,
 				BF627D941C622EF900BB840B /* SoyFilesystem.mm */,
+				BFFC1D551D65D87B005557A8 /* SoyGraphics.cpp */,
+				BFFC1D561D65D87B005557A8 /* SoyGraphics.h */,
 				BF192AFE1BF10A9400324911 /* SoyH264.cpp */,
 				BF192AFF1BF10A9400324911 /* SoyH264.h */,
 				BF406D291BB9B1C500CECF4E /* SoyHttp.cpp */,
@@ -879,6 +886,7 @@
 				BF7225B21BAF0E2700550AD8 /* SoyMemFile.cpp in Sources */,
 				BF406D161BB9A1C600CECF4E /* TAirplayCaster.mm in Sources */,
 				BF7225B81BAF38D300550AD8 /* SoyRef.cpp in Sources */,
+				BFFC1D591D65D87B005557A8 /* SoyGraphics.cpp in Sources */,
 				BFAEE89D1C2774A500E25C47 /* SoyGif.cpp in Sources */,
 				BF40910A1B5EDB6800643329 /* SoyArray.cpp in Sources */,
 				BFEBD65F1C7106DE00539560 /* THttpCaster.cpp in Sources */,
@@ -945,6 +953,7 @@
 				BF41F9E11B4BDC1E0015614A /* memheap.cpp in Sources */,
 				BFC4E1C51C308B71008D13EC /* TBlitterOpengl.cpp in Sources */,
 				BF7225B11BAF0E2700550AD8 /* SoyMemFile.cpp in Sources */,
+				BFFC1D581D65D87B005557A8 /* SoyGraphics.cpp in Sources */,
 				BF48FF9D1B8E5D15004BCF63 /* TGoogleCaster.mm in Sources */,
 				BF3EB6C21C15ACFB002686F6 /* SoyAvf.mm in Sources */,
 				BFEBD65E1C7106DE00539560 /* THttpCaster.cpp in Sources */,
@@ -1051,6 +1060,7 @@
 				BF192B071BF10A9D00324911 /* SoyHttpConnection.cpp in Sources */,
 				BF41F9A91B4BD1920015614A /* SoyTypes.cpp in Sources */,
 				BF3EB6B21C15ACE4002686F6 /* SoyUnity.cpp in Sources */,
+				BFFC1D571D65D87B005557A8 /* SoyGraphics.cpp in Sources */,
 				BF406D251BB9B1A900CECF4E /* SoyStream.cpp in Sources */,
 				BF41F9DC1B4BDBD80015614A /* SoyEvent.cpp in Sources */,
 				BF1499CE1B4D646B00DA2575 /* SoyVector.cpp in Sources */,
@@ -1091,7 +1101,10 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = "POPMOVIE_WATERMARK=$(POPMOVIE_WATERMARK)";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					ENABLE_OPENGL,
+					"POPMOVIE_WATERMARK=$(POPMOVIE_WATERMARK)",
+				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1200,7 +1213,10 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = "POPMOVIE_WATERMARK=$(POPMOVIE_WATERMARK)";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					ENABLE_OPENGL,
+					"POPMOVIE_WATERMARK=$(POPMOVIE_WATERMARK)",
+				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
