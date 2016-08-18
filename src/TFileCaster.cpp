@@ -23,6 +23,9 @@
 #include "MfMuxer.h"
 #endif
 
+#if defined(ENABLE_OPENGL)
+#include <SoyOpengl.h>
+#endif
 
 
 std::shared_ptr<TMediaMuxer> AllocPlatformMuxer(std::string Filename,const TMediaEncoderParams& EncoderParams,std::shared_ptr<TMediaPacketBuffer>& Input,const std::function<void(bool&)>& OnStreamFinished,std::function<std::shared_ptr<TMediaEncoder>(size_t,const SoyPixelsMeta&)>& EncoderFunc)

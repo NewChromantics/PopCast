@@ -581,13 +581,13 @@ void PopCast::TInstance::InitFrameMeta(TCastFrameMeta& Frame,size_t StreamIndex,
 	Frame.mTimecode -= mBaseTimestamp;
 
 	//	reject if timecode is past max duration
-	auto MaxMs = Params.mMaxSeconds * 1000;
-	if ( MaxMs > 0 )
+	SoyTime MaxTime( std::chrono::milliseconds( Params.mMaxSeconds * 1000 ) );
+	if ( MaxTime.IsValid() )
 	{
-		if ( Frame.mTimecode.GetMilliSeconds() > MaxMs )
+		if ( Frame.mTimecode > MaxTime )
 		{
 			std::stringstream Error;
-			Error << "Frame time (" << Frame.mTimecode << "ms) past max (" << MaxMs << "ms). Frame skipped";
+			Error << "Frame time (" << Frame.mTimecode << "ms) past max (" << MaxTime << "ms). Frame skipped";
 			throw Soy::AssertException( Error.str() );
 		}
 	}
