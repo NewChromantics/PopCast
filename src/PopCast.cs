@@ -105,10 +105,6 @@ public class PopCast
 	public static bool mAllowBackgroundProcessing = true;
 #endif
 
-	//	cache the texture ptr's. Unity docs say accessing them causes a GPU sync, I don't believe they do, BUT we want to avoid setting the active render texture anyway
-	private PopTexturePtrCache<Texture2D>		mTexture2DPtrCache = new PopTexturePtrCache<Texture2D>();
-	private PopTexturePtrCache<RenderTexture>	mRenderTexturePtrCache = new PopTexturePtrCache<RenderTexture>();
-
 	//	add your own callbacks here to catch debug output (eg. to a GUI)
 	public static System.Action<string> DebugCallback;
 	public static bool EnableDebugLog
@@ -296,14 +292,21 @@ public class PopCast
 			return;
 		}
 
-		if (Target is RenderTexture) {
+		if (Target is RenderTexture)
+		{
 			RenderTexture Target_rt = Target as RenderTexture;
-			PopCast_UpdateRenderTexture (mInstance, PopTexturePtrCache.GetCache (ref mRenderTexturePtrCache, Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
+			PopCast_UpdateRenderTexture (mInstance, PopTexturePtrCache.GetNativeTexturePtr(Target_rt), Target.width, Target.height, Target_rt.format, StreamIndex);
 		}
-		if (Target is Texture2D) {
+		else if (Target is Texture2D)
+		{
 			Texture2D Target_2d = Target as Texture2D;
-			PopCast_UpdateTexture2D (mInstance, PopTexturePtrCache.GetCache (ref mTexture2DPtrCache, Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
+			PopCast_UpdateTexture2D (mInstance, PopTexturePtrCache.GetNativeTexturePtr(Target_2d), Target.width, Target.height, Target_2d.format, StreamIndex);
 		}
+		else
+		{
+			Debug.LogError ("Texture is not a RenderTexture or Texture2D. Unhandled type. email help@popmovie.xyz");
+		}
+
 		FlushDebug ();
 	}
 
